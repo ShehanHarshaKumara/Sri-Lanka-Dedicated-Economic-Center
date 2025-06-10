@@ -1,12 +1,14 @@
 @import "tailwindcss";
+
+/* Root Variables and Base Styles */
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
   color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  color: rgba(255, 255, 255, 0.9);
+  background-color: #1e1e1e;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -14,56 +16,83 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Anchor Styling */
 a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
+  font-weight: 600;
+  color: #4f46e5;
+  text-decoration: none;
 }
 a:hover {
-  color: #535bf2;
+  color: #6366f1;
+  text-decoration: underline;
 }
 
+/* Body Styling */
 body {
   margin: 0;
   display: flex;
-  place-items: center;
+  justify-content: center;
+  align-items: center;
   min-width: 320px;
   min-height: 100vh;
+  background-color: var(--bg-color, #1e1e1e);
+  color: var(--text-color, rgba(255, 255, 255, 0.9));
 }
 
+/* Heading Styling */
 h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+  font-size: 3rem;
+  line-height: 1.2;
+  font-weight: 700;
+  margin-bottom: 1rem;
 }
 
+/* Button Styling */
 button {
-  border-radius: 8px;
+  border-radius: 0.5rem;
   border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
+  padding: 0.75em 1.5em;
+  font-size: 1rem;
+  font-weight: 600;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: #2563eb;
+  color: #fff;
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: all 0.3s ease;
 }
 button:hover {
-  border-color: #646cff;
+  background-color: #1d4ed8;
+  border-color: #3b82f6;
 }
 button:focus,
 button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  outline: 3px solid #93c5fd;
+  outline-offset: 2px;
 }
 
+/* Light Theme Overrides */
 @media (prefers-color-scheme: light) {
   :root {
-    color: #213547;
-    background-color: #ffffff;
+    color: #1e293b;
+    background-color: #f8fafc;
+  }
+  body {
+    background-color: #f8fafc;
+    color: #1e293b;
+  }
+  a {
+    color: #3b82f6;
   }
   a:hover {
-    color: #747bff;
+    color: #2563eb;
   }
   button {
-    background-color: #f9f9f9;
+    background-color: #e0f2fe;
+    color: #1e40af;
+    border-color: transparent;
+  }
+  button:hover {
+    background-color: #bae6fd;
+    border-color: #60a5fa;
   }
 }

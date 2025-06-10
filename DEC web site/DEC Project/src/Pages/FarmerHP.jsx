@@ -1,0 +1,912 @@
+import { useState, useEffect } from 'react';
+import { 
+  FaTractor, 
+  FaPlus, 
+  FaEdit, 
+  FaTrash, 
+  FaEye, 
+  FaBell, 
+  FaChartBar, 
+  FaShoppingCart, 
+  FaMapMarkerAlt, 
+  FaStar, 
+  FaUpload, 
+  FaCamera, 
+  FaTimes, 
+  FaCheck, 
+  FaLeaf, 
+  FaUser, 
+  FaBars, 
+  FaHome, 
+  FaBox, 
+  FaClipboardList, 
+  FaUsers, 
+  FaCog, 
+  FaSignOutAlt,
+  FaRupeeSign,
+  FaCalendar,
+  FaWeight,
+  FaTag,
+  FaImage,
+  FaSave,
+  FaSpinner
+} from 'react-icons/fa';
+
+const FarmerPortal = () => {
+  // Current user data
+  const [currentUser] = useState({
+    id: 1,
+    name: 'Sunil Rathnayake',
+    email: 'sunil@farmer.lk',
+    location: 'Galle District',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
+    farmSize: '15 acres',
+    joinDate: '2022-03-15',
+    totalProducts: 0,
+    totalSales: 0
+  });
+
+  // Products state
+  const [products, setProducts] = useState([
+    {
+      id: 1,
+      name: 'King Coconut',
+      price: 180,
+      category: 'Fresh Produce',
+      stock: 500,
+      unit: 'pieces',
+      description: 'Fresh king coconuts from coastal regions',
+      images: ['https://images.unsplash.com/photo-1598511757337-fe2caaa45407?w=400&h=300&fit=crop'],
+      status: 'active',
+      createdAt: '2024-01-15',
+      sales: 150,
+      views: 1250
+    },
+    {
+      id: 2,
+      name: 'Ceylon Cinnamon',
+      price: 950,
+      category: 'Spices',
+      stock: 25,
+      unit: 'kg',
+      description: 'Authentic Ceylon cinnamon sticks',
+      images: ['https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=400&h=300&fit=crop'],
+      status: 'active',
+      createdAt: '2024-01-10',
+      sales: 45,
+      views: 890
+    }
+  ]);
+
+  // UI states
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showAddProduct, setShowAddProduct] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [notifications] = useState([
+    { id: 1, message: 'New order for King Coconuts', time: '2 hours ago', type: 'order' },
+    { id: 2, message: 'Product approved by admin', time: '1 day ago', type: 'approval' },
+    { id: 3, message: 'Low stock alert for Cinnamon', time: '2 days ago', type: 'warning' }
+  ]);
+
+  // Product form state
+  const [productForm, setProductForm] = useState({
+    name: '',
+    price: '',
+    category: '',
+    stock: '',
+    unit: '',
+    description: '',
+    images: [],
+    status: 'active'
+  });
+
+  const [previewImages, setPreviewImages] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const categories = [
+    'Fresh Produce', 'Spices', 'Grains', 'Fruits', 'Vegetables', 
+    'Herbs', 'Dairy', 'Coconut Products', 'Tea', 'Other'
+  ];
+
+  const units = ['kg', 'g', 'pieces', 'liters', 'ml', 'bunches', 'bags'];
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.sidebar') && !event.target.closest('.sidebar-toggle')) {
+        setSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    document.addEventListener('click', handleClickOutside);
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, []);
+
+  // Calculate dashboard stats
+  const dashboardStats = {
+    totalProducts: products.length,
+    activeProducts: products.filter(p => p.status === 'active').length,
+    totalSales: products.reduce((sum, p) => sum + p.sales, 0),
+    totalViews: products.reduce((sum, p) => sum + p.views, 0),
+    totalRevenue: products.reduce((sum, p) => sum + (p.price * p.sales), 0)
+  };
+
+  // Handle image upload
+  const handleImageUpload = (event) => {
+    const files = Array.from(event.target.files);
+    const newImages = [];
+    const newPreviews = [];
+
+    files.forEach(file => {
+      if (file.type.startsWith('image/')) {
+        const imageUrl = URL.createObjectURL(file);
+        newImages.push(file);
+        newPreviews.push(imageUrl);
+      }
+    });
+
+    setProductForm(prev => ({
+      ...prev,
+      images: [...prev.images, ...newImages]
+    }));
+    setPreviewImages(prev => [...prev, ...newPreviews]);
+  };
+
+  // Remove image
+  const removeImage = (index) => {
+    const newImages = productForm.images.filter((_, i) => i !== index);
+    const newPreviews = previewImages.filter((_, i) => i !== index);
+    setProductForm(prev => ({ ...prev, images: newImages }));
+    setPreviewImages(newPreviews);
+  };
+
+  // Handle form submission
+  const handleSubmitProduct = async (e) => {
+    e.preventDefault();
+    setIsUploading(true);
+
+    // Simulate upload delay
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    const newProduct = {
+      id: editingProduct ? editingProduct.id : Date.now(),
+      ...productForm,
+      price: parseFloat(productForm.price),
+      stock: parseInt(productForm.stock),
+      images: previewImages.length > 0 ? previewImages : ['https://images.unsplash.com/photo-1516594798947-e65505dbb29d?w=400&h=300&fit=crop'],
+      createdAt: editingProduct ? editingProduct.createdAt : new Date().toISOString().split('T')[0],
+      sales: editingProduct ? editingProduct.sales : 0,
+      views: editingProduct ? editingProduct.views : 0
+    };
+
+    if (editingProduct) {
+      setProducts(prev => prev.map(p => p.id === editingProduct.id ? newProduct : p));
+    } else {
+      setProducts(prev => [...prev, newProduct]);
+    }
+
+    // Reset form
+    setProductForm({
+      name: '', price: '', category: '', stock: '', unit: '', description: '', images: [], status: 'active'
+    });
+    setPreviewImages([]);
+    setShowAddProduct(false);
+    setEditingProduct(null);
+    setIsUploading(false);
+  };
+
+  // Edit product
+  const editProduct = (product) => {
+    setEditingProduct(product);
+    setProductForm({
+      name: product.name,
+      price: product.price.toString(),
+      category: product.category,
+      stock: product.stock.toString(),
+      unit: product.unit,
+      description: product.description,
+      images: [],
+      status: product.status
+    });
+    setPreviewImages(product.images);
+    setShowAddProduct(true);
+  };
+
+  // Delete product
+  const deleteProduct = (id) => {
+    if (window.confirm('Are you sure you want to delete this product?')) {
+      setProducts(prev => prev.filter(p => p.id !== id));
+    }
+  };
+
+  // Toggle product status
+  const toggleProductStatus = (id) => {
+    setProducts(prev => prev.map(p => 
+      p.id === id ? { ...p, status: p.status === 'active' ? 'inactive' : 'active' } : p
+    ));
+  };
+
+  const sidebarItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: FaHome },
+    { id: 'products', label: 'My Products', icon: FaBox },
+    { id: 'orders', label: 'Orders', icon: FaClipboardList },
+    { id: 'analytics', label: 'Analytics', icon: FaChartBar },
+    { id: 'community', label: 'Community', icon: FaUsers },
+    { id: 'settings', label: 'Settings', icon: FaCog }
+  ];
+
+  return (
+    <div className="min-h-screen w-full bg-gray-50">
+      {/* Navigation Header - Full Width Fixed */}
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b ${
+        isScrolled 
+          ? 'bg-white/95 backdrop-blur-md shadow-lg border-green-500/20 py-2' 
+          : 'bg-white shadow-lg py-3 border-gray-200'
+      }`}>
+        <div className="px-2 sm:px-4 lg:px-6 2xl:px-8">
+          <div className="flex justify-between items-center h-14">
+            {/* Logo and Mobile Menu */}
+            <div className="flex items-center min-w-0">
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="sidebar-toggle lg:hidden mr-2 p-2 rounded-lg bg-green-500/20 hover:bg-green-500/30 transition-colors flex-shrink-0"
+              >
+                <FaBars className="text-green-600 text-lg" />
+              </button>
+              <FaTractor className="text-green-600 text-2xl mr-2 flex-shrink-0" />
+              <span className="text-lg sm:text-xl font-bold text-gray-800 truncate">
+                <span className="hidden sm:inline">Sri Lankan Farmer Portal</span>
+                <span className="sm:hidden">Farmer Portal</span>
+              </span>
+            </div>
+
+            {/* Right Side Actions */}
+            <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
+              {/* Notifications */}
+              <div className="relative">
+                <button className="p-2 rounded-full bg-green-500/20 hover:bg-green-500/30 transition-colors relative">
+                  <FaBell className="text-green-600 text-lg" />
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {notifications.length}
+                  </span>
+                </button>
+              </div>
+
+              {/* Profile */}
+              <div className="flex items-center space-x-2 sm:space-x-3">
+                <div className="hidden md:block text-right">
+                  <p className="text-sm font-semibold text-gray-800 truncate max-w-32">{currentUser.name}</p>
+                  <p className="text-xs text-gray-600 truncate max-w-32">{currentUser.location}</p>
+                </div>
+                <img 
+                  src={currentUser.avatar} 
+                  alt="Profile" 
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-green-500/30 flex-shrink-0" 
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <div className="flex pt-20 w-full min-h-screen">
+        {/* Sidebar - Optimized Width */}
+        <aside className={`sidebar fixed lg:static inset-y-0 left-0 z-40 w-64 xl:w-80 2xl:w-96 bg-white border-r border-green-500/20 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}>
+          <div className="p-4 xl:p-6 2xl:p-8 pt-0 h-full overflow-y-auto">
+            <nav className="space-y-1 xl:space-y-2">
+              {sidebarItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActiveTab(item.id);
+                    setSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center px-3 xl:px-4 2xl:px-6 py-2.5 xl:py-3 2xl:py-4 text-left rounded-xl transition-all duration-200 text-sm xl:text-base 2xl:text-lg ${
+                    activeTab === item.id
+                      ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg'
+                      : 'text-gray-700 hover:bg-green-500/10 hover:text-green-600'
+                  }`}
+                >
+                  <item.icon className="mr-2 xl:mr-3 2xl:mr-4 text-lg xl:text-xl 2xl:text-2xl" />
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+
+            {/* Logout Button */}
+            <div className="absolute bottom-4 xl:bottom-6 2xl:bottom-8 left-4 xl:left-6 2xl:left-8 right-4 xl:right-6 2xl:right-8">
+              <button className="w-full flex items-center px-3 xl:px-4 2xl:px-6 py-2.5 xl:py-3 2xl:py-4 text-left rounded-xl text-red-600 hover:bg-red-50 transition-colors text-sm xl:text-base 2xl:text-lg">
+                <FaSignOutAlt className="mr-2 xl:mr-3 2xl:mr-4 text-lg xl:text-xl 2xl:text-2xl" />
+                Logout
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        {/* Main Content - Maximum Width Utilization */}
+        <main className="flex-1 w-full min-w-0">
+          <div className="px-2 sm:px-4 lg:px-6 2xl:px-8 py-4 lg:py-6 2xl:py-8 w-full">
+            
+            {/* Dashboard Tab */}
+            {activeTab === 'dashboard' && (
+              <div className="w-full space-y-6 2xl:space-y-8">
+                {/* Welcome Header */}
+                <div className="mb-6 lg:mb-8 2xl:mb-12">
+                  <h1 className="text-2xl lg:text-3xl xl:text-4xl 2xl:text-5xl font-bold text-gray-800 mb-2">
+                    Welcome back, {currentUser.name}!
+                  </h1>
+                  <p className="text-gray-600 text-sm lg:text-base xl:text-lg 2xl:text-xl">
+                    Manage your farm products and track your sales
+                  </p>
+                </div>
+
+                {/* Stats Cards - Enhanced Full Width Grid */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 2xl:gap-8 mb-6 lg:mb-8 2xl:mb-12">
+                  {[
+                    { title: 'Total Products', value: dashboardStats.totalProducts, icon: FaBox, color: 'blue' },
+                    { title: 'Active Products', value: dashboardStats.activeProducts, icon: FaCheck, color: 'green' },
+                    { title: 'Total Sales', value: dashboardStats.totalSales, icon: FaShoppingCart, color: 'purple' },
+                    { title: 'Revenue', value: `Rs.${dashboardStats.totalRevenue.toLocaleString()}`, icon: FaRupeeSign, color: 'orange' }
+                  ].map((stat, index) => (
+                    <div key={index} className="bg-white p-4 sm:p-6 lg:p-8 2xl:p-10 rounded-xl shadow-lg border border-green-500/10 hover:shadow-xl transition-all">
+                      <div className="flex items-center justify-between">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-gray-600 text-xs sm:text-sm lg:text-base 2xl:text-lg font-medium truncate">{stat.title}</p>
+                          <p className="text-lg sm:text-xl lg:text-2xl 2xl:text-3xl font-bold text-gray-800 mt-1 truncate">{stat.value}</p>
+                        </div>
+                        <div className={`p-3 sm:p-4 lg:p-5 2xl:p-6 rounded-xl bg-${stat.color}-500/20 flex-shrink-0`}>
+                          <stat.icon className={`text-${stat.color}-600 text-xl sm:text-2xl lg:text-3xl 2xl:text-4xl`} />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Quick Actions - Full Width */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 2xl:gap-8 mb-6 lg:mb-8 2xl:mb-12">
+                  <button 
+                    onClick={() => setShowAddProduct(true)}
+                    className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-6 lg:p-8 2xl:p-10 rounded-xl hover:shadow-xl transition-all text-center group"
+                  >
+                    <FaPlus className="text-3xl lg:text-4xl 2xl:text-5xl mx-auto mb-3 lg:mb-4 2xl:mb-6 group-hover:scale-110 transition-transform" />
+                    <h3 className="font-semibold text-lg lg:text-xl 2xl:text-2xl">Add New Product</h3>
+                    <p className="text-green-100 text-sm lg:text-base 2xl:text-lg">Upload and list your products</p>
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('products')}
+                    className="bg-white p-6 lg:p-8 2xl:p-10 rounded-xl shadow-lg hover:shadow-xl transition-all text-center border border-green-500/10 group"
+                  >
+                    <FaEye className="text-3xl lg:text-4xl 2xl:text-5xl text-blue-600 mx-auto mb-3 lg:mb-4 2xl:mb-6 group-hover:scale-110 transition-transform" />
+                    <h3 className="font-semibold text-gray-800 text-lg lg:text-xl 2xl:text-2xl">View Products</h3>
+                    <p className="text-gray-600 text-sm lg:text-base 2xl:text-lg">Manage your product listings</p>
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('analytics')}
+                    className="bg-white p-6 lg:p-8 2xl:p-10 rounded-xl shadow-lg hover:shadow-xl transition-all text-center border border-green-500/10 group"
+                  >
+                    <FaChartBar className="text-3xl lg:text-4xl 2xl:text-5xl text-orange-600 mx-auto mb-3 lg:mb-4 2xl:mb-6 group-hover:scale-110 transition-transform" />
+                    <h3 className="font-semibold text-gray-800 text-lg lg:text-xl 2xl:text-2xl">View Analytics</h3>
+                    <p className="text-gray-600 text-sm lg:text-base 2xl:text-lg">Track your performance</p>
+                  </button>
+                </div>
+
+                {/* Recent Products - Maximum Width Utilization */}
+                <div className="bg-white rounded-xl shadow-lg p-6 lg:p-8 2xl:p-10 border border-green-500/10 w-full">
+                  <div className="flex justify-between items-center mb-6 lg:mb-8 2xl:mb-10">
+                    <h2 className="text-xl lg:text-2xl 2xl:text-3xl font-bold text-gray-800">Recent Products</h2>
+                    <button 
+                      onClick={() => setActiveTab('products')}
+                      className="text-green-600 hover:text-green-700 font-semibold text-sm lg:text-base 2xl:text-lg"
+                    >
+                      View All
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4 lg:gap-6 2xl:gap-8">
+                    {products.slice(0, 6).map((product) => (
+                      <div key={product.id} className="border border-gray-200 rounded-lg p-4 lg:p-6 2xl:p-8 hover:shadow-lg transition-all">
+                        <img 
+                          src={product.images[0]} 
+                          alt={product.name} 
+                          className="w-full h-32 lg:h-36 2xl:h-40 object-cover rounded mb-3 lg:mb-4" 
+                        />
+                        <h3 className="font-semibold text-gray-800 mb-2 text-sm lg:text-base 2xl:text-lg truncate">{product.name}</h3>
+                        <p className="text-green-600 font-bold mb-2 text-sm lg:text-base 2xl:text-lg">Rs.{product.price}</p>
+                        <div className="flex justify-between text-xs lg:text-sm 2xl:text-base text-gray-600">
+                          <span className="truncate">Stock: {product.stock} {product.unit}</span>
+                          <span className={`px-2 py-1 rounded-full text-xs 2xl:text-sm ${
+                            product.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {product.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Products Tab - Maximum Grid Coverage */}
+            {activeTab === 'products' && (
+              <div className="w-full space-y-6 2xl:space-y-8">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 lg:mb-8 2xl:mb-12 gap-4">
+                  <div>
+                    <h1 className="text-2xl lg:text-3xl xl:text-4xl 2xl:text-5xl font-bold text-gray-800 mb-2">My Products</h1>
+                    <p className="text-gray-600 text-sm lg:text-base xl:text-lg 2xl:text-xl">Manage and track your product listings</p>
+                  </div>
+                  <button 
+                    onClick={() => setShowAddProduct(true)}
+                    className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-6 lg:px-8 2xl:px-10 py-3 lg:py-4 2xl:py-5 rounded-xl flex items-center shadow-lg text-sm lg:text-base 2xl:text-lg"
+                  >
+                    <FaPlus className="mr-2 lg:mr-3" /> Add New Product
+                  </button>
+                </div>
+
+                {/* Products Grid - Maximum Screen Coverage */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 3xl:grid-cols-8 gap-4 lg:gap-6 2xl:gap-8">
+                  {products.map((product) => (
+                    <div key={product.id} className="bg-white rounded-xl shadow-lg border border-green-500/10 overflow-hidden hover:shadow-xl transition-all">
+                      <div className="relative">
+                        <img 
+                          src={product.images[0]} 
+                          alt={product.name} 
+                          className="w-full h-40 lg:h-48 2xl:h-56 object-cover" 
+                        />
+                        <div className="absolute top-3 right-3">
+                          <span className={`px-2 lg:px-3 2xl:px-4 py-1 2xl:py-2 rounded-full text-xs 2xl:text-sm font-semibold ${
+                            product.status === 'active' 
+                              ? 'bg-green-500 text-white' 
+                              : 'bg-gray-500 text-white'
+                          }`}>
+                            {product.status}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="p-4 lg:p-6 2xl:p-8">
+                        <h3 className="font-bold text-gray-800 text-base lg:text-lg 2xl:text-xl mb-2 truncate">{product.name}</h3>
+                        <p className="text-gray-600 text-xs lg:text-sm 2xl:text-base mb-3 line-clamp-2">{product.description}</p>
+                        
+                        <div className="space-y-1.5 lg:space-y-2 2xl:space-y-3 mb-4 lg:mb-6">
+                          <div className="flex justify-between text-xs lg:text-sm 2xl:text-base">
+                            <span className="text-gray-600">Price:</span>
+                            <span className="font-semibold text-green-600">Rs.{product.price}</span>
+                          </div>
+                          <div className="flex justify-between text-xs lg:text-sm 2xl:text-base">
+                            <span className="text-gray-600">Stock:</span>
+                            <span className="font-semibold">{product.stock} {product.unit}</span>
+                          </div>
+                          <div className="flex justify-between text-xs lg:text-sm 2xl:text-base">
+                            <span className="text-gray-600">Sales:</span>
+                            <span className="font-semibold">{product.sales}</span>
+                          </div>
+                          <div className="flex justify-between text-xs lg:text-sm 2xl:text-base">
+                            <span className="text-gray-600">Views:</span>
+                            <span className="font-semibold">{product.views}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex space-x-1.5 lg:space-x-2 2xl:space-x-3">
+                          <button 
+                            onClick={() => editProduct(product)}
+                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 lg:py-3 2xl:py-4 px-2 lg:px-3 2xl:px-4 rounded-lg text-xs lg:text-sm 2xl:text-base flex items-center justify-center"
+                          >
+                            <FaEdit className="mr-1" /> Edit
+                          </button>
+                          <button 
+                            onClick={() => toggleProductStatus(product.id)}
+                            className={`flex-1 py-2 lg:py-3 2xl:py-4 px-2 lg:px-3 2xl:px-4 rounded-lg text-xs lg:text-sm 2xl:text-base flex items-center justify-center ${
+                              product.status === 'active'
+                                ? 'bg-orange-600 hover:bg-orange-700 text-white'
+                                : 'bg-green-600 hover:bg-green-700 text-white'
+                            }`}
+                          >
+                            {product.status === 'active' ? 'Pause' : 'Activate'}
+                          </button>
+                          <button 
+                            onClick={() => deleteProduct(product.id)}
+                            className="bg-red-600 hover:bg-red-700 text-white py-2 lg:py-3 2xl:py-4 px-2 lg:px-3 2xl:px-4 rounded-lg text-xs lg:text-sm 2xl:text-base"
+                          >
+                            <FaTrash />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {products.length === 0 && (
+                  <div className="text-center py-16 2xl:py-24">
+                    <FaBox className="text-6xl 2xl:text-8xl text-gray-300 mx-auto mb-4 2xl:mb-6" />
+                    <h3 className="text-xl 2xl:text-2xl font-semibold text-gray-600 mb-2">No products yet</h3>
+                    <p className="text-gray-500 mb-6 2xl:mb-8 text-base 2xl:text-lg">Start by adding your first product to the marketplace</p>
+                    <button 
+                      onClick={() => setShowAddProduct(true)}
+                      className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 2xl:px-8 py-3 2xl:py-4 rounded-xl text-base 2xl:text-lg"
+                    >
+                      Add Your First Product
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Other tabs content - Full Width Optimized */}
+            {activeTab === 'orders' && (
+              <div className="w-full space-y-6 2xl:space-y-8">
+                <div className="mb-6 lg:mb-8 2xl:mb-12">
+                  <h1 className="text-2xl lg:text-3xl xl:text-4xl 2xl:text-5xl font-bold text-gray-800 mb-2">Orders Management</h1>
+                  <p className="text-gray-600 text-sm lg:text-base xl:text-lg 2xl:text-xl">Track and manage your customer orders</p>
+                </div>
+                <div className="text-center py-16 2xl:py-24">
+                  <FaClipboardList className="text-6xl 2xl:text-8xl text-gray-300 mx-auto mb-4 2xl:mb-6" />
+                  <h3 className="text-xl 2xl:text-2xl font-semibold text-gray-600">Orders Management</h3>
+                  <p className="text-gray-500 text-base 2xl:text-lg">Track and manage your customer orders</p>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'analytics' && (
+              <div className="w-full space-y-6 2xl:space-y-8">
+                <div className="mb-6 lg:mb-8 2xl:mb-12">
+                  <h1 className="text-2xl lg:text-3xl xl:text-4xl 2xl:text-5xl font-bold text-gray-800 mb-2">Analytics Dashboard</h1>
+                  <p className="text-gray-600 text-sm lg:text-base xl:text-lg 2xl:text-xl">View detailed insights about your sales and performance</p>
+                </div>
+                <div className="text-center py-16 2xl:py-24">
+                  <FaChartBar className="text-6xl 2xl:text-8xl text-gray-300 mx-auto mb-4 2xl:mb-6" />
+                  <h3 className="text-xl 2xl:text-2xl font-semibold text-gray-600">Analytics Dashboard</h3>
+                  <p className="text-gray-500 text-base 2xl:text-lg">View detailed insights about your sales and performance</p>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'community' && (
+              <div className="w-full space-y-6 2xl:space-y-8">
+                <div className="mb-6 lg:mb-8 2xl:mb-12">
+                  <h1 className="text-2xl lg:text-3xl xl:text-4xl 2xl:text-5xl font-bold text-gray-800 mb-2">Community Hub</h1>
+                  <p className="text-gray-600 text-sm lg:text-base xl:text-lg 2xl:text-xl">Connect with other farmers and share knowledge</p>
+                </div>
+                <div className="text-center py-16 2xl:py-24">
+                  <FaUsers className="text-6xl 2xl:text-8xl text-gray-300 mx-auto mb-4 2xl:mb-6" />
+                  <h3 className="text-xl 2xl:text-2xl font-semibold text-gray-600">Community Hub</h3>
+                  <p className="text-gray-500 text-base 2xl:text-lg">Connect with other farmers and share knowledge</p>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'settings' && (
+              <div className="w-full space-y-6 2xl:space-y-8">
+                <div className="mb-6 lg:mb-8 2xl:mb-12">
+                  <h1 className="text-2xl lg:text-3xl xl:text-4xl 2xl:text-5xl font-bold text-gray-800 mb-2">Account Settings</h1>
+                  <p className="text-gray-600 text-sm lg:text-base xl:text-lg 2xl:text-xl">Manage your profile and account preferences</p>
+                </div>
+                <div className="text-center py-16 2xl:py-24">
+                  <FaCog className="text-6xl 2xl:text-8xl text-gray-300 mx-auto mb-4 2xl:mb-6" />
+                  <h3 className="text-xl 2xl:text-2xl font-semibold text-gray-600">Account Settings</h3>
+                  <p className="text-gray-500 text-base 2xl:text-lg">Manage your profile and account preferences</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </main>
+      </div>
+
+      {/* Add/Edit Product Modal - Full Screen Optimized */}
+      {showAddProduct && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 lg:p-6">
+          <div className="bg-white rounded-2xl w-full max-w-[98vw] 2xl:max-w-[95vw] max-h-[95vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 lg:p-6 2xl:p-8 rounded-t-2xl">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl lg:text-2xl 2xl:text-3xl font-bold text-gray-800">
+                  {editingProduct ? 'Edit Product' : 'Add New Product'}
+                </h2>
+                <button 
+                  onClick={() => {
+                    setShowAddProduct(false);
+                    setEditingProduct(null);
+                    setProductForm({
+                      name: '', price: '', category: '', stock: '', unit: '', description: '', images: [], status: 'active'
+                    });
+                    setPreviewImages([]);
+                  }}
+                  className="p-2 lg:p-3 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <FaTimes className="text-gray-600 text-xl 2xl:text-2xl" />
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmitProduct} className="p-4 lg:p-6 2xl:p-8">
+              <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6 lg:gap-8 2xl:gap-12">
+                {/* Left Column - Product Details */}
+                <div className="space-y-4 lg:space-y-6 2xl:space-y-8 xl:col-span-1 2xl:col-span-2">
+                  {/* Product Name */}
+                  <div>
+                    <label className="block text-sm lg:text-base 2xl:text-lg font-semibold text-gray-700 mb-2 lg:mb-3">
+                      Product Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={productForm.name}
+                      onChange={(e) => setProductForm(prev => ({ ...prev, name: e.target.value }))}
+                      className="w-full px-4 lg:px-6 2xl:px-8 py-3 lg:py-4 2xl:py-5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm lg:text-base 2xl:text-lg"
+                      placeholder="Enter product name"
+                    />
+                  </div>
+
+                  {/* Category and Price */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 2xl:gap-8">
+                    <div>
+                      <label className="block text-sm lg:text-base 2xl:text-lg font-semibold text-gray-700 mb-2 lg:mb-3">
+                        Category *
+                      </label>
+                      <select
+                        required
+                        value={productForm.category}
+                        onChange={(e) => setProductForm(prev => ({ ...prev, category: e.target.value }))}
+                        className="w-full px-4 lg:px-6 2xl:px-8 py-3 lg:py-4 2xl:py-5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm lg:text-base 2xl:text-lg"
+                      >
+                        <option value="">Select category</option>
+                        {categories.map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm lg:text-base 2xl:text-lg font-semibold text-gray-700 mb-2 lg:mb-3">
+                        Price (Rs.) *
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        step="0.01"
+                        value={productForm.price}
+                        onChange={(e) => setProductForm(prev => ({ ...prev, price: e.target.value }))}
+                        className="w-full px-4 lg:px-6 2xl:px-8 py-3 lg:py-4 2xl:py-5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm lg:text-base 2xl:text-lg"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Stock and Unit */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 2xl:gap-8">
+                    <div>
+                      <label className="block text-sm lg:text-base 2xl:text-lg font-semibold text-gray-700 mb-2 lg:mb-3">
+                        Stock Quantity *
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        value={productForm.stock}
+                        onChange={(e) => setProductForm(prev => ({ ...prev, stock: e.target.value }))}
+                        className="w-full px-4 lg:px-6 2xl:px-8 py-3 lg:py-4 2xl:py-5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm lg:text-base 2xl:text-lg"
+                        placeholder="Enter quantity"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm lg:text-base 2xl:text-lg font-semibold text-gray-700 mb-2 lg:mb-3">
+                        Unit *
+                      </label>
+                      <select
+                        required
+                        value={productForm.unit}
+                        onChange={(e) => setProductForm(prev => ({ ...prev, unit: e.target.value }))}
+                        className="w-full px-4 lg:px-6 2xl:px-8 py-3 lg:py-4 2xl:py-5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm lg:text-base 2xl:text-lg"
+                      >
+                        <option value="">Select unit</option>
+                        {units.map(unit => (
+                          <option key={unit} value={unit}>{unit}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <label className="block text-sm lg:text-base 2xl:text-lg font-semibold text-gray-700 mb-2 lg:mb-3">
+                      Description *
+                    </label>
+                    <textarea
+                      required
+                      rows={4}
+                      value={productForm.description}
+                      onChange={(e) => setProductForm(prev => ({ ...prev, description: e.target.value }))}
+                      className="w-full px-4 lg:px-6 2xl:px-8 py-3 lg:py-4 2xl:py-5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none text-sm lg:text-base 2xl:text-lg"
+                      placeholder="Describe your product, its quality, origin, and special features..."
+                    />
+                  </div>
+
+                  {/* Status */}
+                  <div>
+                    <label className="block text-sm lg:text-base 2xl:text-lg font-semibold text-gray-700 mb-2 lg:mb-3">
+                      Status
+                    </label>
+                    <select
+                      value={productForm.status}
+                      onChange={(e) => setProductForm(prev => ({ ...prev, status: e.target.value }))}
+                      className="w-full px-4 lg:px-6 2xl:px-8 py-3 lg:py-4 2xl:py-5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm lg:text-base 2xl:text-lg"
+                    >
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Right Column - Image Upload and Preview */}
+                <div className="space-y-4 lg:space-y-6 2xl:space-y-8">
+                  <div>
+                    <label className="block text-sm lg:text-base 2xl:text-lg font-semibold text-gray-700 mb-2 lg:mb-3">
+                      Product Images *
+                    </label>
+                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 lg:p-8 2xl:p-12 text-center hover:border-green-500 transition-colors">
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                        id="image-upload"
+                      />
+                      <label
+                        htmlFor="image-upload"
+                        className="cursor-pointer block"
+                      >
+                        <FaCamera className="text-4xl lg:text-5xl 2xl:text-6xl text-gray-400 mx-auto mb-4 lg:mb-6" />
+                        <p className="text-gray-600 font-semibold mb-2 text-sm lg:text-base 2xl:text-lg">
+                          Click to upload images
+                        </p>
+                        <p className="text-gray-500 text-xs lg:text-sm 2xl:text-base">
+                          Upload multiple images (JPG, PNG, WebP)
+                        </p>
+                        <p className="text-gray-500 text-xs lg:text-sm 2xl:text-base mt-1">
+                          First image will be the main product image
+                        </p>
+                      </label>
+                    </div>
+
+                    {/* Image Previews */}
+                    {previewImages.length > 0 && (
+                      <div className="mt-4 lg:mt-6 2xl:mt-8">
+                        <h4 className="text-sm lg:text-base 2xl:text-lg font-semibold text-gray-700 mb-3 lg:mb-4">
+                          Uploaded Images ({previewImages.length})
+                        </h4>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 2xl:grid-cols-3 gap-3 lg:gap-4 2xl:gap-6">
+                          {previewImages.map((image, index) => (
+                            <div key={index} className="relative group">
+                              <img
+                                src={image}
+                                alt={`Preview ${index + 1}`}
+                                className="w-full h-20 lg:h-24 2xl:h-32 object-cover rounded-lg border border-gray-200"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeImage(index)}
+                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 lg:w-8 lg:h-8 2xl:w-10 2xl:h-10 flex items-center justify-center text-xs lg:text-sm 2xl:text-base hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100"
+                              >
+                                <FaTimes />
+                              </button>
+                              {index === 0 && (
+                                <div className="absolute bottom-1 left-1 bg-green-500 text-white text-xs lg:text-sm 2xl:text-base px-2 py-1 rounded">
+                                  Main
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Product Tips */}
+                  <div className="bg-green-50 border border-green-200 rounded-xl p-4 lg:p-6 2xl:p-8">
+                    <h4 className="text-sm lg:text-base 2xl:text-lg font-semibold text-green-800 mb-2 lg:mb-3 flex items-center">
+                      <FaLeaf className="mr-2 lg:mr-3" />
+                      Tips for Better Sales
+                    </h4>
+                    <ul className="text-xs lg:text-sm 2xl:text-base text-green-700 space-y-1 lg:space-y-2">
+                      <li>• Use high-quality, well-lit photos</li>
+                      <li>• Write detailed, honest descriptions</li>
+                      <li>• Set competitive but fair prices</li>
+                      <li>• Keep stock quantities updated</li>
+                      <li>• Respond quickly to customer inquiries</li>
+                    </ul>
+                  </div>
+
+                  {/* Preview Card */}
+                  {productForm.name && productForm.price && (
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 lg:p-6 2xl:p-8">
+                      <h4 className="text-sm lg:text-base 2xl:text-lg font-semibold text-gray-700 mb-3 lg:mb-4">Preview</h4>
+                      <div className="bg-white rounded-lg border p-4 lg:p-6">
+                        {previewImages.length > 0 && (
+                          <img
+                            src={previewImages[0]}
+                            alt="Preview"
+                            className="w-full h-32 lg:h-36 2xl:h-40 object-cover rounded mb-3 lg:mb-4"
+                          />
+                        )}
+                        <h5 className="font-semibold text-gray-800 mb-1 lg:mb-2 text-sm lg:text-base 2xl:text-lg">{productForm.name}</h5>
+                        <p className="text-green-600 font-bold mb-2 lg:mb-3 text-sm lg:text-base 2xl:text-lg">Rs.{productForm.price}</p>
+                        {productForm.description && (
+                          <p className="text-gray-600 text-xs lg:text-sm 2xl:text-base line-clamp-2">{productForm.description}</p>
+                        )}
+                        {productForm.stock && productForm.unit && (
+                          <p className="text-gray-500 text-xs lg:text-sm 2xl:text-base mt-2 lg:mt-3">
+                            Stock: {productForm.stock} {productForm.unit}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Form Actions */}
+              <div className="flex flex-col sm:flex-row gap-4 lg:gap-6 2xl:gap-8 mt-6 lg:mt-8 2xl:mt-12 pt-6 lg:pt-8 2xl:pt-10 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddProduct(false);
+                    setEditingProduct(null);
+                    setProductForm({
+                      name: '', price: '', category: '', stock: '', unit: '', description: '', images: [], status: 'active'
+                    });
+                    setPreviewImages([]);
+                  }}
+                  className="flex-1 sm:flex-none px-6 lg:px-8 2xl:px-10 py-3 lg:py-4 2xl:py-5 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors text-sm lg:text-base 2xl:text-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUploading || !productForm.name || !productForm.price || !productForm.category || !productForm.stock || !productForm.unit || !productForm.description}
+                  className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 text-white px-6 lg:px-8 2xl:px-10 py-3 lg:py-4 2xl:py-5 rounded-xl transition-all flex items-center justify-center text-sm lg:text-base 2xl:text-lg"
+                >
+                  {isUploading ? (
+                    <>
+                      <FaSpinner className="mr-2 lg:mr-3 animate-spin" />
+                      {editingProduct ? 'Updating...' : 'Creating...'}
+                    </>
+                  ) : (
+                    <>
+                      <FaSave className="mr-2 lg:mr-3" />
+                      {editingProduct ? 'Update Product' : 'Create Product'}
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      {/* Success Message */}
+      {!showAddProduct && products.length > 0 && (
+        <div className="fixed bottom-4 lg:bottom-6 2xl:bottom-8 right-4 lg:right-6 2xl:right-8 z-40">
+          <div className="bg-green-500 text-white px-4 lg:px-6 2xl:px-8 py-2 lg:py-3 2xl:py-4 rounded-lg shadow-lg text-sm lg:text-base 2xl:text-lg">
+            Product saved successfully!
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default FarmerPortal;
