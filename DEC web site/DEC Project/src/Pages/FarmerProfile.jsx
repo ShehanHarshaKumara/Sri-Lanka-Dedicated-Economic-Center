@@ -1,278 +1,478 @@
-import React, { useState } from 'react';
-import { User, MapPin, Phone, Mail, Calendar, Wheat, Tractor, Award, Edit2, Save, X } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Camera, MapPin, Edit3, Save, X, User, Mail, Phone, Hash, Globe, Sparkles, Award, Sprout } from 'lucide-react';
 
-export default function FarmerProfilePage() {
+const CustomerProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
-  const [profile, setProfile] = useState({
-    name: "John Anderson",
-    location: "Green Valley, Iowa",
-    phone: "+1 (555) 123-4567",
-    email: "john.anderson@farmmail.com",
-    joinDate: "March 2020",
-    farmSize: "250 acres",
-    primaryCrops: "Corn, Soybeans, Wheat",
-    experience: "15 years",
-    certifications: "Organic Certified, Sustainable Farming",
-    bio: "Passionate organic farmer dedicated to sustainable agriculture practices. Specializing in crop rotation and soil health management with over 15 years of experience in modern farming techniques."
+  const [profileData, setProfileData] = useState({
+    firstName: 'John',
+    lastName: 'Doe',
+    email: 'john.doe@example.com',
+    phone: '+1 (555) 123-4567',
+    age: '32',
+    nicNumber: '123456789V',
+    experience: '8 years',
+    farmingType: 'Organic Vegetable Farming',
+    address: '123 Main Street',
+    city: 'New York',
+    bio: 'Passionate about sustainable agriculture and organic farming. Love exploring new farming techniques and meeting fellow farmers.',
+    profileImage: null
   });
-
-  const [editedProfile, setEditedProfile] = useState({ ...profile });
-
-  const handleEdit = () => {
-    setIsEditing(true);
-    setEditedProfile({ ...profile });
-  };
-
-  const handleSave = () => {
-    setProfile({ ...editedProfile });
-    setIsEditing(false);
-  };
-
-  const handleCancel = () => {
-    setEditedProfile({ ...profile });
-    setIsEditing(false);
-  };
+  
+  const [location, setLocation] = useState({
+    lat: 40.7128,
+    lng: -74.0060,
+    address: 'New York, NY, USA'
+  });
+  
+  const [mapCenter, setMapCenter] = useState({ lat: 40.7128, lng: -74.0060 });
+  const fileInputRef = useRef(null);
 
   const handleInputChange = (field, value) => {
-    setEditedProfile(prev => ({
+    setProfileData(prev => ({
       ...prev,
       [field]: value
     }));
   };
 
+  const handleImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setProfileData(prev => ({
+          ...prev,
+          profileImage: e.target.result
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleLocationClick = (e) => {
+    if (isEditing) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      const lat = mapCenter.lat + (rect.height / 2 - y) * 0.001;
+      const lng = mapCenter.lng + (x - rect.width / 2) * 0.001;
+      
+      setLocation({
+        lat: lat,
+        lng: lng,
+        address: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`
+      });
+    }
+  };
+
+  const getCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setLocation({
+            lat: latitude,
+            lng: longitude,
+            address: `Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`
+          });
+          setMapCenter({ lat: latitude, lng: longitude });
+        },
+        () => {
+          alert('Unable to retrieve your location');
+        }
+      );
+    }
+  };
+
+  const handleSave = () => {
+    setIsEditing(false);
+    alert('Profile updated successfully!');
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+  };
+
+  const inputClasses = "w-full px-4 py-3.5 text-gray-900 bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all duration-300 placeholder:text-gray-400 hover:bg-white/90 shadow-sm hover:shadow-md";
+  const readOnlyClasses = "text-gray-800 py-3.5 px-4 font-medium bg-gradient-to-r from-gray-50/80 to-white/60 backdrop-blur-sm rounded-2xl border border-gray-100/50 shadow-sm";
+
   return (
-    <div className="min-h-screen w-full bg-gray-900 text-gray-100">
-      {/* Header Section */}
-      <div className="w-full bg-gradient-to-r from-green-800 to-blue-800 py-8 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row items-center gap-6">
-            {/* Profile Avatar */}
-            <div className="relative">
-              <div className="w-32 h-32 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center">
-                <User size={64} className="text-white" />
+    <div className="min-h-screen w-full overflow-x-hidden bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
+      <div className="w-full min-h-screen">
+        {/* Floating Header with Glassmorphism - Full Width */}
+        <div className="relative bg-white/40 backdrop-blur-xl shadow-xl p-4 sm:p-6 lg:p-8 xl:p-10 overflow-hidden">
+          {/* Animated Background Elements */}
+          <div className="absolute top-0 right-0 w-48 h-48 sm:w-64 sm:h-64 lg:w-72 lg:h-72 xl:w-96 xl:h-96 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-0 left-0 w-56 h-56 sm:w-72 sm:h-72 lg:w-96 lg:h-96 xl:w-[30rem] xl:h-[30rem] bg-gradient-to-tr from-cyan-400/20 to-indigo-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+          
+          {/* Header Content */}
+          <div className="relative z-10 max-w-7xl mx-auto">
+            <div className="flex flex-col sm:flex-row justify-between items-start mb-6 sm:mb-8 lg:mb-10 gap-4 sm:gap-6">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="p-2 sm:p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl sm:rounded-2xl shadow-lg">
+                  <Sparkles className="text-white" size={24} />
+                </div>
+                <div>
+                  <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-purple-800 bg-clip-text text-transparent">
+                    Profile
+                  </h1>
+                  <p className="text-gray-600 mt-1 text-sm sm:text-base">Manage your personal information</p>
+                </div>
               </div>
-              <div className="absolute -bottom-2 -right-2 bg-green-500 rounded-full p-2">
-                <Wheat size={20} className="text-white" />
-              </div>
-            </div>
-
-            {/* Profile Info */}
-            <div className="flex-1 text-center md:text-left">
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editedProfile.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                  className="text-3xl font-bold bg-transparent border-b-2 border-white/50 text-white placeholder-white/70 focus:outline-none focus:border-white mb-2 w-full"
-                />
-              ) : (
-                <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">{profile.name}</h1>
-              )}
               
-              <div className="flex flex-wrap justify-center md:justify-start gap-4 text-white/90">
-                <div className="flex items-center gap-2">
-                  <MapPin size={18} />
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editedProfile.location}
-                      onChange={(e) => handleInputChange('location', e.target.value)}
-                      className="bg-transparent border-b border-white/50 focus:outline-none focus:border-white"
-                    />
-                  ) : (
-                    <span>{profile.location}</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar size={18} />
-                  <span>Joined {profile.joinDate}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Edit Button */}
-            <div className="flex gap-2">
-              {isEditing ? (
-                <>
+              {!isEditing ? (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="group flex items-center gap-2 sm:gap-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 sm:px-6 lg:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl hover:from-blue-700 hover:to-purple-700 transition-all duration-500 font-semibold shadow-lg hover:shadow-2xl transform hover:-translate-y-1 hover:scale-105 text-sm sm:text-base"
+                >
+                  <Edit3 size={18} className="group-hover:rotate-12 transition-transform duration-300" />
+                  Edit Profile
+                </button>
+              ) : (
+                <div className="flex gap-2 sm:gap-3">
                   <button
                     onClick={handleSave}
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-300"
+                    className="group flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl hover:from-emerald-600 hover:to-teal-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 text-sm sm:text-base"
                   >
-                    <Save size={18} />
+                    <Save size={16} className="group-hover:scale-110 transition-transform duration-300" />
                     Save
                   </button>
                   <button
                     onClick={handleCancel}
-                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-300"
+                    className="group flex items-center gap-2 bg-gradient-to-r from-gray-500 to-gray-600 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl hover:from-gray-600 hover:to-gray-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 text-sm sm:text-base"
                   >
-                    <X size={18} />
+                    <X size={16} className="group-hover:rotate-90 transition-transform duration-300" />
                     Cancel
                   </button>
-                </>
+                </div>
+              )}
+            </div>
+
+            {/* Profile Section */}
+            <div className="flex flex-col xl:flex-row gap-8 lg:gap-12">
+              {/* Profile Image */}
+              <div className="flex flex-col items-center xl:items-start">
+                <div className="relative group">
+                  <div className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 xl:w-52 xl:h-52 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center overflow-hidden border-2 sm:border-4 border-white/50 shadow-2xl backdrop-blur-sm">
+                    {profileData.profileImage ? (
+                      <img
+                        src={profileData.profileImage}
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User size={48} className="text-blue-400 sm:w-16 sm:h-16" />
+                    )}
+                  </div>
+                  {isEditing && (
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 bg-gradient-to-br from-blue-500 to-purple-600 text-white p-2 sm:p-3 lg:p-4 rounded-xl sm:rounded-2xl hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:scale-110 group-hover:animate-bounce"
+                    >
+                      <Camera size={16} className="sm:w-5 sm:h-5" />
+                    </button>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                </div>
+                <div className="mt-4 sm:mt-6 text-center xl:text-left">
+                  <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-gray-800 to-blue-600 bg-clip-text text-transparent">
+                    {profileData.firstName} {profileData.lastName}
+                  </h2>
+                  <p className="text-gray-600 mt-1 sm:mt-2 font-medium text-sm sm:text-base">{profileData.email}</p>
+                </div>
+              </div>
+
+              {/* Form Fields */}
+              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+                <div className="space-y-2 sm:space-y-3">
+                  <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">FIRST NAME</label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={profileData.firstName}
+                      onChange={(e) => handleInputChange('firstName', e.target.value)}
+                      className={inputClasses}
+                    />
+                  ) : (
+                    <p className={readOnlyClasses}>{profileData.firstName}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2 sm:space-y-3">
+                  <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">LAST NAME</label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={profileData.lastName}
+                      onChange={(e) => handleInputChange('lastName', e.target.value)}
+                      className={inputClasses}
+                    />
+                  ) : (
+                    <p className={readOnlyClasses}>{profileData.lastName}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2 sm:space-y-3">
+                  <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">EMAIL</label>
+                  <div className="relative">
+                    <Mail size={18} className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-blue-400" />
+                    {isEditing ? (
+                      <input
+                        type="email"
+                        value={profileData.email}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        className={inputClasses + " pl-10 sm:pl-12"}
+                      />
+                    ) : (
+                      <p className={readOnlyClasses + " pl-10 sm:pl-12"}>{profileData.email}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2 sm:space-y-3">
+                  <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">PHONE</label>
+                  <div className="relative">
+                    <Phone size={18} className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-blue-400" />
+                    {isEditing ? (
+                      <input
+                        type="tel"
+                        value={profileData.phone}
+                        onChange={(e) => handleInputChange('phone', e.target.value)}
+                        className={inputClasses + " pl-10 sm:pl-12"}
+                      />
+                    ) : (
+                      <p className={readOnlyClasses + " pl-10 sm:pl-12"}>{profileData.phone}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2 sm:space-y-3">
+                  <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">AGE</label>
+                  <div className="relative">
+                    <Hash size={18} className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-blue-400" />
+                    {isEditing ? (
+                      <input
+                        type="number"
+                        value={profileData.age}
+                        onChange={(e) => handleInputChange('age', e.target.value)}
+                        className={inputClasses + " pl-10 sm:pl-12"}
+                        min="18"
+                        max="100"
+                      />
+                    ) : (
+                      <p className={readOnlyClasses + " pl-10 sm:pl-12"}>{profileData.age} years</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2 sm:space-y-3">
+                  <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">NIC NUMBER</label>
+                  <div className="relative">
+                    <Hash size={18} className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-blue-400" />
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={profileData.nicNumber}
+                        onChange={(e) => handleInputChange('nicNumber', e.target.value)}
+                        className={inputClasses + " pl-10 sm:pl-12"}
+                        placeholder="123456789V"
+                      />
+                    ) : (
+                      <p className={readOnlyClasses + " pl-10 sm:pl-12"}>{profileData.nicNumber}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2 sm:space-y-3">
+                  <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">EXPERIENCE</label>
+                  <div className="relative">
+                    <Award size={18} className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-blue-400" />
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={profileData.experience}
+                        onChange={(e) => handleInputChange('experience', e.target.value)}
+                        className={inputClasses + " pl-10 sm:pl-12"}
+                        placeholder="e.g., 5 years"
+                      />
+                    ) : (
+                      <p className={readOnlyClasses + " pl-10 sm:pl-12"}>{profileData.experience}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Address and Farming Section */}
+            <div className="mt-8 sm:mt-10 lg:mt-12 grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+              <div className="space-y-2 sm:space-y-3">
+                <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">ADDRESS</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={profileData.address}
+                    onChange={(e) => handleInputChange('address', e.target.value)}
+                    className={inputClasses}
+                  />
+                ) : (
+                  <p className={readOnlyClasses}>{profileData.address}</p>
+                )}
+              </div>
+
+              <div className="space-y-2 sm:space-y-3">
+                <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">CITY</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={profileData.city}
+                    onChange={(e) => handleInputChange('city', e.target.value)}
+                    className={inputClasses}
+                  />
+                ) : (
+                  <p className={readOnlyClasses}>{profileData.city}</p>
+                )}
+              </div>
+
+              <div className="space-y-2 sm:space-y-3">
+                <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">FARMING TYPE</label>
+                <div className="relative">
+                  <Sprout size={18} className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-green-500" />
+                  {isEditing ? (
+                    <select
+                      value={profileData.farmingType}
+                      onChange={(e) => handleInputChange('farmingType', e.target.value)}
+                      className={inputClasses + " pl-10 sm:pl-12"}
+                    >
+                      <option value="Organic Vegetable Farming">Organic Vegetable Farming</option>
+                      <option value="Rice Cultivation">Rice Cultivation</option>
+                      <option value="Fruit Cultivation">Fruit Cultivation</option>
+                      <option value="Livestock Farming">Livestock Farming</option>
+                      <option value="Dairy Farming">Dairy Farming</option>
+                      <option value="Poultry Farming">Poultry Farming</option>
+                      <option value="Aquaculture">Aquaculture</option>
+                      <option value="Mixed Farming">Mixed Farming</option>
+                      <option value="Spice Cultivation">Spice Cultivation</option>
+                      <option value="Tea Cultivation">Tea Cultivation</option>
+                      <option value="Coconut Cultivation">Coconut Cultivation</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  ) : (
+                    <p className={readOnlyClasses + " pl-10 sm:pl-12"}>{profileData.farmingType}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Bio Section */}
+            <div className="mt-6 sm:mt-8 space-y-2 sm:space-y-3">
+              <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">BIO</label>
+              {isEditing ? (
+                <textarea
+                  value={profileData.bio}
+                  onChange={(e) => handleInputChange('bio', e.target.value)}
+                  rows={4}
+                  className={inputClasses + " resize-none"}
+                  placeholder="Tell us about yourself..."
+                />
               ) : (
-                <button
-                  onClick={handleEdit}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-300"
-                >
-                  <Edit2 size={18} />
-                  Edit Profile
-                </button>
+                <p className={readOnlyClasses + " leading-relaxed"}>{profileData.bio}</p>
               )}
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Contact Information */}
-          <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 hover:border-green-500 transition-all duration-300">
-            <h2 className="text-xl font-semibold mb-4 text-green-400 flex items-center gap-2">
-              <Phone size={20} />
-              Contact Information
-            </h2>
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Phone size={18} className="text-gray-400" />
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editedProfile.phone}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                    className="bg-gray-700 border border-gray-600 rounded px-3 py-1 text-white focus:outline-none focus:border-green-500 flex-1"
-                  />
-                ) : (
-                  <span className="text-gray-300">{profile.phone}</span>
-                )}
+        {/* Location Section - Full Width */}
+        <div className="relative bg-white/40 backdrop-blur-xl shadow-xl p-4 sm:p-6 lg:p-8 xl:p-10 overflow-hidden">
+          {/* Background Elements */}
+          <div className="absolute top-0 left-0 w-48 h-48 sm:w-64 sm:h-64 lg:w-80 lg:h-80 bg-gradient-to-br from-emerald-400/20 to-blue-400/20 rounded-full blur-3xl animate-pulse delay-500"></div>
+          
+          <div className="relative z-10 max-w-7xl mx-auto">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 gap-4 sm:gap-6">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="p-2 sm:p-3 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-xl sm:rounded-2xl shadow-lg">
+                  <MapPin className="text-white" size={24} />
+                </div>
+                <div>
+                  <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 via-emerald-800 to-blue-800 bg-clip-text text-transparent">
+                    Location
+                  </h2>
+                  <p className="text-gray-600 mt-1 text-sm sm:text-base">Your current position</p>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <Mail size={18} className="text-gray-400" />
-                {isEditing ? (
-                  <input
-                    type="email"
-                    value={editedProfile.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
-                    className="bg-gray-700 border border-gray-600 rounded px-3 py-1 text-white focus:outline-none focus:border-green-500 flex-1"
-                  />
-                ) : (
-                  <span className="text-gray-300">{profile.email}</span>
-                )}
-              </div>
+              
+              {isEditing && (
+                <button
+                  onClick={getCurrentLocation}
+                  className="group bg-gradient-to-r from-emerald-500 to-blue-600 text-white px-4 sm:px-6 lg:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl hover:from-emerald-600 hover:to-blue-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 text-sm sm:text-base"
+                >
+                  <span className="group-hover:animate-pulse">📍 Use Current Location</span>
+                </button>
+              )}
             </div>
-          </div>
 
-          {/* Farm Details */}
-          <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 hover:border-green-500 transition-all duration-300">
-            <h2 className="text-xl font-semibold mb-4 text-green-400 flex items-center gap-2">
-              <Tractor size={20} />
-              Farm Details
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <label className="text-gray-400 text-sm">Farm Size</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editedProfile.farmSize}
-                    onChange={(e) => handleInputChange('farmSize', e.target.value)}
-                    className="bg-gray-700 border border-gray-600 rounded px-3 py-1 text-white focus:outline-none focus:border-green-500 w-full mt-1"
-                  />
-                ) : (
-                  <p className="text-white font-medium">{profile.farmSize}</p>
-                )}
-              </div>
-              <div>
-                <label className="text-gray-400 text-sm">Primary Crops</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editedProfile.primaryCrops}
-                    onChange={(e) => handleInputChange('primaryCrops', e.target.value)}
-                    className="bg-gray-700 border border-gray-600 rounded px-3 py-1 text-white focus:outline-none focus:border-green-500 w-full mt-1"
-                  />
-                ) : (
-                  <p className="text-white font-medium">{profile.primaryCrops}</p>
-                )}
-              </div>
-              <div>
-                <label className="text-gray-400 text-sm">Experience</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editedProfile.experience}
-                    onChange={(e) => handleInputChange('experience', e.target.value)}
-                    className="bg-gray-700 border border-gray-600 rounded px-3 py-1 text-white focus:outline-none focus:border-green-500 w-full mt-1"
-                  />
-                ) : (
-                  <p className="text-white font-medium">{profile.experience}</p>
-                )}
-              </div>
+            <div className="mb-4 sm:mb-6">
+              <p className="text-gray-700 font-semibold bg-gradient-to-r from-emerald-50 to-blue-50 backdrop-blur-sm rounded-xl sm:rounded-2xl px-4 sm:px-6 py-3 sm:py-4 border border-emerald-100/50 shadow-sm text-sm sm:text-base">
+                {location.address}
+              </p>
             </div>
-          </div>
 
-          {/* Certifications */}
-          <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 hover:border-green-500 transition-all duration-300">
-            <h2 className="text-xl font-semibold mb-4 text-green-400 flex items-center gap-2">
-              <Award size={20} />
-              Certifications
-            </h2>
-            {isEditing ? (
-              <textarea
-                value={editedProfile.certifications}
-                onChange={(e) => handleInputChange('certifications', e.target.value)}
-                className="bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-green-500 w-full h-24 resize-none"
-              />
-            ) : (
-              <div className="space-y-2">
-                {profile.certifications.split(', ').map((cert, index) => (
-                  <div key={index} className="bg-green-900/30 border border-green-600 rounded-lg px-3 py-2">
-                    <span className="text-green-300 font-medium">{cert}</span>
+            {/* Enhanced Map - Full Width */}
+            <div
+              onClick={handleLocationClick}
+              className={`relative w-full h-64 sm:h-80 lg:h-96 xl:h-[28rem] bg-gradient-to-br from-emerald-100 via-blue-100 to-cyan-100 rounded-2xl sm:rounded-3xl overflow-hidden ${
+                isEditing ? 'cursor-crosshair' : 'cursor-default'
+              } shadow-inner border-2 border-white/50 transition-all duration-500 hover:shadow-2xl group`}
+            >
+              {/* Grid Pattern */}
+              <div className="absolute inset-0 opacity-20">
+                <div className="w-full h-full" style={{
+                  backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(59, 130, 246, 0.3) 1px, transparent 0)',
+                  backgroundSize: '20px 20px'
+                }}></div>
+              </div>
+              
+              {/* Location marker */}
+              <div
+                className="absolute transform -translate-x-1/2 -translate-y-1/2 z-20 transition-all duration-500 group-hover:scale-110"
+                style={{
+                  left: `${50 + (location.lng - mapCenter.lng) * 500}%`,
+                  top: `${50 - (location.lat - mapCenter.lat) * 500}%`
+                }}
+              >
+                <div className="relative">
+                  <div className="bg-gradient-to-br from-red-500 to-pink-600 w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full border-2 sm:border-4 border-white shadow-2xl flex items-center justify-center animate-bounce">
+                    <div className="w-2 h-2 sm:w-3 sm:h-3 lg:w-4 lg:h-4 bg-white rounded-full"></div>
                   </div>
-                ))}
+                  <div className="absolute top-0 left-0 w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-red-400 rounded-full animate-ping opacity-75"></div>
+                </div>
               </div>
-            )}
-          </div>
 
-          {/* Bio Section - Full Width */}
-          <div className="lg:col-span-3 bg-gray-800 rounded-xl p-6 border border-gray-700 hover:border-green-500 transition-all duration-300">
-            <h2 className="text-xl font-semibold mb-4 text-green-400 flex items-center gap-2">
-              <User size={20} />
-              About
-            </h2>
-            {isEditing ? (
-              <textarea
-                value={editedProfile.bio}
-                onChange={(e) => handleInputChange('bio', e.target.value)}
-                className="bg-gray-700 border border-gray-600 rounded px-4 py-3 text-white focus:outline-none focus:border-green-500 w-full h-32 resize-none"
-                placeholder="Tell us about your farming journey..."
-              />
-            ) : (
-              <p className="text-gray-300 leading-relaxed">{profile.bio}</p>
-            )}
-          </div>
-        </div>
+              {/* Instructions */}
+              {isEditing && (
+                <div className="absolute top-3 sm:top-6 left-3 sm:left-6 bg-black/80 backdrop-blur-sm text-white px-3 sm:px-6 py-2 sm:py-4 rounded-xl sm:rounded-2xl font-semibold shadow-2xl border border-white/20 text-xs sm:text-sm">
+                  ✨ Click anywhere to set location
+                </div>
+              )}
+            </div>
 
-        {/* Stats Section */}
-        <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-gradient-to-br from-green-800 to-green-900 rounded-xl p-4 text-center border border-green-600">
-            <div className="text-2xl font-bold text-green-300">250</div>
-            <div className="text-green-200 text-sm">Acres Farmed</div>
-          </div>
-          <div className="bg-gradient-to-br from-blue-800 to-blue-900 rounded-xl p-4 text-center border border-blue-600">
-            <div className="text-2xl font-bold text-blue-300">15</div>
-            <div className="text-blue-200 text-sm">Years Experience</div>
-          </div>
-          <div className="bg-gradient-to-br from-yellow-800 to-yellow-900 rounded-xl p-4 text-center border border-yellow-600">
-            <div className="text-2xl font-bold text-yellow-300">3</div>
-            <div className="text-yellow-200 text-sm">Crop Types</div>
-          </div>
-          <div className="bg-gradient-to-br from-purple-800 to-purple-900 rounded-xl p-4 text-center border border-purple-600">
-            <div className="text-2xl font-bold text-purple-300">2</div>
-            <div className="text-purple-200 text-sm">Certifications</div>
+            <div className="mt-4 sm:mt-6 text-gray-600 bg-gradient-to-r from-blue-50/80 to-emerald-50/80 backdrop-blur-sm rounded-xl sm:rounded-2xl px-4 sm:px-6 py-3 sm:py-4 border border-blue-100/50">
+              {isEditing ? (
+                <p className="font-medium text-sm sm:text-base">🎯 Click on the map to set your location, or use the "Use Current Location" button to automatically detect your position.</p>
+              ) : (
+                <p className="font-medium text-sm sm:text-base">📍 Your current location is marked on the map above.</p>
+              )}
+            </div>
           </div>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default CustomerProfile;
