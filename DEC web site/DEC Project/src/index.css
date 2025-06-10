@@ -96,3 +96,28 @@ button:focus-visible {
     border-color: #60a5fa;
   }
 }
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  body {
+    flex-direction: column;
+    padding: 1rem;
+  }
+  h1 {
+    font-size: 2rem;
+  }
+  button {
+    font-size: 0.875rem;
+    padding: 0.5em 1em;
+  }
+}
+
+@media (max-width: 480px) {
+  h1 {
+    font-size: 1.5rem;
+  }
+  button {
+    font-size: 0.75rem;
+    padding: 0.5em 0.75em;
+  }
+}
