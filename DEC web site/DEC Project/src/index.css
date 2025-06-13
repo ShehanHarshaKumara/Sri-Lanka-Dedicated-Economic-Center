@@ -7,7 +7,7 @@
   font-weight: 400;
 
   color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(0, 0, 0, 0.9);
   background-color: #1e1e1e;
 
   font-synthesis: none;
@@ -36,7 +36,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background-color: var(--bg-color, #1e1e1e);
-  color: var(--text-color, rgba(255, 255, 255, 0.9));
+  color: var(--text-color, rgba(0, 0, 0, 0.9));
 }
 
 /* Heading Styling */
