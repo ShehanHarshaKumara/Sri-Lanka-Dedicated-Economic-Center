@@ -7,7 +7,6 @@ import {
 } from 'react-icons/fa';
 
 const FarmerPortal = ({ user, onLogout }) => {
-  // Use the passed user prop (must have correct id after login)
   const [currentUser, setCurrentUser] = useState({
     id: user?.id || 1,
     name: user?.name || 'Farmer User',
@@ -20,7 +19,6 @@ const FarmerPortal = ({ user, onLogout }) => {
     totalSales: 0
   });
 
-  // Update currentUser if user prop changes (important for logout/login)
   useEffect(() => {
     setCurrentUser({
       id: user?.id || 1,
@@ -35,7 +33,6 @@ const FarmerPortal = ({ user, onLogout }) => {
     });
   }, [user]);
 
-  // Products state
   const [products, setProducts] = useState([]);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -48,7 +45,6 @@ const FarmerPortal = ({ user, onLogout }) => {
     { id: 3, message: 'Low stock alert for Cinnamon', time: '2 days ago', type: 'warning' }
   ]);
 
-  // Product form state
   const [productForm, setProductForm] = useState({
     name: '',
     price: '',
@@ -62,6 +58,13 @@ const FarmerPortal = ({ user, onLogout }) => {
 
   const [previewImages, setPreviewImages] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
+  const [deletingProductId, setDeletingProductId] = useState(null);
 
   const categories = [
     'Fresh Produce', 'Spices', 'Grains', 'Fruits', 'Vegetables', 
@@ -85,9 +88,8 @@ const FarmerPortal = ({ user, onLogout }) => {
       document.removeEventListener('click', handleClickOutside);
     };
     // eslint-disable-next-line
-  }, [currentUser.id]); // refetch when user changes
+  }, [currentUser.id]);
 
-  // Fetch products from backend for the current farmer
   const fetchProducts = async () => {
     try {
       const res = await fetch('http://localhost:5001/api/products?farmer_id=' + currentUser.id);
@@ -98,7 +100,6 @@ const FarmerPortal = ({ user, onLogout }) => {
     }
   };
 
-  // Dashboard stats
   const dashboardStats = {
     totalProducts: products.length,
     activeProducts: products.filter(p => p.status === 'active').length,
@@ -107,7 +108,6 @@ const FarmerPortal = ({ user, onLogout }) => {
     totalRevenue: products.reduce((sum, p) => sum + ((p.price || 0) * (p.sales || 0)), 0)
   };
 
-  // Handle image upload
   const handleImageUpload = (event) => {
     const files = Array.from(event.target.files);
     const newImages = [];
@@ -126,7 +126,6 @@ const FarmerPortal = ({ user, onLogout }) => {
     setPreviewImages(prev => [...prev, ...newPreviews]);
   };
 
-  // Remove image
   const removeImage = (index) => {
     const newImages = productForm.images.filter((_, i) => i !== index);
     const newPreviews = previewImages.filter((_, i) => i !== index);
@@ -134,10 +133,26 @@ const FarmerPortal = ({ user, onLogout }) => {
     setPreviewImages(newPreviews);
   };
 
-  // Handle form submission (upload to backend)
+  const showSuccessNotification = (message) => {
+    setSuccessMessage(message);
+    setShowSuccess(true);
+    setTimeout(() => {
+      setShowSuccess(false);
+    }, 3000);
+  };
+
+  // Handle form submission (upload or update)
   const handleSubmitProduct = async (e) => {
     e.preventDefault();
     setIsUploading(true);
+    setFormError('');
+
+    // Validation
+    if (!productForm.name || !productForm.price || !productForm.category || !productForm.stock || !productForm.unit || !productForm.description) {
+      setFormError('Please fill in all required fields');
+      setIsUploading(false);
+      return;
+    }
 
     const formData = new FormData();
     formData.append('farmer_id', currentUser.id);
@@ -147,19 +162,40 @@ const FarmerPortal = ({ user, onLogout }) => {
     formData.append('quantity', productForm.stock);
     formData.append('category', productForm.category);
     formData.append('address', currentUser.location || '');
-    // Optionally add lat/lng if available
-    // formData.append('lat', ...);
-    // formData.append('lng', ...);
-    productForm.images.forEach((img) => {
-      formData.append('images', img);
-    });
+    formData.append('unit', productForm.unit);
+    formData.append('status', productForm.status);
+
+    // Handle images
+    if (productForm.images && productForm.images.length > 0) {
+      productForm.images.forEach((img) => {
+        formData.append('images', img);
+      });
+    }
 
     try {
-      const response = await fetch('http://localhost:5001/api/products/upload', {
-        method: 'POST',
-        body: formData
-      });
-      const data = await response.json();
+      let response, data;
+      if (editingProduct) {
+        // If no new image is uploaded, send the existing image_url
+        if (productForm.images.length === 0 && editingProduct.image_url) {
+          formData.append('image_url', editingProduct.image_url);
+        }
+        
+        console.log('Updating product with ID:', editingProduct.id);
+        response = await fetch(`http://localhost:5001/api/products/${editingProduct.id}`, {
+          method: 'PUT',
+          body: formData
+        });
+      } else {
+        console.log('Creating new product');
+        response = await fetch('http://localhost:5001/api/products/upload', {
+          method: 'POST',
+          body: formData
+        });
+      }
+
+      data = await response.json();
+      console.log('Server response:', data);
+
       if (data.success) {
         setShowAddProduct(false);
         setEditingProduct(null);
@@ -167,46 +203,156 @@ const FarmerPortal = ({ user, onLogout }) => {
           name: '', price: '', category: '', stock: '', unit: '', description: '', images: [], status: 'active'
         });
         setPreviewImages([]);
-        fetchProducts();
-        alert('Product uploaded successfully!');
+        await fetchProducts();
+        setFormError('');
+        showSuccessNotification(editingProduct ? 'Product updated successfully!' : 'Product uploaded successfully!');
       } else {
-        alert('Error uploading product: ' + (data.error || 'Unknown error'));
+        setFormError(data.error || 'Unknown error occurred');
+        console.error('Server error:', data.error);
       }
-    } catch {
-      alert('Network or server error');
+    } catch (err) {
+      console.error('Network error:', err);
+      setFormError('Network or server error: ' + err.message);
     }
     setIsUploading(false);
   };
 
-  // Edit product (local only, not DB)
+  // Edit product (populate form)
   const editProduct = (product) => {
     setEditingProduct(product);
     setProductForm({
-      name: product.name,
-      price: product.price.toString(),
-      category: product.category,
+      name: product.name || '',
+      price: product.price ? product.price.toString() : '',
+      category: product.category || '',
       stock: product.quantity ? product.quantity.toString() : '',
-      unit: product.unit || '',
-      description: product.description,
+      unit: product.unit || 'kg',
+      description: product.description || '',
       images: [],
       status: product.status || 'active'
     });
     setPreviewImages(product.image_url ? [product.image_url] : []);
     setShowAddProduct(true);
+    setFormError(''); // Clear any previous errors
   };
 
-  // Delete product (optional, not implemented in backend)
-  const deleteProduct = (id) => {
-    if (window.confirm('Are you sure you want to delete this product?')) {
-      setProducts(prev => prev.filter(p => p.id !== id));
+  // Delete product with modal
+  const handleDeleteClick = (product) => {
+    setProductToDelete(product);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!productToDelete) return;
+    
+    const id = productToDelete.id;
+    setDeletingProductId(id);
+    setShowDeleteModal(false);
+    
+    try {
+      const response = await fetch(`http://localhost:5001/api/products/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        setProducts(prev => prev.filter(p => p.id !== id));
+        showSuccessNotification(`Product "${productToDelete.name}" deleted successfully!`);
+      } else {
+        const errorMessage = data.error || 'Failed to delete product';
+        alert(`Error: ${errorMessage}`);
+        console.error('Delete error:', errorMessage);
+      }
+    } catch (err) {
+      console.error('Delete error:', err);
+      alert('Network error: Could not delete product. Please check your connection and try again.');
+    } finally {
+      setDeletingProductId(null);
+      setProductToDelete(null);
     }
   };
 
-  // Toggle product status (local only)
-  const toggleProductStatus = (id) => {
-    setProducts(prev => prev.map(p => 
-      p.id === id ? { ...p, status: p.status === 'active' ? 'inactive' : 'active' } : p
-    ));
+  // Delete product
+  const deleteProduct = async (id) => {
+    // Custom confirmation dialog with product details
+    const product = products.find(p => p.id === id);
+    if (!product) return;
+    
+    const confirmMessage = `Are you sure you want to delete "${product.name}"?\n\nThis action cannot be undone.`;
+    
+    if (window.confirm(confirmMessage)) {
+      setDeletingProductId(id); // Set loading state
+      try {
+        // Show loading state (optional: you can add a loading state)
+        const response = await fetch(`http://localhost:5001/api/products/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          // Remove from local state immediately for better UX
+          setProducts(prev => prev.filter(p => p.id !== id));
+          showSuccessNotification(`Product "${product.name}" deleted successfully!`);
+          
+          // Optionally refresh the products list to ensure sync with database
+          // await fetchProducts();
+        } else {
+          // Show error message
+          const errorMessage = data.error || 'Failed to delete product';
+          alert(`Error: ${errorMessage}`);
+          console.error('Delete error:', errorMessage);
+        }
+      } catch (err) {
+        console.error('Delete error:', err);
+        alert('Network error: Could not delete product. Please check your connection and try again.');
+      } finally {
+        setDeletingProductId(null); // Clear loading state
+      }
+    }
+  };
+
+  const toggleProductStatus = async (id) => {
+    const product = products.find(p => p.id === id);
+    if (!product) return;
+
+    const newStatus = product.status === 'active' ? 'inactive' : 'active';
+    
+    const formData = new FormData();
+    formData.append('farmer_id', currentUser.id);
+    formData.append('name', product.name || '');
+    formData.append('description', product.description || '');
+    formData.append('price', product.price || '0');
+    formData.append('quantity', product.quantity || '0');
+    formData.append('category', product.category || '');
+    formData.append('address', product.address || '');
+    formData.append('unit', product.unit || 'kg');
+    formData.append('status', newStatus);
+    formData.append('image_url', product.image_url || '');
+
+    try {
+      const response = await fetch(`http://localhost:5001/api/products/${id}`, {
+        method: 'PUT',
+        body: formData
+      });
+      const data = await response.json();
+      if (data.success) {
+        await fetchProducts();
+        showSuccessNotification(`Product ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully!`);
+      } else {
+        console.error('Status toggle error:', data.error);
+        alert('Error updating product status: ' + data.error);
+      }
+    } catch (err) {
+      console.error('Status toggle error:', err);
+      alert('Network error while updating product status');
+    }
   };
 
   const sidebarItems = [
@@ -305,7 +451,6 @@ const FarmerPortal = ({ user, onLogout }) => {
           </div>
         </aside>
 
-
         {/* Main Content */}
         <main className="flex-1 w-full min-w-0">
           <div className="px-2 sm:px-4 lg:px-6 2xl:px-8 py-4 lg:py-6 2xl:py-8 w-full">
@@ -387,7 +532,7 @@ const FarmerPortal = ({ user, onLogout }) => {
                         <h3 className="font-semibold text-gray-800 mb-2 text-sm lg:text-base 2xl:text-lg truncate">{product.name}</h3>
                         <p className="text-green-600 font-bold mb-2 text-sm lg:text-base 2xl:text-lg">Rs.{product.price}</p>
                         <div className="flex justify-between text-xs lg:text-sm 2xl:text-base text-gray-600">
-                          <span className="truncate">Stock: {product.quantity} {product.unit}</span>
+                          <span className="truncate">Stock: {product.quantity} {product.unit || 'kg'}</span>
                           <span className={`px-2 py-1 rounded-full text-xs 2xl:text-sm ${
                             product.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                           }`}>
@@ -445,7 +590,7 @@ const FarmerPortal = ({ user, onLogout }) => {
                           </div>
                           <div className="flex justify-between text-xs lg:text-sm 2xl:text-base">
                             <span className="text-gray-600">Stock:</span>
-                            <span className="font-semibold">{product.quantity} {product.unit}</span>
+                            <span className="font-semibold">{product.quantity} {product.unit || 'kg'}</span>
                           </div>
                           <div className="flex justify-between text-xs lg:text-sm 2xl:text-base">
                             <span className="text-gray-600">Sales:</span>
@@ -459,13 +604,13 @@ const FarmerPortal = ({ user, onLogout }) => {
                         <div className="flex space-x-1.5 lg:space-x-2 2xl:space-x-3">
                           <button 
                             onClick={() => editProduct(product)}
-                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 lg:py-3 2xl:py-4 px-2 lg:px-3 2xl:px-4 rounded-lg text-xs lg:text-sm 2xl:text-base flex items-center justify-center"
+                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 lg:py-3 2xl:py-4 px-2 lg:px-3 2xl:px-4 rounded-lg text-xs lg:text-sm 2xl:text-base flex items-center justify-center transition-colors"
                           >
                             <FaEdit className="mr-1" /> Edit
                           </button>
                           <button 
                             onClick={() => toggleProductStatus(product.id)}
-                            className={`flex-1 py-2 lg:py-3 2xl:py-4 px-2 lg:px-3 2xl:px-4 rounded-lg text-xs lg:text-sm 2xl:text-base flex items-center justify-center ${
+                            className={`flex-1 py-2 lg:py-3 2xl:py-4 px-2 lg:px-3 2xl:px-4 rounded-lg text-xs lg:text-sm 2xl:text-base flex items-center justify-center transition-colors ${
                               product.status === 'active'
                                 ? 'bg-orange-600 hover:bg-orange-700 text-white'
                                 : 'bg-green-600 hover:bg-green-700 text-white'
@@ -475,9 +620,15 @@ const FarmerPortal = ({ user, onLogout }) => {
                           </button>
                           <button 
                             onClick={() => deleteProduct(product.id)}
-                            className="bg-red-600 hover:bg-red-700 text-white py-2 lg:py-3 2xl:py-4 px-2 lg:px-3 2xl:px-4 rounded-lg text-xs lg:text-sm 2xl:text-base"
+                            disabled={deletingProductId === product.id}
+                            className="bg-red-600 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-2 lg:py-3 2xl:py-4 px-2 lg:px-3 2xl:px-4 rounded-lg text-xs lg:text-sm 2xl:text-base flex items-center justify-center transition-colors"
+                            title="Delete Product"
                           >
-                            <FaTrash />
+                            {deletingProductId === product.id ? (
+                              <FaSpinner className="animate-spin" />
+                            ) : (
+                              <FaTrash />
+                            )}
                           </button>
                         </div>
                       </div>
@@ -522,6 +673,7 @@ const FarmerPortal = ({ user, onLogout }) => {
                       name: '', price: '', category: '', stock: '', unit: '', description: '', images: [], status: 'active'
                     });
                     setPreviewImages([]);
+                    setFormError('');
                   }}
                   className="p-2 lg:p-3 hover:bg-gray-100 rounded-lg transition-colors"
                 >
@@ -530,6 +682,11 @@ const FarmerPortal = ({ user, onLogout }) => {
               </div>
             </div>
             <form onSubmit={handleSubmitProduct} className="p-4 lg:p-6 2xl:p-8">
+              {formError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+                  {formError}
+                </div>
+              )}
               <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6 lg:gap-8 2xl:gap-12">
                 {/* Left Column - Product Details */}
                 <div className="space-y-4 lg:space-y-6 2xl:space-y-8 xl:col-span-1 2xl:col-span-2">
@@ -645,7 +802,7 @@ const FarmerPortal = ({ user, onLogout }) => {
                 <div className="space-y-4 lg:space-y-6 2xl:space-y-8">
                   <div>
                     <label className="block text-sm lg:text-base 2xl:text-lg font-semibold text-gray-700 mb-2 lg:mb-3">
-                      Product Images *
+                      Product Images {editingProduct ? '(Leave empty to keep existing)' : '*'}
                     </label>
                     <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 lg:p-8 2xl:p-12 text-center hover:border-green-500 transition-colors">
                       <input
@@ -752,6 +909,7 @@ const FarmerPortal = ({ user, onLogout }) => {
                       name: '', price: '', category: '', stock: '', unit: '', description: '', images: [], status: 'active'
                     });
                     setPreviewImages([]);
+                    setFormError('');
                   }}
                   className="flex-1 sm:flex-none px-6 lg:px-8 2xl:px-10 py-3 lg:py-4 2xl:py-5 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors text-sm lg:text-base 2xl:text-lg"
                 >
@@ -786,11 +944,53 @@ const FarmerPortal = ({ user, onLogout }) => {
       )}
 
       {/* Success Message */}
-    
-      {!showAddProduct && products.length > 0 && (
-        <div className="fixed bottom-4 lg:bottom-6 2xl:bottom-8 right-4 lg:right-6 2xl:right-8 z-40">
-          <div className="bg-green-500 text-white px-4 lg:px-6 2xl:px-8 py-2 lg:py-3 2xl:py-4 rounded-lg shadow-lg text-sm lg:text-base 2xl:text-lg">
-            Product saved successfully!
+      {showSuccess && (
+        <div className="fixed bottom-4 lg:bottom-6 2xl:bottom-8 right-4 lg:right-6 2xl:right-8 z-40 animate-in slide-in-from-bottom-2">
+          <div className="bg-green-500 text-white px-4 lg:px-6 2xl:px-8 py-2 lg:py-3 2xl:py-4 rounded-lg shadow-lg text-sm lg:text-base 2xl:text-lg flex items-center">
+            <FaCheck className="mr-2" />
+            {successMessage}
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && productToDelete && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 lg:p-8 shadow-2xl">
+            <div className="text-center">
+              <div className="mx-auto w-16 h-16 lg:w-20 lg:h-20 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                <FaTrash className="text-red-600 text-2xl lg:text-3xl" />
+              </div>
+              <h3 className="text-xl lg:text-2xl font-bold text-gray-900 mb-2">Delete Product</h3>
+              <p className="text-gray-600 mb-1">Are you sure you want to delete</p>
+              <p className="text-lg font-semibold text-gray-800 mb-4">"{productToDelete.name}"?</p>
+              {productToDelete.image_url && (
+                <img 
+                  src={productToDelete.image_url} 
+                  alt={productToDelete.name}
+                  className="w-32 h-32 object-cover rounded-lg mx-auto mb-4"
+                />
+              )}
+              <p className="text-sm text-red-600 mb-6">This action cannot be undone.</p>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setProductToDelete(null);
+                  }}
+                  className="flex-1 px-4 py-2 lg:py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 px-4 py-2 lg:py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center justify-center"
+                >
+                  <FaTrash className="mr-2" />
+                  Delete Product
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
