@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { FaLeaf, FaUser, FaUserTie, FaTractor, FaGoogle, FaFacebook, FaTwitter, FaApple } from 'react-icons/fa';
 
-const AuthPage = () => {
+const AuthPage = ({ onLogin }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
   const [slideDirection, setSlideDirection] = useState('');
   const [contentVisible, setContentVisible] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -13,6 +15,7 @@ const AuthPage = () => {
     confirmPassword: '',
     role: 'farmer'
   });
+  const [successMessage, setSuccessMessage] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -22,21 +25,181 @@ const AuthPage = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isLogin) {
-      console.log('Login attempt:', { email: formData.email, password: formData.password });
-    } else {
-      if (formData.password !== formData.confirmPassword) {
-        alert("Passwords don't match!");
-        return;
+    setLoading(true);
+    setError('');
+    setSuccessMessage('');
+
+    try {
+      const apiUrl = 'http://localhost:5000/api/auth';
+      
+      if (isLogin) {
+        // Login API call
+        console.log('Attempting login with:', { email: formData.email });
+        
+        const response = await fetch(`${apiUrl}/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password
+          }),
+        });
+
+        const data = await response.json();
+        console.log('Login response:', data);
+
+        if (response.ok) {
+          // Store token and user data
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          
+          console.log('Login successful, user data:', data.user);
+          console.log('User role from response:', data.user.role);
+          
+          // Reset form
+          setFormData({
+            name: '',
+            email: '',
+            password: '',
+            confirmPassword: '',
+            role: 'farmer'
+          });
+          
+          // Call the onLogin callback to update the parent component
+          if (onLogin) {
+            onLogin(data.user);
+          }
+        } else {
+          setError(data.message || 'Login failed. Please check your credentials.');
+        }
+      } else {
+        // Registration API call
+        if (formData.password !== formData.confirmPassword) {
+          setError("Passwords don't match!");
+          setLoading(false);
+          return;
+        }
+
+        if (formData.password.length < 6) {
+          setError("Password must be at least 6 characters long!");
+          setLoading(false);
+          return;
+        }
+
+        console.log('Attempting registration with:', {
+          name: formData.name,
+          email: formData.email,
+          role: formData.role
+        });
+
+        const response = await fetch(`${apiUrl}/register`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: formData.name,
+            email: formData.email,
+            password: formData.password,
+            confirmPassword: formData.confirmPassword,
+            role: formData.role
+          }),
+        });
+
+        const data = await response.json();
+        console.log('Registration response:', data);
+
+        if (response.ok) {
+          console.log('Registration successful for user:', data.user);
+          
+          // Show success message
+          setSuccessMessage(`Account created successfully! Please login with your credentials.`);
+          
+          // Reset form
+          setFormData({
+            name: '',
+            email: '',
+            password: '',
+            confirmPassword: '',
+            role: 'farmer'
+          });
+          
+          // Auto-switch to login mode after 2 seconds
+          setTimeout(() => {
+            setIsLogin(true);
+            setSuccessMessage('');
+          }, 2000);
+          
+        } else {
+          setError(data.message || 'Registration failed. Please try again.');
+        }
       }
-      console.log('Registration attempt:', formData);
+    } catch (error) {
+      console.error('Auth error:', error);
+      setError('Network error. Please check your connection and try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSocialLogin = (provider) => {
-    console.log(`Login with ${provider}`);
+  const handleSocialLogin = async (provider) => {
+    setLoading(true);
+    setError('');
+
+    try {
+      console.log(`Attempting ${provider} login`);
+      
+      // For demo purposes, simulate social login
+      const mockSocialData = {
+        provider: provider.toLowerCase(),
+        email: `user@${provider.toLowerCase()}.com`,
+        name: `${provider} User`,
+        socialId: `${provider.toLowerCase()}_${Date.now()}`
+      };
+
+      const response = await fetch('http://localhost:5000/api/auth/social-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(mockSocialData),
+      });
+
+      const data = await response.json();
+      console.log('Social login response:', data);
+
+      if (response.ok) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        console.log('Social login successful, user data:', data.user);
+        
+        // Reset form
+        setFormData({
+          name: '',
+          email: '',
+          password: '',
+          confirmPassword: '',
+          role: 'farmer'
+        });
+        
+        // Call the onLogin callback to update the parent component
+        if (onLogin) {
+          onLogin(data.user);
+        }
+      } else {
+        setError(data.message || `${provider} login failed`);
+      }
+    } catch (error) {
+      console.error('Social login error:', error);
+      setError(`${provider} login failed. Please try again.`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const toggleAuthMode = () => {
@@ -298,6 +461,20 @@ const AuthPage = () => {
               }`}></div>
               
               <div className="relative z-10">
+                {/* Success Message */}
+                {successMessage && (
+                  <div className="mb-6 p-4 bg-green-50 border-2 border-green-200 rounded-2xl">
+                    <p className="text-green-700 font-semibold text-center">{successMessage}</p>
+                  </div>
+                )}
+
+                {/* Error Message */}
+                {error && (
+                  <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-2xl">
+                    <p className="text-red-700 font-semibold text-center">{error}</p>
+                  </div>
+                )}
+
                 {/* Social Login Buttons */}
                 <div className="mb-8">
                   <div className="text-center text-base text-gray-700 mb-6 font-semibold">
@@ -315,7 +492,8 @@ const AuthPage = () => {
                         <button
                           key={provider}
                           onClick={() => handleSocialLogin(provider)}
-                          className={`flex items-center justify-center px-6 py-4 border-2 border-gray-200 rounded-2xl shadow-sm bg-white text-gray-700 ${bg} ${border} hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 hover:scale-105 font-bold group`}
+                          disabled={loading}
+                          className={`flex items-center justify-center px-6 py-4 border-2 border-gray-200 rounded-2xl shadow-sm bg-white text-gray-700 ${bg} ${border} hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 hover:scale-105 font-bold group disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
                           <Icon className={`${color} mr-3 text-xl transition-transform duration-300 group-hover:scale-110`} />
                           <span className="text-sm">{provider}</span>
@@ -338,7 +516,7 @@ const AuthPage = () => {
                 </div>
 
                 {/* Auth Form */}
-                <div className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-6">
                   {!isLogin && (
                     <>
                       {/* Role Selection */}
@@ -487,16 +665,24 @@ const AuthPage = () => {
                   )}
 
                   <button
-                    onClick={handleSubmit}
-                    className={`w-full py-5 px-8 text-white font-black rounded-2xl transition-all duration-400 focus:outline-none focus:ring-4 shadow-xl hover:shadow-2xl transform hover:-translate-y-2 active:scale-95 text-lg ${
+                    type="submit"
+                    disabled={loading}
+                    className={`w-full py-5 px-8 text-white font-black rounded-2xl transition-all duration-400 focus:outline-none focus:ring-4 shadow-xl hover:shadow-2xl transform hover:-translate-y-2 active:scale-95 text-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none ${
                       isLogin 
                         ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 focus:ring-green-200' 
                         : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:ring-blue-200'
                     }`}
                   >
-                    {isLogin ? 'Sign In Now' : 'Create Account'}
+                    {loading ? (
+                      <div className="flex items-center justify-center">
+                        <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin mr-3"></div>
+                        {isLogin ? 'Signing In...' : 'Creating Account...'}
+                      </div>
+                    ) : (
+                      isLogin ? 'Sign In Now' : 'Create Account'
+                    )}
                   </button>
-                </div>
+                </form>
 
                 <div className="mt-10 text-center text-base text-gray-600">
                   {isLogin ? (
