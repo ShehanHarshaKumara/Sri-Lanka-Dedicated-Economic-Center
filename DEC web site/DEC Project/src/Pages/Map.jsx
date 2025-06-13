@@ -1,378 +1,698 @@
 import { useState, useRef, useEffect } from 'react';
-import { GoogleMap, LoadScript, Marker, InfoWindow } from '@react-google-maps/api';
+import { MapContainer, TileLayer, Marker, Popup, Tooltip } from 'react-leaflet';
+import { 
+  MapPin, 
+  Search, 
+  Filter, 
+  Maximize, 
+  Minimize, 
+  X, 
+  Activity,
+  Carrot,
+  Apple,
+  Leaf,
+  Flame,
+  Package,
+  Layers
+} from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
 
-// District data with agricultural information
+// Enhanced district data with more categories and detailed information
 const districts = [
-  // ... (keep your existing districts data unchanged)
-];
-
-// Color coding for different crop types
-const getColorByType = (type) => {
-  switch(type) {
-    case 'vegetable': return '#10b981'; // emerald
-    case 'fruit': return '#22c55e'; // green
-    case 'nut': return '#16a34a'; // green-600
-    case 'chili': return '#15803d'; // green-700
-    case 'other': return '#14532d'; // green-900
-    case 'both': return '#059669'; // emerald-600
-    default: return '#22c55e'; // green-500
-  }
-};
-
-// Starfield background animation
-const StarfieldBackground = () => {
-  // ... (keep your existing StarfieldBackground component unchanged)
-};
-
-// Google Maps container style - will fill available space
-const containerStyle = {
-  width: '100%',
-  height: '100%' // Changed to 100% to fill container
-};
-
-// Sri Lanka center coordinates
-const center = {
-  lat: 7.8731,
-  lng: 80.7718
-};
-
-// Strict bounds for Sri Lanka to prevent panning outside
-const sriLankaBounds = {
-  north: 9.831,   // Northernmost point
-  south: 5.919,   // Southernmost point
-  west: 79.521,   // Westernmost point
-  east: 81.879    // Easternmost point
-};
-
-// Custom map styles to remove clutter and focus on Sri Lanka
-const mapStyles = [
   {
-    featureType: "poi",
-    elementType: "labels",
-    stylers: [{ visibility: "off" }]
+    name: 'Nuwara Eliya',
+    latitude: 6.97078,
+    longitude: 80.78286,
+    crops: ['Carrots', 'Leeks', 'Beetroot', 'Cabbage', 'Cauliflower'],
+    fruits: ['Strawberry'],
+    nuts: [],
+    chili: [],
+    other: ['Potatoes', 'Tea'],
+    type: 'both',
+    region: 'Upcountry',
+    elevation: '1868m',
+    climate: 'Temperate',
+    economicValue: 'High',
+    exportPotential: 'Premium'
   },
   {
-    featureType: "transit",
-    elementType: "labels",
-    stylers: [{ visibility: "off" }]
+    name: 'Badulla',
+    latitude: 6.9895,
+    longitude: 81.0557,
+    crops: ['Carrots', 'Leeks', 'Potatoes'],
+    fruits: [],
+    nuts: [],
+    chili: [],
+    other: ['Tea'],
+    type: 'vegetable',
+    region: 'Upcountry',
+    elevation: '680m',
+    climate: 'Sub-tropical',
+    economicValue: 'Medium',
+    exportPotential: 'Moderate'
   },
   {
-    featureType: "administrative",
-    elementType: "labels",
-    stylers: [{ visibility: "simplified" }]
+    name: 'Anuradhapura',
+    latitude: 8.31135,
+    longitude: 80.40365,
+    crops: ['Onion', 'Pumpkins'],
+    fruits: ['Banana', 'Mango', 'Wood Apple'],
+    nuts: ['Cashew'],
+    chili: ['Chilli'],
+    other: ['Rice'],
+    type: 'both',
+    region: 'Dry Zone',
+    elevation: '81m',
+    climate: 'Tropical Dry',
+    economicValue: 'High',
+    exportPotential: 'High'
+  },
+  {
+    name: 'Monaragala',
+    latitude: 6.8726,
+    longitude: 81.3507,
+    crops: ['Onion'],
+    fruits: ['Banana', 'Mango', 'Papaya', 'Guava'],
+    nuts: [],
+    chili: ['Chilli'],
+    other: [],
+    type: 'both',
+    region: 'Dry Zone',
+    elevation: '200m',
+    climate: 'Tropical Dry',
+    economicValue: 'Medium',
+    exportPotential: 'Moderate'
+  },
+  {
+    name: 'Polonnaruwa',
+    latitude: 7.932857,
+    longitude: 81.008087,
+    crops: ['Onion'],
+    fruits: [],
+    nuts: [],
+    chili: ['Chilli'],
+    other: ['Rice'],
+    type: 'vegetable',
+    region: 'Dry Zone',
+    elevation: '58m',
+    climate: 'Tropical Dry',
+    economicValue: 'Medium',
+    exportPotential: 'Low'
+  },
+  {
+    name: 'Kurunegala',
+    latitude: 7.4863,
+    longitude: 80.3623,
+    crops: [],
+    fruits: ['Banana', 'Mango', 'Pineapple'],
+    nuts: ['Cashew'],
+    chili: [],
+    other: ['Coconut'],
+    type: 'fruit',
+    region: 'Intermediate Zone',
+    elevation: '116m',
+    climate: 'Tropical Intermediate',
+    economicValue: 'High',
+    exportPotential: 'High'
+  },
+  {
+    name: 'Gampaha',
+    latitude: 7.0846,
+    longitude: 80.0091,
+    crops: [],
+    fruits: ['Pineapple'],
+    nuts: [],
+    chili: [],
+    other: ['Rubber'],
+    type: 'fruit',
+    region: 'Low Country Wet Zone',
+    elevation: '12m',
+    climate: 'Tropical Wet',
+    economicValue: 'High',
+    exportPotential: 'Very High'
+  },
+  {
+    name: 'Hambantota',
+    latitude: 6.1249,
+    longitude: 81.1188,
+    crops: ['Pumpkins', 'Gourds'],
+    fruits: ['Guava', 'Papaya', 'Watermelon'],
+    nuts: [],
+    chili: [],
+    other: ['Salt'],
+    type: 'both',
+    region: 'Dry Zone',
+    elevation: '18m',
+    climate: 'Tropical Dry',
+    economicValue: 'Medium',
+    exportPotential: 'Moderate'
+  },
+  {
+    name: 'Ampara',
+    latitude: 7.3019,
+    longitude: 81.6820,
+    crops: [],
+    fruits: ['Guava', 'Papaya'],
+    nuts: [],
+    chili: [],
+    other: ['Rice'],
+    type: 'fruit',
+    region: 'Dry Zone',
+    elevation: '27m',
+    climate: 'Tropical Dry',
+    economicValue: 'Low',
+    exportPotential: 'Low'
+  },
+  {
+    name: 'Kandy',
+    latitude: 7.2906,
+    longitude: 80.6337,
+    crops: ['Beans', 'Cabbage'],
+    fruits: ['Avocado', 'Passion Fruit', 'Oranges'],
+    nuts: [],
+    chili: [],
+    other: ['Tea', 'Spices'],
+    type: 'both',
+    region: 'Hill Country',
+    elevation: '465m',
+    climate: 'Tropical Highland',
+    economicValue: 'Very High',
+    exportPotential: 'Premium'
+  },
+  {
+    name: 'Galle',
+    latitude: 6.0535,
+    longitude: 80.2210,
+    crops: ['Brinjal', 'Okra'],
+    fruits: ['Pineapple', 'Avocado'],
+    nuts: [],
+    chili: [],
+    other: ['Cinnamon', 'Fishing'],
+    type: 'both',
+    region: 'Low Country Wet Zone',
+    elevation: '13m',
+    climate: 'Tropical Wet',
+    economicValue: 'High',
+    exportPotential: 'Very High'
+  },
+  {
+    name: 'Jaffna',
+    latitude: 9.6615,
+    longitude: 80.0255,
+    crops: [],
+    fruits: ['Palmyrah', 'Watermelon', 'Banana'],
+    nuts: ['Cashew'],
+    chili: [],
+    other: ['Fishing'],
+    type: 'fruit',
+    region: 'Coastal Areas',
+    elevation: '3m',
+    climate: 'Tropical Dry Coastal',
+    economicValue: 'Medium',
+    exportPotential: 'Moderate'
+  },
+  {
+    name: 'Matale',
+    latitude: 7.4675,
+    longitude: 80.6234,
+    crops: ['Brinjal', 'Tomato'],
+    fruits: ['Banana', 'Papaya'],
+    nuts: [],
+    chili: ['Chilli'],
+    other: ['Spices'],
+    type: 'both',
+    region: 'Hill Country',
+    elevation: '364m',
+    climate: 'Tropical Highland',
+    economicValue: 'High',
+    exportPotential: 'High'
+  },
+  {
+    name: 'Ratnapura',
+    latitude: 6.6844,
+    longitude: 80.3996,
+    crops: [],
+    fruits: ['Mango', 'Jackfruit'],
+    nuts: [],
+    chili: [],
+    other: ['Rubber', 'Gems'],
+    type: 'fruit',
+    region: 'Low Country Wet Zone',
+    elevation: '34m',
+    climate: 'Tropical Wet',
+    economicValue: 'Very High',
+    exportPotential: 'Premium'
   }
 ];
 
+// Custom icons for different categories
+const createCustomIcon = (type, size = 'medium') => {
+  const sizeMap = {
+    small: 20,
+    medium: 30,
+    large: 40
+  };
+  const iconSize = sizeMap[size];
+  
+  const getIconColor = (type) => {
+    switch(type) {
+      case 'vegetable': return '#10b981'; // emerald-500
+      case 'fruit': return '#f59e0b'; // amber-500
+      case 'nut': return '#8b5cf6'; // violet-500
+      case 'chili': return '#ef4444'; // red-500
+      case 'other': return '#6b7280'; // gray-500
+      case 'both': return '#06b6d4'; // cyan-500
+      default: return '#10b981';
+    }
+  };
+
+  const getIconSymbol = (type) => {
+    switch(type) {
+      case 'vegetable': return '🥕';
+      case 'fruit': return '🍎';
+      case 'nut': return '🥜';
+      case 'chili': return '🌶️';
+      case 'other': return '📦';
+      case 'both': return '🌾';
+      default: return '📍';
+    }
+  };
+
+  return L.divIcon({
+    html: `
+      <div style="
+        width: ${iconSize}px;
+        height: ${iconSize}px;
+        background: ${getIconColor(type)};
+        border: 3px solid white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: ${iconSize * 0.5}px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        animation: pulse 2s infinite;
+      ">
+        ${getIconSymbol(type)}
+      </div>
+      <style>
+        @keyframes pulse {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.1); }
+          100% { transform: scale(1); }
+        }
+      </style>
+    `,
+    className: 'custom-div-icon',
+    iconSize: [iconSize, iconSize],
+    iconAnchor: [iconSize/2, iconSize/2]
+  });
+};
+
+// FPS Counter Component
+const FPSCounter = () => {
+  const [fps, setFps] = useState(0);
+  const frameCount = useRef(0);
+  const lastTime = useRef(performance.now());
+
+  useEffect(() => {
+    const updateFPS = () => {
+      frameCount.current++;
+      const currentTime = performance.now();
+      
+      if (currentTime >= lastTime.current + 1000) {
+        setFps(Math.round((frameCount.current * 1000) / (currentTime - lastTime.current)));
+        frameCount.current = 0;
+        lastTime.current = currentTime;
+      }
+      
+      requestAnimationFrame(updateFPS);
+    };
+    
+    const animationId = requestAnimationFrame(updateFPS);
+    return () => cancelAnimationFrame(animationId);
+  }, []);
+
+  return (
+    <div className="fixed top-4 right-4 z-50 bg-black bg-opacity-70 text-white px-3 py-1 rounded-full text-sm font-mono flex items-center gap-2">
+      <Activity size={16} />
+      {fps} FPS
+    </div>
+  );
+};
+
+// Enhanced Map Component
 const CropMap = ({ districtData, onDistrictSelect, selectedCategories }) => {
-  const mapRef = useRef(null);
-  const [activeMarker, setActiveMarker] = useState(null);
-  const [mapLoaded, setMapLoaded] = useState(false);
+  const mapRef = useRef();
 
-  // Filter districts based on selected categories
   const filteredDistricts = districtData.filter(district => {
     if (selectedCategories.length === 0) return true;
     return selectedCategories.includes(district.type);
   });
 
-  const onLoad = (map) => {
-    mapRef.current = map;
-    setMapLoaded(true);
-    
-    // Set bounds and viewport to Sri Lanka
-    const bounds = new window.google.maps.LatLngBounds(
-      new window.google.maps.LatLng(sriLankaBounds.south, sriLankaBounds.west),
-      new window.google.maps.LatLng(sriLankaBounds.north, sriLankaBounds.east)
-    );
-    
-    // Add padding to ensure all of Sri Lanka is visible
-    map.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 50 });
-    
-    // Set minimum zoom level to prevent zooming out too far
-    map.addListener('bounds_changed', () => {
-      if (map.getZoom() > 15) map.setZoom(15);
-      if (map.getZoom() < 7) map.setZoom(7);
-    });
-  };
-
   return (
-    <div className="relative h-full w-full">
-      {/* Google Maps API LoadScript with your API key */}
-      <LoadScript 
-        googleMapsApiKey="https://maps.googleapis.com/maps/api/js?key=AIzaSyDZennffc4I2wa2NDZeSi233YpTRl6P18g&libraries=places"
-        libraries={['places']}
+    <div className="relative h-full">
+      <MapContainer
+        center={[7.8731, 80.7718]}
+        zoom={7}
+        style={{ height: '75vh', width: '100%' }}
+        className="rounded-xl shadow-2xl border border-gray-300"
+        whenCreated={(map) => { mapRef.current = map; }}
       >
-        <GoogleMap
-          mapContainerStyle={containerStyle}
-          center={center}
-          zoom={7}
-          onLoad={onLoad}
-          options={{
-            restriction: {
-              latLngBounds: sriLankaBounds,
-              strictBounds: true // Strictly prevent panning outside Sri Lanka
-            },
-            minZoom: 7,          // Minimum zoom level
-            maxZoom: 15,         // Maximum zoom level
-            streetViewControl: false,
-            mapTypeControl: false,
-            fullscreenControl: false,
-            styles: mapStyles,
-            gestureHandling: 'greedy',
-            disableDefaultUI: true, // Cleaner look
-            clickableIcons: false
-          }}
-          className="rounded-lg shadow-2xl border-2 border-green-300"
-        >
-          {mapLoaded && filteredDistricts.map((district, index) => (
-            <Marker
-              key={index}
-              position={{ lat: district.latitude, lng: district.longitude }}
-              onClick={() => {
-                onDistrictSelect(district);
-                setActiveMarker(index);
-              }}
-              icon={{
-                path: window.google.maps.SymbolPath.CIRCLE,
-                fillColor: getColorByType(district.type),
-                fillOpacity: 0.9,
-                strokeColor: '#fff',
-                strokeWeight: 2,
-                scale: 8,
-                anchor: new window.google.maps.Point(0, 0)
-              }}
+        <TileLayer
+          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>'
+        />
+
+        {filteredDistricts.map((district, index) => (
+          <Marker
+            key={index}
+            position={[district.latitude, district.longitude]}
+            icon={createCustomIcon(district.type)}
+            eventHandlers={{
+              click: () => onDistrictSelect(district),
+            }}
+          >
+            <Tooltip
+              direction="top"
+              opacity={0.95}
+              className="custom-tooltip"
+              permanent={false}
             >
-              {activeMarker === index && (
-                <InfoWindow 
-                  onCloseClick={() => setActiveMarker(null)}
-                  options={{
-                    pixelOffset: new window.google.maps.Size(0, -30)
-                  }}
-                >
-                  <div className="p-2 max-w-xs bg-white rounded-lg">
-                    <h3 className="font-bold text-lg text-green-800">{district.name}</h3>
-                    <p className="text-sm text-green-600">{district.region}</p>
-                    {district.crops.length > 0 && (
-                      <p className="mt-1 text-sm"><strong>Crops:</strong> {district.crops.join(', ')}</p>
-                    )}
-                    {district.fruits.length > 0 && (
-                      <p className="mt-1 text-sm"><strong>Fruits:</strong> {district.fruits.join(', ')}</p>
-                    )}
+              <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200 min-w-48">
+                <div className="font-bold text-lg text-gray-800 mb-1">{district.name}</div>
+                <div className="text-sm text-gray-600 mb-2">{district.region} • {district.elevation}</div>
+                
+                {district.crops.length > 0 && (
+                  <div className="mb-2">
+                    <div className="flex items-center gap-1 mb-1">
+                      <Carrot size={14} className="text-green-600" />
+                      <span className="font-medium text-xs text-gray-700">Vegetables:</span>
+                    </div>
+                    <div className="text-xs text-gray-600">{district.crops.slice(0, 3).join(', ')}</div>
                   </div>
-                </InfoWindow>
-              )}
-            </Marker>
-          ))}
-        </GoogleMap>
-      </LoadScript>
+                )}
+                
+                {district.fruits.length > 0 && (
+                  <div className="mb-2">
+                    <div className="flex items-center gap-1 mb-1">
+                      <Apple size={14} className="text-orange-500" />
+                      <span className="font-medium text-xs text-gray-700">Fruits:</span>
+                    </div>
+                    <div className="text-xs text-gray-600">{district.fruits.slice(0, 3).join(', ')}</div>
+                  </div>
+                )}
+
+                <div className="text-xs text-blue-600 font-medium">
+                  {district.economicValue} Economic Value
+                </div>
+              </div>
+            </Tooltip>
+
+            <Popup className="custom-popup" maxWidth={400}>
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-bold text-xl text-gray-800">{district.name}</h3>
+                  <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    district.economicValue === 'Very High' ? 'bg-green-100 text-green-800' :
+                    district.economicValue === 'High' ? 'bg-blue-100 text-blue-800' :
+                    district.economicValue === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {district.economicValue}
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3 mb-3 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-600">Region:</span>
+                    <div className="text-gray-800">{district.region}</div>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Climate:</span>
+                    <div className="text-gray-800">{district.climate}</div>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Elevation:</span>
+                    <div className="text-gray-800">{district.elevation}</div>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Export:</span>
+                    <div className="text-gray-800">{district.exportPotential}</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2">
+                  {district.crops.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-1 mb-1">
+                        <Carrot size={16} className="text-green-600" />
+                        <span className="font-medium text-sm">Vegetables:</span>
+                      </div>
+                      <div className="text-sm text-gray-700">{district.crops.join(', ')}</div>
+                    </div>
+                  )}
+                  
+                  {district.fruits.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-1 mb-1">
+                        <Apple size={16} className="text-orange-500" />
+                        <span className="font-medium text-sm">Fruits:</span>
+                      </div>
+                      <div className="text-sm text-gray-700">{district.fruits.join(', ')}</div>
+                    </div>
+                  )}
+
+                  {district.other.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-1 mb-1">
+                        <Package size={16} className="text-purple-600" />
+                        <span className="font-medium text-sm">Other Products:</span>
+                      </div>
+                      <div className="text-sm text-gray-700">{district.other.join(', ')}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+      </MapContainer>
     </div>
   );
 };
 
-// Search control component
+// Enhanced Search Component
 const SearchControlComponent = ({ districts, onSelect }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  
-  const handleSearch = (e) => {
-    setSearchTerm(e.target.value);
-  };
-  
-  const filteredDistricts = districts.filter(district => 
-    district.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-  
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    if (query.length > 1) {
+      const filtered = districts.filter(district =>
+        district.name.toLowerCase().includes(query.toLowerCase()) ||
+        district.region.toLowerCase().includes(query.toLowerCase()) ||
+        district.crops.some(crop => crop.toLowerCase().includes(query.toLowerCase())) ||
+        district.fruits.some(fruit => fruit.toLowerCase().includes(query.toLowerCase()))
+      );
+      setResults(filtered);
+      setIsOpen(true);
+    } else {
+      setResults([]);
+      setIsOpen(false);
+    }
+  }, [query, districts]);
+
   return (
-    <div className="space-y-2">
-      <input 
-        type="text"
-        placeholder="Search district..."
-        value={searchTerm}
-        onChange={handleSearch}
-        className="w-full p-2 border border-green-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-      />
-      {searchTerm && (
-        <div className="bg-white max-h-48 overflow-auto rounded-md shadow-md">
-          {filteredDistricts.length > 0 ? (
-            filteredDistricts.map((district, index) => (
-              <button
-                key={index}
-                className="w-full text-left px-3 py-2 hover:bg-green-100 text-sm"
-                onClick={() => {
-                  onSelect(district);
-                  setSearchTerm('');
-                }}
-              >
-                {district.name} ({district.region})
-              </button>
-            ))
-          ) : (
-            <div className="px-3 py-2 text-gray-500 text-sm">No districts found</div>
-          )}
+    <div className="relative w-full">
+      <div className="relative">
+        <input
+          type="text"
+          placeholder="Search districts, regions, or products..."
+          className="w-full p-4 pl-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-800 shadow-sm"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+      </div>
+      
+      {isOpen && results.length > 0 && (
+        <div className="absolute z-30 mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-xl max-h-80 overflow-auto">
+          {results.map((district) => (
+            <div
+              key={district.name}
+              className="p-4 hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0"
+              onClick={() => {
+                onSelect(district);
+                setQuery('');
+                setIsOpen(false);
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-semibold text-gray-800">{district.name}</span>
+                  <div className="text-sm text-gray-600">{district.region} • {district.climate}</div>
+                </div>
+                <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  district.economicValue === 'Very High' ? 'bg-green-100 text-green-800' :
+                  district.economicValue === 'High' ? 'bg-blue-100 text-blue-800' :
+                  district.economicValue === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {district.economicValue}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
   );
 };
 
+// Main Application Component
 function App() {
   const [selectedRegion, setSelectedRegion] = useState('all');
   const [selectedDistrict, setSelectedDistrict] = useState(null);
   const [selectedCategories, setSelectedCategories] = useState([]);
-
-  // Toggle category selection
-  const toggleCategory = (categoryId) => {
-    setSelectedCategories(prev =>
-      prev.includes(categoryId)
-        ? prev.filter(id => id !== categoryId)
-        : [...prev, categoryId]
-    );
-  };
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [windowSize, setWindowSize] = useState({
-    width: window.innerWidth,
-    height: window.innerHeight
-  });
+  const [showFPS, setShowFPS] = useState(false);
 
   const regions = ['all', ...new Set(districts.map(d => d.region))];
   const categories = [
-    { id: 'vegetable', name: 'Vegetables' },
-    { id: 'fruit', name: 'Fruits' },
-    { id: 'nut', name: 'Nuts' },
-    { id: 'chili', name: 'Chili' },
-    { id: 'other', name: 'Other' },
-    { id: 'both', name: 'Mixed' }
+    { id: 'vegetable', name: 'Vegetables', icon: Carrot, color: 'emerald' },
+    { id: 'fruit', name: 'Fruits', icon: Apple, color: 'orange' },
+    { id: 'nut', name: 'Nuts', icon: Package, color: 'purple' },
+    { id: 'chili', name: 'Chili', icon: Flame, color: 'red' },
+    { id: 'other', name: 'Other', icon: Layers, color: 'gray' },
+    { id: 'both', name: 'Mixed', icon: Leaf, color: 'cyan' }
   ];
 
   const filteredDistricts = selectedRegion === 'all' 
     ? districts 
     : districts.filter(d => d.region === selectedRegion);
 
-  // Handle window resize for responsive design
-  useEffect(() => {
-    const handleResize = () => {
-      setWindowSize({
-        width: window.innerWidth,
-        height: window.innerHeight
+  const toggleCategory = (categoryId) => {
+    setSelectedCategories(prev => 
+      prev.includes(categoryId) 
+        ? prev.filter(id => id !== categoryId) 
+        : [...prev, categoryId]
+    );
+  };
+
+  const handleDistrictSelect = (district) => {
+    setSelectedDistrict(district);
+  };
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.log(`Error attempting to enable fullscreen: ${err.message}`);
       });
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Fullscreen toggle handler
-  const toggleFullscreen = async () => {
-    try {
-      if (!document.fullscreenElement) {
-        await document.documentElement.requestFullscreen();
-        setIsFullscreen(true);
-      } else {
-        if (document.exitFullscreen) {
-          await document.exitFullscreen();
-          setIsFullscreen(false);
-        }
+      setIsFullscreen(true);
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+        setIsFullscreen(false);
       }
-    } catch (err) {
-      console.error('Fullscreen error:', err);
     }
   };
 
-  // Auto fullscreen on mobile devices
   useEffect(() => {
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    if (isMobile && !document.fullscreenElement) {
-      toggleFullscreen();
-    }
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
+  const getColorClasses = (color) => {
+    const colorMap = {
+      emerald: 'bg-emerald-500 text-white hover:bg-emerald-600',
+      orange: 'bg-orange-500 text-white hover:bg-orange-600',
+      purple: 'bg-purple-500 text-white hover:bg-purple-600',
+      red: 'bg-red-500 text-white hover:bg-red-600',
+      gray: 'bg-gray-500 text-white hover:bg-gray-600',
+      cyan: 'bg-cyan-500 text-white hover:bg-cyan-600'
+    };
+    return colorMap[color] || 'bg-gray-500 text-white hover:bg-gray-600';
+  };
+
   return (
-    <div className={`
-      fixed inset-0 
-      bg-gradient-to-b from-green-900 via-green-800 to-green-900 
-      overflow-auto
-      ${isFullscreen ? 'fixed' : 'relative'}
-    `}>
-      <StarfieldBackground />
+    <div className={`min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 text-gray-900 ${isFullscreen ? 'fixed inset-0 overflow-auto' : ''}`}>
+      {showFPS && <FPSCounter />}
       
-      {/* Main container with dynamic sizing */}
-      <div className={`
-        relative z-10 
-        ${isFullscreen ? 'h-screen w-screen' : 'min-h-screen'}
-        mx-auto px-4 py-6
-        overflow-hidden
-      `}>
-        {/* Header section */}
-        <div className="text-center mb-4 md:mb-8">
-          <h1 className="text-3xl md:text-5xl font-bold text-white mb-2 tracking-wider animate-pulse">
-            SRI LANKA DEDICATED ECONOMIC CENTER
-          </h1>
-          <p className="text-lg md:text-xl text-green-100">
-            Agricultural Production & Distribution Network
-          </p>
-          
-          <button 
-            onClick={toggleFullscreen}
-            className={`
-              mt-4 px-4 py-2 bg-green-600 text-white rounded-lg 
-              hover:bg-green-700 transition-colors
-              ${windowSize.width < 640 ? 'text-sm' : ''}
-            `}
-          >
-            {isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
-          </button>
+      <div className="container mx-auto px-4 py-6">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent mb-2">
+              Sri Lanka Dedicated Economic Centers
+            </h1>
+            <p className="text-lg text-gray-600">Advanced Agricultural Production & Distribution Network</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowFPS(!showFPS)}
+              className="p-3 rounded-xl bg-blue-100 hover:bg-blue-200 text-blue-800 transition-colors"
+              title="Toggle FPS Counter"
+            >
+              <Activity size={20} />
+            </button>
+            <button
+              onClick={toggleFullscreen}
+              className="p-3 rounded-xl bg-green-100 hover:bg-green-200 text-green-800 transition-colors"
+              title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+            >
+              {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
+            </button>
+          </div>
         </div>
         
-        {/* Main content grid */}
-        <div className={`
-          grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6
-          ${isFullscreen ? 'h-[calc(100%-150px)]' : ''}
-        `}>
-          {/* Map container - takes 3/4 width on large screens */}
-          <div className="lg:col-span-3 h-[50vh] md:h-[65vh] lg:h-[70vh]">
-            <div className="
-              bg-white/10 backdrop-blur-md 
-              rounded-lg shadow-2xl p-2 md:p-4 
-              border border-green-300
-              h-full
-            ">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="lg:col-span-3">
+            <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-200">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold text-gray-800">Interactive Economic Centers Map</h2>
+                <div className="flex items-center gap-2">
+                  <MapPin className="text-blue-600" size={24} />
+                  <span className="text-sm text-gray-600">{filteredDistricts.length} Centers</span>
+                </div>
+              </div>
               <CropMap 
                 districtData={filteredDistricts} 
-                onDistrictSelect={setSelectedDistrict}
+                onDistrictSelect={handleDistrictSelect}
                 selectedCategories={selectedCategories}
               />
             </div>
           </div>
           
-          {/* Sidebar controls - takes 1/4 width on large screens */}
-          <div className="space-y-3 md:space-y-4 overflow-y-auto">
-            <div className="bg-white/90 backdrop-blur p-3 md:p-4 rounded-lg shadow-xl border border-green-300">
-              <h2 className="text-lg md:text-xl font-bold mb-2 md:mb-3 text-green-800">
-                Search Districts
-              </h2>
-              <SearchControlComponent 
-                districts={districts} 
-                onSelect={setSelectedDistrict} 
-              />
+          <div className="space-y-6">
+            <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+              <div className="flex items-center gap-2 mb-4">
+                <Search className="text-blue-600" size={20} />
+                <h2 className="text-xl font-bold text-gray-800">Search Centers</h2>
+              </div>
+              <SearchControlComponent districts={districts} onSelect={handleDistrictSelect} />
             </div>
             
-            <div className="bg-white/90 backdrop-blur p-3 md:p-4 rounded-lg shadow-xl border border-green-300">
-              <h2 className="text-lg md:text-xl font-bold mb-2 md:mb-3 text-green-800">
-                Filter by Region
-              </h2>
-              <div className="space-y-1 md:space-y-2">
+            <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+              <div className="flex items-center gap-2 mb-4">
+                <Filter className="text-green-600" size={20} />
+                <h2 className="text-xl font-bold text-gray-800">Filter by Region</h2>
+              </div>
+              <div className="space-y-2">
                 {regions.map(region => (
                   <button
                     key={region}
                     onClick={() => setSelectedRegion(region)}
-                    className={`
-                      w-full text-left px-2 py-1 md:px-3 md:py-2 
-                      rounded-md text-xs md:text-sm font-medium 
-                      transition-all
-                      ${selectedRegion === region 
-                        ? 'bg-green-600 text-white shadow-lg' 
-                        : 'bg-green-100 text-green-800 hover:bg-green-200'
-                      }
-                    `}
+                    className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all transform hover:scale-105 ${
+                      selectedRegion === region 
+                        ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-lg' 
+                        : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                    }`}
                   >
                     {region === 'all' ? 'All Regions' : region}
                   </button>
@@ -380,72 +700,130 @@ function App() {
               </div>
             </div>
             
-            <div className="bg-white/90 backdrop-blur p-3 md:p-4 rounded-lg shadow-xl border border-green-300">
-              <h2 className="text-lg md:text-xl font-bold mb-2 md:mb-3 text-green-800">
-                Filter by Category
-              </h2>
-              <div className="space-y-1 md:space-y-2">
-                {categories.map(category => (
-                  <button
-                    key={category.id}
-                    onClick={() => toggleCategory(category.id)}
-                    className={`
-                      w-full text-left px-2 py-1 md:px-3 md:py-2 
-                      rounded-md text-xs md:text-sm font-medium 
-                      transition-all flex items-center
-                      ${selectedCategories.includes(category.id)
-                        ? 'bg-green-600 text-white shadow-lg' 
-                        : 'bg-green-100 text-green-800 hover:bg-green-200'
-                      }
-                    `}
-                  >
-                    <div 
-                      className="w-3 h-3 md:w-4 md:h-4 rounded-full mr-2 border-2 border-white" 
-                      style={{ backgroundColor: getColorByType(category.id) }}
-                    ></div>
-                    {category.name}
-                  </button>
-                ))}
+            <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+              <div className="flex items-center gap-2 mb-4">
+                <Layers className="text-purple-600" size={20} />
+                <h2 className="text-xl font-bold text-gray-800">Filter by Category</h2>
+              </div>
+              <div className="space-y-3">
+                {categories.map(category => {
+                  const IconComponent = category.icon;
+                  return (
+                    <button
+                      key={category.id}
+                      onClick={() => toggleCategory(category.id)}
+                      className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all transform hover:scale-105 flex items-center gap-3 ${
+                        selectedCategories.includes(category.id)
+                          ? getColorClasses(category.color)
+                          : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                      }`}
+                    >
+                      <IconComponent size={18} />
+                      {category.name}
+                      <div className="ml-auto text-xs opacity-75">
+                        {districts.filter(d => d.type === category.id).length}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-blue-50 to-green-50 p-6 rounded-2xl border border-blue-200">
+              <h3 className="font-bold text-blue-800 mb-3">Economic Statistics</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Total Centers:</span>
+                  <span className="font-semibold text-blue-800">{districts.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">High Value:</span>
+                  <span className="font-semibold text-green-600">
+                    {districts.filter(d => d.economicValue === 'High' || d.economicValue === 'Very High').length}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Export Ready:</span>
+                  <span className="font-semibold text-orange-600">
+                    {districts.filter(d => d.exportPotential === 'High' || d.exportPotential === 'Very High' || d.exportPotential === 'Premium').length}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Selected district details panel */}
         {selectedDistrict && (
-          <div className={`
-            bg-white/95 backdrop-blur p-4 md:p-6 
-            rounded-lg shadow-2xl my-4 md:my-6 
-            border-2 border-green-300
-            transition-all duration-300
-            ${isFullscreen ? 'max-w-4xl mx-auto' : ''}
-          `}>
-            <div className="flex justify-between items-start">
+          <div className="bg-white p-8 rounded-2xl shadow-2xl my-8 border border-gray-200 transform transition-all duration-300 animate-in slide-in-from-bottom">
+            <div className="flex justify-between items-start mb-6">
               <div>
-                <h2 className="text-2xl md:text-3xl font-bold text-green-800">
-                  {selectedDistrict.name}
-                </h2>
-                <p className="text-green-600 text-base md:text-lg">
-                  {selectedDistrict.region}
-                </p>
+                <h2 className="text-3xl font-bold text-gray-800 mb-2">{selectedDistrict.name}</h2>
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-medium">
+                    {selectedDistrict.region}
+                  </span>
+                  <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full font-medium">
+                    {selectedDistrict.climate}
+                  </span>
+                  <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full font-medium">
+                    {selectedDistrict.elevation}
+                  </span>
+                </div>
               </div>
               <button 
                 onClick={() => setSelectedDistrict(null)} 
-                className="text-green-500 hover:text-green-700 text-xl md:text-2xl font-bold"
+                className="p-2 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
               >
-                ✕
+                <X size={24} />
               </button>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mt-3 md:mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200">
+                <h4 className="font-bold text-blue-800 mb-2">Economic Value</h4>
+                <div className={`text-2xl font-bold ${
+                  selectedDistrict.economicValue === 'Very High' ? 'text-green-600' :
+                  selectedDistrict.economicValue === 'High' ? 'text-blue-600' :
+                  selectedDistrict.economicValue === 'Medium' ? 'text-yellow-600' :
+                  'text-gray-600'
+                }`}>
+                  {selectedDistrict.economicValue}
+                </div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl border border-green-200">
+                <h4 className="font-bold text-green-800 mb-2">Export Potential</h4>
+                <div className={`text-2xl font-bold ${
+                  selectedDistrict.exportPotential === 'Premium' ? 'text-purple-600' :
+                  selectedDistrict.exportPotential === 'Very High' ? 'text-green-600' :
+                  selectedDistrict.exportPotential === 'High' ? 'text-blue-600' :
+                  selectedDistrict.exportPotential === 'Moderate' ? 'text-yellow-600' :
+                  'text-gray-600'
+                }`}>
+                  {selectedDistrict.exportPotential}
+                </div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl border border-purple-200">
+                <h4 className="font-bold text-purple-800 mb-2">Total Products</h4>
+                <div className="text-2xl font-bold text-purple-600">
+                  {selectedDistrict.crops.length + selectedDistrict.fruits.length + selectedDistrict.nuts.length + selectedDistrict.chili.length + selectedDistrict.other.length}
+                </div>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               {selectedDistrict.crops.length > 0 && (
-                <div className="bg-green-50 p-3 md:p-4 rounded-lg border border-green-300">
-                  <h3 className="font-bold text-green-800 mb-1 md:mb-2">Vegetables</h3>
-                  <ul className="space-y-1">
+                <div className="bg-green-50 p-4 rounded-xl border border-green-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Carrot className="text-green-600" size={20} />
+                    <h3 className="font-bold text-green-800">Vegetables</h3>
+                  </div>
+                  <ul className="space-y-2">
                     {selectedDistrict.crops.map((crop, i) => (
-                      <li key={i} className="flex items-center text-sm md:text-base">
-                        <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                        {crop}
+                      <li key={i} className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-gray-700 text-sm">{crop}</span>
                       </li>
                     ))}
                   </ul>
@@ -453,13 +831,67 @@ function App() {
               )}
               
               {selectedDistrict.fruits.length > 0 && (
-                <div className="bg-green-50 p-3 md:p-4 rounded-lg border border-green-300">
-                  <h3 className="font-bold text-green-800 mb-1 md:mb-2">Fruits</h3>
-                  <ul className="space-y-1">
+                <div className="bg-orange-50 p-4 rounded-xl border border-orange-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Apple className="text-orange-600" size={20} />
+                    <h3 className="font-bold text-orange-800">Fruits</h3>
+                  </div>
+                  <ul className="space-y-2">
                     {selectedDistrict.fruits.map((fruit, i) => (
-                      <li key={i} className="flex items-center text-sm md:text-base">
-                        <div className="w-2 h-2 bg-green-600 rounded-full mr-2"></div>
-                        {fruit}
+                      <li key={i} className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                        <span className="text-gray-700 text-sm">{fruit}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {selectedDistrict.nuts.length > 0 && (
+                <div className="bg-purple-50 p-4 rounded-xl border border-purple-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Package className="text-purple-600" size={20} />
+                    <h3 className="font-bold text-purple-800">Nuts</h3>
+                  </div>
+                  <ul className="space-y-2">
+                    {selectedDistrict.nuts.map((nut, i) => (
+                      <li key={i} className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                        <span className="text-gray-700 text-sm">{nut}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {selectedDistrict.chili.length > 0 && (
+                <div className="bg-red-50 p-4 rounded-xl border border-red-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Flame className="text-red-600" size={20} />
+                    <h3 className="font-bold text-red-800">Chili</h3>
+                  </div>
+                  <ul className="space-y-2">
+                    {selectedDistrict.chili.map((chili, i) => (
+                      <li key={i} className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                        <span className="text-gray-700 text-sm">{chili}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {selectedDistrict.other.length > 0 && (
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Layers className="text-gray-600" size={20} />
+                    <h3 className="font-bold text-gray-800">Other Products</h3>
+                  </div>
+                  <ul className="space-y-2">
+                    {selectedDistrict.other.map((item, i) => (
+                      <li key={i} className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
+                        <span className="text-gray-700 text-sm">{item}</span>
                       </li>
                     ))}
                   </ul>
@@ -469,38 +901,149 @@ function App() {
           </div>
         )}
 
-        {/* Economic centers info section */}
-        <div className={`
-          bg-white/90 backdrop-blur p-4 md:p-6 
-          rounded-lg shadow-xl my-4 md:my-8 
-          border border-green-300
-          ${isFullscreen ? 'max-w-4xl mx-auto' : ''}
-        `}>
-          <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-green-800">
-            Economic Centers Distribution
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-            <div className="bg-green-50 p-3 md:p-4 rounded-lg border border-green-200">
-              <h3 className="font-bold text-green-700 mb-1 md:mb-2">Highland Economic Zone</h3>
-              <p className="text-xs md:text-sm text-green-600">
-                Specialized in temperate vegetables and premium produce
+        <div className="mt-8 bg-white p-8 rounded-2xl shadow-xl border border-gray-200">
+          <h2 className="text-3xl font-bold mb-6 text-gray-800">Sri Lanka Dedicated Economic Centers Overview</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-gradient-to-br from-green-50 to-emerald-100 p-6 rounded-xl border border-green-200 hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-green-600 rounded-full">
+                  <Carrot className="text-white" size={24} />
+                </div>
+                <h3 className="font-bold text-green-800 text-xl">Highland Economic Zone</h3>
+              </div>
+              <p className="text-gray-700 leading-relaxed">
+                Specialized in temperate vegetables (carrots, leeks, potatoes) and premium produce (strawberries, tea). 
+                Optimized for high-altitude cultivation with superior quality exports.
               </p>
+              <div className="mt-4 flex items-center gap-2">
+                <span className="px-3 py-1 bg-green-200 text-green-800 rounded-full text-sm font-medium">Premium Quality</span>
+                <span className="px-3 py-1 bg-blue-200 text-blue-800 rounded-full text-sm font-medium">Export Ready</span>
+              </div>
             </div>
-            <div className="bg-green-50 p-3 md:p-4 rounded-lg border border-green-200">
-              <h3 className="font-bold text-green-700 mb-1 md:mb-2">Dry Zone Agricultural Hub</h3>
-              <p className="text-xs md:text-sm text-green-600">
-                Major supplier of onions, chili, and tropical fruits
+            
+            <div className="bg-gradient-to-br from-orange-50 to-amber-100 p-6 rounded-xl border border-orange-200 hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-orange-600 rounded-full">
+                  <Apple className="text-white" size={24} />
+                </div>
+                <h3 className="font-bold text-orange-800 text-xl">Dry Zone Agricultural Hub</h3>
+              </div>
+              <p className="text-gray-700 leading-relaxed">
+                Major supplier of onions, chili, and tropical fruits (banana, mango, papaya). 
+                Strategic location for bulk production and distribution networks.
               </p>
+              <div className="mt-4 flex items-center gap-2">
+                <span className="px-3 py-1 bg-orange-200 text-orange-800 rounded-full text-sm font-medium">High Volume</span>
+                <span className="px-3 py-1 bg-red-200 text-red-800 rounded-full text-sm font-medium">Spice Center</span>
+              </div>
             </div>
-            <div className="bg-green-50 p-3 md:p-4 rounded-lg border border-green-200">
-              <h3 className="font-bold text-green-700 mb-1 md:mb-2">Coastal Trade Centers</h3>
-              <p className="text-xs md:text-sm text-green-600">
-                Export processing and maritime agricultural trade
+            
+            <div className="bg-gradient-to-br from-blue-50 to-cyan-100 p-6 rounded-xl border border-blue-200 hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-blue-600 rounded-full">
+                  <Package className="text-white" size={24} />
+                </div>
+                <h3 className="font-bold text-blue-800 text-xl">Coastal Trade Centers</h3>
+              </div>
+              <p className="text-gray-700 leading-relaxed">
+                Export processing of fruits (pineapple, palmyrah), spices (cinnamon), and maritime agricultural trade. 
+                Gateway for international market access.
               </p>
+              <div className="mt-4 flex items-center gap-2">
+                <span className="px-3 py-1 bg-blue-200 text-blue-800 rounded-full text-sm font-medium">Export Hub</span>
+                <span className="px-3 py-1 bg-purple-200 text-purple-800 rounded-full text-sm font-medium">Value Added</span>
+              </div>
             </div>
           </div>
         </div>
+
+        <div className="mt-8 bg-gradient-to-r from-blue-600 to-green-600 p-8 rounded-2xl shadow-xl text-white">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-center">
+            <div>
+              <div className="text-3xl font-bold mb-2">{districts.length}</div>
+              <div className="text-blue-100">Economic Centers</div>
+            </div>
+            <div>
+              <div className="text-3xl font-bold mb-2">
+                {districts.filter(d => d.economicValue === 'High' || d.economicValue === 'Very High').length}
+              </div>
+              <div className="text-blue-100">High Value Centers</div>
+            </div>
+            <div>
+              <div className="text-3xl font-bold mb-2">
+                {districts.filter(d => d.exportPotential === 'High' || d.exportPotential === 'Very High' || d.exportPotential === 'Premium').length}
+              </div>
+              <div className="text-blue-100">Export Ready</div>
+            </div>
+            <div>
+              <div className="text-3xl font-bold mb-2">
+                {new Set([...districts.flatMap(d => d.crops), ...districts.flatMap(d => d.fruits), ...districts.flatMap(d => d.other)]).size}
+              </div>
+              <div className="text-blue-100">Unique Products</div>
+            </div>
+          </div>
+        </div>
+
+        <footer className="mt-12 py-6 border-t border-gray-200 text-center text-gray-600">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <MapPin className="text-blue-600" size={20} />
+            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
+              Sri Lanka Dedicated Economic Centers
+            </span>
+          </div>
+          <p className="text-sm">© {new Date().getFullYear()} - Advanced Agricultural Production & Distribution Network</p>
+          <p className="text-xs mt-1 text-gray-500">
+            Data sourced from Sri Lanka Department of Agriculture • Enhanced with real-time analytics
+          </p>
+        </footer>
       </div>
+
+      <style jsx>{`
+        .custom-tooltip {
+          border-radius: 12px !important;
+          box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+        }
+        
+        .custom-popup .leaflet-popup-content-wrapper {
+          border-radius: 16px !important;
+          box-shadow: 0 20px 40px rgba(0,0,0,0.1) !important;
+        }
+        
+        .custom-div-icon {
+          background: transparent !important;
+          border: none !important;
+        }
+        
+        @keyframes animate-in {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        .animate-in {
+          animation: animate-in 0.3s ease-out;
+        }
+        
+        .slide-in-from-bottom {
+          animation: slide-in-from-bottom 0.4s ease-out;
+        }
+        
+        @keyframes slide-in-from-bottom {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }
