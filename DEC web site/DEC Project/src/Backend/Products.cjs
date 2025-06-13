@@ -63,10 +63,11 @@ app.post('/api/products/upload', upload.array('images', 5), (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Save only the first image as main image
+    // Save only the first image as main image with full URL
     let image_url = null;
     if (req.files && req.files.length > 0) {
-      image_url = `/uploads/${req.files[0].filename}`;
+      // Store the full URL including the backend server address
+      image_url = `http://localhost:5001/uploads/${req.files[0].filename}`;
     }
 
     const sql = `

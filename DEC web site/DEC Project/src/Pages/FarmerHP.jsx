@@ -93,7 +93,7 @@ const FarmerPortal = ({ user, onLogout }) => {
       const res = await fetch('http://localhost:5001/api/products?farmer_id=' + currentUser.id);
       const data = await res.json();
       if (Array.isArray(data)) setProducts(data);
-    } catch (err) {
+    } catch {
       setProducts([]);
     }
   };
@@ -172,7 +172,7 @@ const FarmerPortal = ({ user, onLogout }) => {
       } else {
         alert('Error uploading product: ' + (data.error || 'Unknown error'));
       }
-    } catch (err) {
+    } catch {
       alert('Network or server error');
     }
     setIsUploading(false);

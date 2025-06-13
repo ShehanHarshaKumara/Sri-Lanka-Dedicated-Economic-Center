@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
+import React from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Tooltip } from 'react-leaflet';
 import { 
   MapPin, 
@@ -293,7 +294,6 @@ const createCustomIcon = (type, size = 'medium') => {
         font-size: ${iconSize * 0.5}px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         animation: pulse 2s infinite;
-      ">
         ${getIconSymbol(type)}
       </div>
       <style>
