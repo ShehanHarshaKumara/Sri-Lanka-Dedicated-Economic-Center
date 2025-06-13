@@ -19,7 +19,7 @@ import {
   FaSort
 } from 'react-icons/fa';
 
-const EconomicCenter = () => {
+const EconomicCenter = ({ user, onLogout }) => {
   const [products] = useState([
     {
       id: 1,
@@ -209,6 +209,13 @@ const EconomicCenter = () => {
 
   const categories = ['all', ...new Set(products.map(p => p.category))];
 
+  // Update the current user info in the profile section
+  const currentUser = {
+    name: user?.name || 'Guest User',
+    email: user?.email || 'guest@example.com',
+    avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b05b?w=100&h=100&fit=crop&crop=face'
+  };
+
   return (
     <div className="w-full min-h-screen bg-white text-gray-800 m-0 p-0 box-border" style={{ 
       margin: 0, 
@@ -297,11 +304,11 @@ const EconomicCenter = () => {
                 {profileOpen && (
                   <div className="profile-dropdown absolute right-0 mt-2 w-44 bg-white/95 backdrop-blur-md rounded-lg border border-green-500/10 shadow-xl">
                     <div className="p-3 border-b border-green-500/10">
-                      <p className="text-gray-800 font-semibold text-sm">Welcome!</p>
-                      <p className="text-gray-600 text-xs">Guest User</p>
+                      <p className="text-gray-800 font-semibold text-sm">{currentUser.name}</p>
+                      <p className="text-gray-600 text-xs">{currentUser.email}</p>
                     </div>
                     <div className="py-1">
-                      {['Profile', 'Orders', 'Wishlist', 'Settings', 'Logout'].map((item) => (
+                      {['Profile', 'Orders', 'Wishlist', 'Settings'].map((item) => (
                         <a
                           key={item}
                           href="#"
@@ -310,6 +317,15 @@ const EconomicCenter = () => {
                           {item}
                         </a>
                       ))}
+                      <button
+                        onClick={() => {
+                          console.log('Customer logout clicked');
+                          onLogout();
+                        }}
+                        className="w-full text-left px-3 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors"
+                      >
+                        Logout
+                      </button>
                     </div>
                   </div>
                 )}

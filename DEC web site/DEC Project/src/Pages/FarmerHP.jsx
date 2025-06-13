@@ -32,12 +32,12 @@ import {
   FaSpinner
 } from 'react-icons/fa';
 
-const FarmerPortal = () => {
-  // Current user data
+const FarmerPortal = ({ user, onLogout }) => {
+  // Current user data - use the passed user prop with fallbacks
   const [currentUser] = useState({
-    id: 1,
-    name: 'Sunil Rathnayake',
-    email: 'sunil@farmer.lk',
+    id: user?.id || 1,
+    name: user?.name || 'Farmer User',
+    email: user?.email || 'farmer@example.com',
     location: 'Galle District',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
     farmSize: '15 acres',
@@ -327,7 +327,13 @@ const FarmerPortal = () => {
 
             {/* Logout Button */}
             <div className="absolute bottom-4 xl:bottom-6 2xl:bottom-8 left-4 xl:left-6 2xl:left-8 right-4 xl:right-6 2xl:right-8">
-              <button className="w-full flex items-center px-3 xl:px-4 2xl:px-6 py-2.5 xl:py-3 2xl:py-4 text-left rounded-xl text-red-600 hover:bg-red-50 transition-colors text-sm xl:text-base 2xl:text-lg">
+              <button 
+                onClick={() => {
+                  console.log('Farmer logout clicked');
+                  onLogout();
+                }}
+                className="w-full flex items-center px-3 xl:px-4 2xl:px-6 py-2.5 xl:py-3 2xl:py-4 text-left rounded-xl text-red-600 hover:bg-red-50 transition-colors text-sm xl:text-base 2xl:text-lg"
+              >
                 <FaSignOutAlt className="mr-2 xl:mr-3 2xl:mr-4 text-lg xl:text-xl 2xl:text-2xl" />
                 Logout
               </button>
