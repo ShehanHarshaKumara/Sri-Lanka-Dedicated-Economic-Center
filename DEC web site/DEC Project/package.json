@@ -10,23 +10,30 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@react-google-maps/api": "^2.20.6",
     "@react-three/drei": "^10.1.2",
     "@react-three/fiber": "^9.1.2",
+    "@tailwindcss/cli": "^4.1.10",
     "@tailwindcss/vite": "^4.1.8",
+    "@types/leaflet": "^1.9.18",
     "axios": "^1.9.0",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
+    "daisyui": "^5.0.43",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "framer-motion": "^12.16.0",
     "jsonwebtoken": "^9.0.2",
+    "leaflet": "^1.9.4",
     "lucide-react": "^0.513.0",
+    "maplibre-gl": "^5.6.0",
     "multer": "^2.0.1",
     "mysql2": "^3.14.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.57.0",
     "react-icons": "^5.5.0",
+    "react-leaflet": "^5.0.0",
     "three": "^0.177.0"
   },
   "devDependencies": {
@@ -39,8 +46,8 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^16.0.0",
-    "postcss": "^8.5.4",
-    "tailwindcss": "^4.1.8",
+    "postcss": "^8.5.5",
+    "tailwindcss": "^4.1.10",
     "vite": "^6.3.5"
   }
 }

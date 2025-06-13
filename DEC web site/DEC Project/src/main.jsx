@@ -5,7 +5,7 @@ import './index.css'
 //import LoginPage from './Pages/LoginPage.jsx'
 // import AdminHP from './Pages/AdminHP.jsx'
 // import FarmerHP from './Pages/FarmerHp.jsx'
- import CustomerHP from './Pages/CustomerHP.jsx'
+//  import CustomerHP from './Pages/CustomerHP.jsx'
 // import CustomerProfile from './Pages/CustomerProfile.jsx'
 // import FarmerProfile from './Pages/FarmerProfile.jsx'
 
@@ -16,7 +16,7 @@ createRoot(document.getElementById('root')).render(
      {/* <FarmerProfile/>  */}
     {/* <LoginPage /> */}
     {/* <CustomerProfile /> */}
-    <CustomerHP />
+    {/* <CustomerHP /> */}
      {/* <FarmerHP />  */}
     {/* <AdminHP /> */}
   </StrictMode>,
