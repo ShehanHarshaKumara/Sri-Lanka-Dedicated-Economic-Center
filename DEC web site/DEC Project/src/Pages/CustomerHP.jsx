@@ -18,6 +18,7 @@ import {
   FaFilter,
   FaSort
 } from 'react-icons/fa';
+import CustomerProfile from './CustomerProfile';
 
 const EconomicCenter = ({ user, onLogout }) => {
   const [products] = useState([
@@ -108,6 +109,7 @@ const EconomicCenter = ({ user, onLogout }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const [sortBy, setSortBy] = useState('name');
   const [filterCategory, setFilterCategory] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
@@ -209,12 +211,59 @@ const EconomicCenter = ({ user, onLogout }) => {
 
   const categories = ['all', ...new Set(products.map(p => p.category))];
 
+  // Helper function to parse name properly
+  const parseName = (fullName) => {
+    if (!fullName) return { firstName: '', lastName: '' };
+    const nameParts = fullName.trim().split(' ');
+    return {
+      firstName: nameParts[0] || '',
+      lastName: nameParts.slice(1).join(' ') || ''
+    };
+  };
+
   // Update the current user info in the profile section
   const currentUser = {
     name: user?.name || 'Guest User',
     email: user?.email || 'guest@example.com',
+    role: user?.role || 'customer',
     avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b05b?w=100&h=100&fit=crop&crop=face'
   };
+
+  const handleProfileClick = () => {
+    console.log('Profile button clicked!');
+    console.log('Current user:', user);
+    console.log('Setting showProfile to true');
+    setShowProfile(true);
+    setProfileOpen(false);
+  };
+
+  const handleBackToHome = () => {
+    console.log('Back to home clicked!');
+    setShowProfile(false);
+  };
+
+  // If showing profile, render CustomerProfile component
+  if (showProfile) {
+    console.log('Rendering CustomerProfile component');
+    const nameData = parseName(user?.name);
+    
+    return (
+      <CustomerProfile 
+        user={{
+          id: user?.id, // Make sure to pass 'id' not 'userId'
+          name: user?.name || currentUser.name,
+          email: user?.email || currentUser.email,
+          role: user?.role || currentUser.role,
+          firstName: user?.firstName || nameData.firstName,
+          lastName: user?.lastName || nameData.lastName
+        }}
+        onBack={handleBackToHome}
+        onLogout={onLogout}
+      />
+    );
+  }
+
+  console.log('Rendering CustomerHP component, showProfile:', showProfile);
 
   return (
     <div className="w-full min-h-screen bg-white text-gray-800 m-0 p-0 box-border" style={{ 
@@ -295,7 +344,10 @@ const EconomicCenter = ({ user, onLogout }) => {
               {/* Profile Dropdown */}
               <div className="relative">
                 <button 
-                  onClick={() => setProfileOpen(!profileOpen)}
+                  onClick={() => {
+                    console.log('Profile dropdown button clicked, current state:', profileOpen);
+                    setProfileOpen(!profileOpen);
+                  }}
                   className="profile-btn p-2 rounded-full bg-green-500/20 hover:bg-green-500/30 transition-colors"
                 >
                   <FaUser className="text-green-600 text-base sm:text-lg" />
@@ -308,21 +360,37 @@ const EconomicCenter = ({ user, onLogout }) => {
                       <p className="text-gray-600 text-xs">{currentUser.email}</p>
                     </div>
                     <div className="py-1">
-                      {['Profile', 'Orders', 'Wishlist', 'Settings'].map((item) => (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          console.log('Profile menu item clicked!');
+                          handleProfileClick();
+                        }}
+                        className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:text-green-600 hover:bg-green-500/10 transition-colors"
+                        type="button"
+                      >
+                        Profile
+                      </button>
+                      {['Orders', 'Wishlist', 'Settings'].map((item) => (
                         <a
                           key={item}
                           href="#"
+                          onClick={(e) => e.preventDefault()}
                           className="block px-3 py-2 text-sm text-gray-700 hover:text-green-600 hover:bg-green-500/10 transition-colors"
                         >
                           {item}
                         </a>
                       ))}
                       <button
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
                           console.log('Customer logout clicked');
                           onLogout();
                         }}
                         className="w-full text-left px-3 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors"
+                        type="button"
                       >
                         Logout
                       </button>

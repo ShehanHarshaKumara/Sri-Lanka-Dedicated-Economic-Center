@@ -570,7 +570,7 @@ const AuthPage = ({ onLogin }) => {
 
                       <div>
                         <label htmlFor="name" className="block text-base font-black text-gray-800 mb-2">
-                          Full Name
+                          Full Name <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
@@ -579,7 +579,7 @@ const AuthPage = ({ onLogin }) => {
                           value={formData.name}
                           onChange={handleChange}
                           required
-                          placeholder="Enter your full name"
+                          placeholder="Enter your name"
                           className="w-full px-6 py-4 rounded-2xl bg-gray-50 border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:bg-white outline-none transition-all duration-300 font-semibold placeholder-gray-400 hover:border-gray-300 text-lg"
                         />
                       </div>
