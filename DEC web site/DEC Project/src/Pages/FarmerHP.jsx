@@ -3,7 +3,7 @@ import {
   FaTractor, FaPlus, FaEdit, FaTrash, FaEye, FaBell, FaChartBar, FaShoppingCart, 
   FaMapMarkerAlt, FaStar, FaUpload, FaCamera, FaTimes, FaCheck, FaLeaf, FaUser, 
   FaBars, FaHome, FaBox, FaClipboardList, FaUsers, FaCog, FaSignOutAlt, FaRupeeSign, 
-  FaCalendar, FaWeight, FaTag, FaImage, FaSave, FaSpinner
+  FaCalendar, FaWeight, FaTag, FaImage, FaSave, FaSpinner, FaEllipsisV
 } from 'react-icons/fa';
 
 const FarmerPortal = ({ user, onLogout }) => {
@@ -39,6 +39,8 @@ const FarmerPortal = ({ user, onLogout }) => {
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [deletingProductId, setDeletingProductId] = useState(null);
+  const [showDropdownId, setShowDropdownId] = useState(null);
   const [notifications] = useState([
     { id: 1, message: 'New order for King Coconuts', time: '2 hours ago', type: 'order' },
     { id: 2, message: 'Product approved by admin', time: '1 day ago', type: 'approval' },
@@ -62,10 +64,6 @@ const FarmerPortal = ({ user, onLogout }) => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
 
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [productToDelete, setProductToDelete] = useState(null);
-  const [deletingProductId, setDeletingProductId] = useState(null);
-
   const categories = [
     'Fresh Produce', 'Spices', 'Grains', 'Fruits', 'Vegetables', 
     'Herbs', 'Dairy', 'Coconut Products', 'Tea', 'Other'
@@ -78,6 +76,9 @@ const FarmerPortal = ({ user, onLogout }) => {
     const handleClickOutside = (event) => {
       if (!event.target.closest('.sidebar') && !event.target.closest('.sidebar-toggle')) {
         setSidebarOpen(false);
+      }
+      if (!event.target.closest('.dropdown-menu') && !event.target.closest('.dropdown-trigger')) {
+        setShowDropdownId(null);
       }
     };
     window.addEventListener('scroll', handleScroll);
@@ -235,58 +236,16 @@ const FarmerPortal = ({ user, onLogout }) => {
     setFormError(''); // Clear any previous errors
   };
 
-  // Delete product with modal
-  const handleDeleteClick = (product) => {
-    setProductToDelete(product);
-    setShowDeleteModal(true);
-  };
-
-  const confirmDelete = async () => {
-    if (!productToDelete) return;
-    
-    const id = productToDelete.id;
-    setDeletingProductId(id);
-    setShowDeleteModal(false);
-    
-    try {
-      const response = await fetch(`http://localhost:5001/api/products/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      const data = await response.json();
-      
-      if (response.ok && data.success) {
-        setProducts(prev => prev.filter(p => p.id !== id));
-        showSuccessNotification(`Product "${productToDelete.name}" deleted successfully!`);
-      } else {
-        const errorMessage = data.error || 'Failed to delete product';
-        alert(`Error: ${errorMessage}`);
-        console.error('Delete error:', errorMessage);
-      }
-    } catch (err) {
-      console.error('Delete error:', err);
-      alert('Network error: Could not delete product. Please check your connection and try again.');
-    } finally {
-      setDeletingProductId(null);
-      setProductToDelete(null);
-    }
-  };
-
   // Delete product
   const deleteProduct = async (id) => {
-    // Custom confirmation dialog with product details
     const product = products.find(p => p.id === id);
     if (!product) return;
     
     const confirmMessage = `Are you sure you want to delete "${product.name}"?\n\nThis action cannot be undone.`;
     
     if (window.confirm(confirmMessage)) {
-      setDeletingProductId(id); // Set loading state
+      setDeletingProductId(id);
       try {
-        // Show loading state (optional: you can add a loading state)
         const response = await fetch(`http://localhost:5001/api/products/${id}`, {
           method: 'DELETE',
           headers: {
@@ -297,14 +256,9 @@ const FarmerPortal = ({ user, onLogout }) => {
         const data = await response.json();
         
         if (response.ok && data.success) {
-          // Remove from local state immediately for better UX
           setProducts(prev => prev.filter(p => p.id !== id));
           showSuccessNotification(`Product "${product.name}" deleted successfully!`);
-          
-          // Optionally refresh the products list to ensure sync with database
-          // await fetchProducts();
         } else {
-          // Show error message
           const errorMessage = data.error || 'Failed to delete product';
           alert(`Error: ${errorMessage}`);
           console.error('Delete error:', errorMessage);
@@ -313,7 +267,8 @@ const FarmerPortal = ({ user, onLogout }) => {
         console.error('Delete error:', err);
         alert('Network error: Could not delete product. Please check your connection and try again.');
       } finally {
-        setDeletingProductId(null); // Clear loading state
+        setDeletingProductId(null);
+        setShowDropdownId(null);
       }
     }
   };
@@ -570,7 +525,7 @@ const FarmerPortal = ({ user, onLogout }) => {
                           alt={product.name} 
                           className="w-full h-40 lg:h-48 2xl:h-56 object-cover" 
                         />
-                        <div className="absolute top-3 right-3">
+                        <div className="absolute top-3 right-3 flex items-center space-x-2">
                           <span className={`px-2 lg:px-3 2xl:px-4 py-1 2xl:py-2 rounded-full text-xs 2xl:text-sm font-semibold ${
                             product.status === 'active' 
                               ? 'bg-green-500 text-white' 
@@ -578,6 +533,49 @@ const FarmerPortal = ({ user, onLogout }) => {
                           }`}>
                             {product.status}
                           </span>
+                          <div className="relative">
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowDropdownId(showDropdownId === product.id ? null : product.id);
+                              }}
+                              className="dropdown-trigger p-2 bg-white/90 hover:bg-white rounded-full shadow-md transition-all"
+                            >
+                              <FaEllipsisV className="text-gray-600" />
+                            </button>
+                            {showDropdownId === product.id && (
+                              <div className="dropdown-menu absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-10">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    editProduct(product);
+                                    setShowDropdownId(null);
+                                  }}
+                                  className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center text-gray-700"
+                                >
+                                  <FaEdit className="mr-2 text-blue-600" /> Edit Product
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteProduct(product.id);
+                                  }}
+                                  disabled={deletingProductId === product.id}
+                                  className="w-full px-4 py-2 text-left hover:bg-red-50 flex items-center text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {deletingProductId === product.id ? (
+                                    <>
+                                      <FaSpinner className="mr-2 animate-spin" /> Deleting...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FaTrash className="mr-2" /> Delete Product
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="p-4 lg:p-6 2xl:p-8">
@@ -617,18 +615,6 @@ const FarmerPortal = ({ user, onLogout }) => {
                             }`}
                           >
                             {product.status === 'active' ? 'Pause' : 'Activate'}
-                          </button>
-                          <button 
-                            onClick={() => deleteProduct(product.id)}
-                            disabled={deletingProductId === product.id}
-                            className="bg-red-600 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-2 lg:py-3 2xl:py-4 px-2 lg:px-3 2xl:px-4 rounded-lg text-xs lg:text-sm 2xl:text-base flex items-center justify-center transition-colors"
-                            title="Delete Product"
-                          >
-                            {deletingProductId === product.id ? (
-                              <FaSpinner className="animate-spin" />
-                            ) : (
-                              <FaTrash />
-                            )}
                           </button>
                         </div>
                       </div>
@@ -949,48 +935,6 @@ const FarmerPortal = ({ user, onLogout }) => {
           <div className="bg-green-500 text-white px-4 lg:px-6 2xl:px-8 py-2 lg:py-3 2xl:py-4 rounded-lg shadow-lg text-sm lg:text-base 2xl:text-lg flex items-center">
             <FaCheck className="mr-2" />
             {successMessage}
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && productToDelete && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6 lg:p-8 shadow-2xl">
-            <div className="text-center">
-              <div className="mx-auto w-16 h-16 lg:w-20 lg:h-20 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                <FaTrash className="text-red-600 text-2xl lg:text-3xl" />
-              </div>
-              <h3 className="text-xl lg:text-2xl font-bold text-gray-900 mb-2">Delete Product</h3>
-              <p className="text-gray-600 mb-1">Are you sure you want to delete</p>
-              <p className="text-lg font-semibold text-gray-800 mb-4">"{productToDelete.name}"?</p>
-              {productToDelete.image_url && (
-                <img 
-                  src={productToDelete.image_url} 
-                  alt={productToDelete.name}
-                  className="w-32 h-32 object-cover rounded-lg mx-auto mb-4"
-                />
-              )}
-              <p className="text-sm text-red-600 mb-6">This action cannot be undone.</p>
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => {
-                    setShowDeleteModal(false);
-                    setProductToDelete(null);
-                  }}
-                  className="flex-1 px-4 py-2 lg:py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmDelete}
-                  className="flex-1 px-4 py-2 lg:py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center justify-center"
-                >
-                  <FaTrash className="mr-2" />
-                  Delete Product
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       )}
