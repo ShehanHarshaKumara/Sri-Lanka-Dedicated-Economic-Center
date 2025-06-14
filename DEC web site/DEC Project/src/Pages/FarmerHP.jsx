@@ -5,6 +5,7 @@ import {
   FaBars, FaHome, FaBox, FaClipboardList, FaUsers, FaCog, FaSignOutAlt, FaRupeeSign, 
   FaCalendar, FaWeight, FaTag, FaImage, FaSave, FaSpinner, FaEllipsisV
 } from 'react-icons/fa';
+import FarmerProfile from './FarmerProfile';
 
 const FarmerPortal = ({ user, onLogout }) => {
   const [currentUser, setCurrentUser] = useState({
@@ -316,6 +317,7 @@ const FarmerPortal = ({ user, onLogout }) => {
     { id: 'orders', label: 'Orders', icon: FaClipboardList },
     { id: 'analytics', label: 'Analytics', icon: FaChartBar },
     { id: 'community', label: 'Community', icon: FaUsers },
+    { id: 'profile', label: 'Profile', icon: FaUser },
     { id: 'settings', label: 'Settings', icon: FaCog }
   ];
 
@@ -356,11 +358,16 @@ const FarmerPortal = ({ user, onLogout }) => {
                   <p className="text-sm font-semibold text-gray-800 truncate max-w-32">{currentUser.name}</p>
                   <p className="text-xs text-gray-600 truncate max-w-32">{currentUser.location}</p>
                 </div>
-                <img 
-                  src={currentUser.avatar} 
-                  alt="Profile" 
-                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-green-500/30 flex-shrink-0" 
-                />
+                <button
+                  onClick={() => setActiveTab('profile')}
+                  className="rounded-full hover:ring-2 hover:ring-green-500 transition-all"
+                >
+                  <img 
+                    src={currentUser.avatar} 
+                    alt="Profile" 
+                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-green-500/30 flex-shrink-0 cursor-pointer hover:border-green-500 transition-colors" 
+                  />
+                </button>
               </div>
             </div>
           </div>
@@ -635,6 +642,11 @@ const FarmerPortal = ({ user, onLogout }) => {
                   </div>
                 )}
               </div>
+            )}
+
+            {/* Profile Tab */}
+            {activeTab === 'profile' && (
+              <FarmerProfile user={user} />
             )}
 
             {/* Other tabs content (orders, analytics, community, settings) can remain as in your original code */}
