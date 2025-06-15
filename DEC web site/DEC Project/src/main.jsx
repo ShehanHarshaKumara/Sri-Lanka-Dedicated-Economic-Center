@@ -18,8 +18,6 @@ function App() {
         const storedUser = localStorage.getItem('user');
         
         if (token && storedUser) {
-          const userData = JSON.parse(storedUser);
-          
           // Verify token with backend
           const response = await fetch('http://localhost:5000/api/auth/verify-token', {
             headers: {

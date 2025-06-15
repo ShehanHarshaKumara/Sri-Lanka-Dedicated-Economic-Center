@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FaLeaf, FaUser, FaUserTie, FaTractor, FaGoogle, FaFacebook, FaTwitter, FaApple } from 'react-icons/fa';
+import { FaLeaf, FaUser, FaTractor, FaGoogle, FaFacebook, FaTwitter, FaApple, FaLock } from 'react-icons/fa';
 
 const AuthPage = ({ onLogin }) => {
   const [isLogin, setIsLogin] = useState(true);
@@ -16,6 +16,7 @@ const AuthPage = ({ onLogin }) => {
     role: 'farmer'
   });
   const [successMessage, setSuccessMessage] = useState('');
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -53,14 +54,9 @@ const AuthPage = ({ onLogin }) => {
         console.log('Login response:', data);
 
         if (response.ok) {
-          // Store token and user data
           localStorage.setItem('token', data.token);
           localStorage.setItem('user', JSON.stringify(data.user));
           
-          console.log('Login successful, user data:', data.user);
-          console.log('User role from response:', data.user.role);
-          
-          // Reset form
           setFormData({
             name: '',
             email: '',
@@ -69,7 +65,6 @@ const AuthPage = ({ onLogin }) => {
             role: 'farmer'
           });
           
-          // Call the onLogin callback to update the parent component
           if (onLogin) {
             onLogin(data.user);
           }
@@ -114,12 +109,7 @@ const AuthPage = ({ onLogin }) => {
         console.log('Registration response:', data);
 
         if (response.ok) {
-          console.log('Registration successful for user:', data.user);
-          
-          // Show success message
           setSuccessMessage(`Account created successfully! Please login with your credentials.`);
-          
-          // Reset form
           setFormData({
             name: '',
             email: '',
@@ -128,12 +118,10 @@ const AuthPage = ({ onLogin }) => {
             role: 'farmer'
           });
           
-          // Auto-switch to login mode after 2 seconds
           setTimeout(() => {
             setIsLogin(true);
             setSuccessMessage('');
           }, 2000);
-          
         } else {
           setError(data.message || 'Registration failed. Please try again.');
         }
@@ -146,57 +134,38 @@ const AuthPage = ({ onLogin }) => {
     }
   };
 
-  const handleSocialLogin = async (provider) => {
+  const handleAdminLogin = async (e) => {
+    e.preventDefault();
     setLoading(true);
     setError('');
-
+    
     try {
-      console.log(`Attempting ${provider} login`);
-      
-      // For demo purposes, simulate social login
-      const mockSocialData = {
-        provider: provider.toLowerCase(),
-        email: `user@${provider.toLowerCase()}.com`,
-        name: `${provider} User`,
-        socialId: `${provider.toLowerCase()}_${Date.now()}`
-      };
-
-      const response = await fetch('http://localhost:5000/api/auth/social-login', {
+      const response = await fetch('http://localhost:5000/api/auth/admin-login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(mockSocialData),
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password
+        }),
       });
 
       const data = await response.json();
-      console.log('Social login response:', data);
 
       if (response.ok) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         
-        console.log('Social login successful, user data:', data.user);
-        
-        // Reset form
-        setFormData({
-          name: '',
-          email: '',
-          password: '',
-          confirmPassword: '',
-          role: 'farmer'
-        });
-        
-        // Call the onLogin callback to update the parent component
         if (onLogin) {
           onLogin(data.user);
         }
       } else {
-        setError(data.message || `${provider} login failed`);
+        setError(data.message || 'Admin login failed. Please check your credentials.');
       }
     } catch (error) {
-      console.error('Social login error:', error);
-      setError(`${provider} login failed. Please try again.`);
+      console.error('Admin login error:', error);
+      setError('Network error. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -209,13 +178,11 @@ const AuthPage = ({ onLogin }) => {
     setSlideDirection(isLogin ? 'slide-to-signup' : 'slide-to-login');
     setContentVisible(false);
     
-    // Content change timing
     setTimeout(() => {
       setIsLogin(!isLogin);
       setContentVisible(true);
     }, 400);
     
-    // Animation cleanup
     setTimeout(() => {
       setIsAnimating(false);
       setSlideDirection('');
@@ -224,9 +191,14 @@ const AuthPage = ({ onLogin }) => {
 
   const roles = [
     { value: 'farmer', label: 'Farmer', icon: FaTractor, description: 'Agricultural Producer' },
-    { value: 'customer', label: 'Customer', icon: FaUser, description: 'Buyer/Consumer' },
-    { value: 'administrator', label: 'Administrator', icon: FaUserTie, description: 'System Admin' }
+    { value: 'customer', label: 'Customer', icon: FaUser, description: 'Buyer/Consumer' }
   ];
+
+  // Placeholder for social login handler
+  const handleSocialLogin = (provider) => {
+    // Implement social login logic here
+    alert(`Social login with ${provider} is not implemented yet.`);
+  };
 
   return (
     <div className="fixed inset-0 flex flex-col md:flex-row bg-gray-100 text-gray-800 overflow-hidden font-sans">
@@ -242,7 +214,6 @@ const AuthPage = ({ onLogin }) => {
       >
         {/* Video Background */}
         <div className="absolute inset-0 w-full h-full">
-          {/* Login Video */}
           <video
             key="login-video"
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
@@ -254,11 +225,9 @@ const AuthPage = ({ onLogin }) => {
             playsInline
           >
             <source src="https://videocdn.cdnpk.net/videos/b80e2b7c-9eea-5514-9515-4d95359247c1/horizontal/previews/clear/small.mp4?token=exp=1749288655~hmac=97f5a1971ef2ad8067b5d270a92efdc5b41327d4aa8b606ca3c27fcb15567766" type="video/mp4" />
-            {/* Fallback for when video fails to load */}
             <div className="w-full h-full bg-gradient-to-br from-green-600 to-green-800"></div>
           </video>
           
-          {/* Signup Video */}
           <video
             key="signup-video"
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
@@ -270,7 +239,6 @@ const AuthPage = ({ onLogin }) => {
             playsInline
           >
             <source src="https://videocdn.cdnpk.net/videos/f97a63aa-c19f-50dc-be72-e1ed3bd218c7/horizontal/previews/clear/small.mp4?token=exp=1749288535~hmac=0a7b13746acd0ebc4af2e99bf7897e1ffbf032750fbab15ecc29d78ca73b121d" type="video/mp4" />
-            {/* Fallback for when video fails to load */}
             <div className="w-full h-full bg-gradient-to-br from-blue-600 to-blue-800"></div>
           </video>
         </div>
@@ -295,7 +263,6 @@ const AuthPage = ({ onLogin }) => {
           }`}></div>
         </div>
 
-        {/* Sliding Geometric Shapes */}
         <div className="absolute inset-0 overflow-hidden">
           <div className={`absolute w-20 h-20 border-2 border-white/30 rotate-45 transition-all duration-1000 ${
             isLogin ? 'top-20 right-20 animate-pulse' : 'bottom-20 left-20 animate-bounce'
@@ -341,7 +308,6 @@ const AuthPage = ({ onLogin }) => {
               </span>
             </div>
 
-            {/* Stats or Features */}
             <div className="grid grid-cols-3 gap-6 mt-12">
               {[
                 { number: '10K+', label: 'Farmers' },
@@ -356,46 +322,6 @@ const AuthPage = ({ onLogin }) => {
             </div>
           </div>
         </div>
-        
-        {/* Dynamic Decorative Elements */}
-        <div className="absolute bottom-8 left-16 flex space-x-4 z-10">
-          {[0, 1, 2].map((index) => (
-            <div 
-              key={index}
-              className={`w-5 h-5 rounded-full shadow-lg transition-all duration-500 ${
-                isLogin 
-                  ? 'bg-gradient-to-r from-green-300 to-green-500' 
-                  : 'bg-gradient-to-r from-blue-300 to-blue-500'
-              }`}
-              style={{
-                animationDelay: `${index * 0.2}s`,
-                animation: 'bounce 2s infinite'
-              }}
-            ></div>
-          ))}
-        </div>
-
-        {/* Video Controls Overlay (Optional) */}
-        <div className="absolute bottom-4 right-4 flex space-x-2 z-20">
-          <button
-            onClick={() => {
-              const videos = document.querySelectorAll('video');
-              videos.forEach(video => {
-                if (video.paused) {
-                  video.play();
-                } else {
-                  video.pause();
-                }
-              });
-            }}
-            className="bg-white/20 hover:bg-white/30 text-white p-2 rounded-full backdrop-blur-sm transition-all duration-300"
-            title="Play/Pause Video"
-          >
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-            </svg>
-          </button>
-        </div>
       </div>
 
       {/* Right Auth Section */}
@@ -407,7 +333,6 @@ const AuthPage = ({ onLogin }) => {
             : 'transform translate-x-0'
         }`}>
         
-        {/* Sliding Background Pattern */}
         <div className="absolute inset-0 opacity-5">
           <div className={`absolute inset-0 transition-transform duration-1000 ${
             isLogin ? 'translate-x-0' : 'translate-x-full'
@@ -423,7 +348,6 @@ const AuthPage = ({ onLogin }) => {
 
         <div className="min-h-full flex flex-col justify-center py-8 px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="sm:mx-auto sm:w-full sm:max-w-md">
-            {/* Logo for Mobile */}
             <div className="flex justify-center md:hidden mb-8">
               <div className="flex items-center transform transition-all duration-500 hover:scale-110">
                 <FaLeaf className={`text-5xl mr-3 transition-all duration-500 ${
@@ -442,277 +366,352 @@ const AuthPage = ({ onLogin }) => {
               contentVisible ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-8'
             }`}>
               <h2 className="text-4xl font-black text-gray-800 mb-4 tracking-tight">
-                {isLogin ? 'Welcome Back' : 'Join Our Community'}
+                {showAdminLogin ? 'Admin Portal' : isLogin ? 'Welcome Back' : 'Join Our Community'}
               </h2>
               <p className="text-gray-600 mb-8 font-medium text-lg">
-                {isLogin ? 'Access your agricultural dashboard' : 'Start your farming journey today'}
+                {showAdminLogin 
+                  ? 'Access the administration dashboard' 
+                  : isLogin 
+                    ? 'Access your agricultural dashboard' 
+                    : 'Start your farming journey today'}
               </p>
             </div>
           </div>
 
           <div className="sm:mx-auto sm:w-full sm:max-w-md">
-            <div className={`bg-white py-10 px-8 shadow-2xl rounded-3xl border border-gray-200 backdrop-blur-sm relative overflow-hidden transition-all duration-600 ${
-              contentVisible ? 'opacity-100 transform scale-100 translate-y-0' : 'opacity-0 transform scale-95 translate-y-4'
-            }`}>
-              
-              {/* Card Background Animation */}
-              <div className={`absolute inset-0 transition-all duration-1000 ${
-                isLogin ? 'bg-gradient-to-br from-green-50/50 to-transparent' : 'bg-gradient-to-br from-blue-50/50 to-transparent'
-              }`}></div>
-              
-              <div className="relative z-10">
-                {/* Success Message */}
-                {successMessage && (
-                  <div className="mb-6 p-4 bg-green-50 border-2 border-green-200 rounded-2xl">
-                    <p className="text-green-700 font-semibold text-center">{successMessage}</p>
-                  </div>
-                )}
-
-                {/* Error Message */}
-                {error && (
-                  <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-2xl">
-                    <p className="text-red-700 font-semibold text-center">{error}</p>
-                  </div>
-                )}
-
-                {/* Social Login Buttons */}
-                <div className="mb-8">
-                  <div className="text-center text-base text-gray-700 mb-6 font-semibold">
-                    {isLogin ? 'Quick Sign In' : 'Quick Sign Up'}
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    {[
-                      { provider: 'Google', icon: FaGoogle, color: 'text-red-500', bg: 'hover:bg-red-50', border: 'hover:border-red-200' },
-                      { provider: 'Facebook', icon: FaFacebook, color: 'text-blue-600', bg: 'hover:bg-blue-50', border: 'hover:border-blue-200' },
-                      { provider: 'Twitter', icon: FaTwitter, color: 'text-blue-400', bg: 'hover:bg-blue-50', border: 'hover:border-blue-200' },
-                      { provider: 'Apple', icon: FaApple, color: 'text-gray-800', bg: 'hover:bg-gray-50', border: 'hover:border-gray-300' }
-                    ].map(({ provider, icon, color, bg, border }) => {
-                      const Icon = icon;
-                      return (
-                        <button
-                          key={provider}
-                          onClick={() => handleSocialLogin(provider)}
-                          disabled={loading}
-                          className={`flex items-center justify-center px-6 py-4 border-2 border-gray-200 rounded-2xl shadow-sm bg-white text-gray-700 ${bg} ${border} hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 hover:scale-105 font-bold group disabled:opacity-50 disabled:cursor-not-allowed`}
-                        >
-                          <Icon className={`${color} mr-3 text-xl transition-transform duration-300 group-hover:scale-110`} />
-                          <span className="text-sm">{provider}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Animated Divider */}
-                <div className="relative mb-8">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t-2 border-gray-200"></div>
-                  </div>
-                  <div className="relative flex justify-center text-base">
-                    <span className="px-6 bg-white text-gray-700 font-bold">
-                      or continue with email
-                    </span>
-                  </div>
-                </div>
-
-                {/* Auth Form */}
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  {!isLogin && (
-                    <>
-                      {/* Role Selection */}
-                      <div>
-                        <label className="block text-base font-black text-gray-800 mb-4">
-                          Choose Your Role
-                        </label>
-                        <div className="grid grid-cols-1 gap-4">
-                          {roles.map((role) => {
-                            const IconComponent = role.icon;
-                            return (
-                              <label
-                                key={role.value}
-                                className={`relative flex items-center p-5 border-3 rounded-2xl cursor-pointer transition-all duration-400 transform hover:scale-105 ${
-                                  formData.role === role.value
-                                    ? 'border-blue-500 bg-gradient-to-r from-blue-50 to-blue-100 shadow-xl scale-105'
-                                    : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50 hover:shadow-lg'
-                                }`}
-                              >
-                                <input
-                                  type="radio"
-                                  name="role"
-                                  value={role.value}
-                                  checked={formData.role === role.value}
-                                  onChange={handleChange}
-                                  className="sr-only"
-                                />
-                                <IconComponent className={`text-3xl mr-4 transition-all duration-400 ${
-                                  formData.role === role.value ? 'text-blue-600 scale-110' : 'text-gray-400'
-                                }`} />
-                                <div className="flex-1">
-                                  <div className={`font-black text-lg transition-colors duration-300 ${
-                                    formData.role === role.value ? 'text-blue-800' : 'text-gray-700'
-                                  }`}>
-                                    {role.label}
-                                  </div>
-                                  <div className="text-sm text-gray-500 font-medium">
-                                    {role.description}
-                                  </div>
-                                </div>
-                                {formData.role === role.value && (
-                                  <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-blue-500 rounded-full flex items-center justify-center shadow-lg transform scale-110">
-                                    <div className="w-3 h-3 bg-white rounded-full"></div>
-                                  </div>
-                                )}
-                              </label>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      <div>
-                        <label htmlFor="name" className="block text-base font-black text-gray-800 mb-2">
-                          Full Name <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          id="name"
-                          name="name"
-                          value={formData.name}
-                          onChange={handleChange}
-                          required
-                          placeholder="Enter your name"
-                          className="w-full px-6 py-4 rounded-2xl bg-gray-50 border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:bg-white outline-none transition-all duration-300 font-semibold placeholder-gray-400 hover:border-gray-300 text-lg"
-                        />
-                      </div>
-                    </>
+            {showAdminLogin ? (
+              <div className="bg-white py-10 px-8 shadow-2xl rounded-3xl border border-gray-200 backdrop-blur-sm relative overflow-hidden">
+                <div className="relative z-10">
+                  {error && (
+                    <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-2xl">
+                      <p className="text-red-700 font-semibold text-center">{error}</p>
+                    </div>
                   )}
 
-                  <div>
-                    <label htmlFor="email" className="block text-base font-black text-gray-800 mb-2">
-                      Email Address
-                    </label>
-                    <input
-                      type="email"
-                      id="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      required
-                      placeholder="your@email.com"
-                      className={`w-full px-6 py-4 rounded-2xl bg-gray-50 border-2 border-gray-200 focus:ring-4 focus:bg-white outline-none transition-all duration-300 font-semibold placeholder-gray-400 hover:border-gray-300 text-lg ${
-                        isLogin ? 'focus:border-green-500 focus:ring-green-100' : 'focus:border-blue-500 focus:ring-blue-100'
-                      }`}
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="password" className="block text-base font-black text-gray-800 mb-2">
-                      Password
-                    </label>
-                    <input
-                      type="password"
-                      id="password"
-                      name="password"
-                      value={formData.password}
-                      onChange={handleChange}
-                      required
-                      minLength="6"
-                      placeholder="••••••••"
-                      className={`w-full px-6 py-4 rounded-2xl bg-gray-50 border-2 border-gray-200 focus:ring-4 focus:bg-white outline-none transition-all duration-300 font-semibold placeholder-gray-400 hover:border-gray-300 text-lg ${
-                        isLogin ? 'focus:border-green-500 focus:ring-green-100' : 'focus:border-blue-500 focus:ring-blue-100'
-                      }`}
-                    />
-                  </div>
-
-                  {!isLogin && (
+                  <form onSubmit={handleAdminLogin} className="space-y-6">
                     <div>
-                      <label htmlFor="confirmPassword" className="block text-base font-black text-gray-800 mb-2">
-                        Confirm Password
+                      <label htmlFor="admin-email" className="block text-base font-black text-gray-800 mb-2">
+                        Admin Email
+                      </label>
+                      <input
+                        type="email"
+                        id="admin-email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        required
+                        placeholder="admin@example.com"
+                        className="w-full px-6 py-4 rounded-2xl bg-gray-50 border-2 border-gray-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 focus:bg-white outline-none transition-all duration-300 font-semibold placeholder-gray-400 hover:border-gray-300 text-lg"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="admin-password" className="block text-base font-black text-gray-800 mb-2">
+                        Admin Password
                       </label>
                       <input
                         type="password"
-                        id="confirmPassword"
-                        name="confirmPassword"
-                        value={formData.confirmPassword}
+                        id="admin-password"
+                        name="password"
+                        value={formData.password}
+                        onChange={handleChange}
+                        required
+                        placeholder="••••••••"
+                        className="w-full px-6 py-4 rounded-2xl bg-gray-50 border-2 border-gray-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 focus:bg-white outline-none transition-all duration-300 font-semibold placeholder-gray-400 hover:border-gray-300 text-lg"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full py-5 px-8 text-white font-black rounded-2xl transition-all duration-400 focus:outline-none focus:ring-4 shadow-xl hover:shadow-2xl transform hover:-translate-y-2 active:scale-95 text-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 focus:ring-purple-200"
+                    >
+                      {loading ? (
+                        <div className="flex items-center justify-center">
+                          <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin mr-3"></div>
+                          Signing In...
+                        </div>
+                      ) : (
+                        'Sign In As Admin'
+                      )}
+                    </button>
+                  </form>
+
+                  <div className="mt-6 text-center">
+                    <button 
+                      onClick={() => setShowAdminLogin(false)}
+                      className="text-purple-600 hover:text-purple-700 font-bold transition-colors duration-300 hover:underline"
+                    >
+                      Back to regular login
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className={`bg-white py-10 px-8 shadow-2xl rounded-3xl border border-gray-200 backdrop-blur-sm relative overflow-hidden transition-all duration-600 ${
+                contentVisible ? 'opacity-100 transform scale-100 translate-y-0' : 'opacity-0 transform scale-95 translate-y-4'
+              }`}>
+                <div className={`absolute inset-0 transition-all duration-1000 ${
+                  isLogin ? 'bg-gradient-to-br from-green-50/50 to-transparent' : 'bg-gradient-to-br from-blue-50/50 to-transparent'
+                }`}></div>
+                
+                <div className="relative z-10">
+                  {successMessage && (
+                    <div className="mb-6 p-4 bg-green-50 border-2 border-green-200 rounded-2xl">
+                      <p className="text-green-700 font-semibold text-center">{successMessage}</p>
+                    </div>
+                  )}
+
+                  {error && (
+                    <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-2xl">
+                      <p className="text-red-700 font-semibold text-center">{error}</p>
+                    </div>
+                  )}
+
+                  <div className="mb-8">
+                    <div className="text-center text-base text-gray-700 mb-6 font-semibold">
+                      {isLogin ? 'Quick Sign In' : 'Quick Sign Up'}
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      {[
+                        { provider: 'Google', icon: FaGoogle, color: 'text-red-500', bg: 'hover:bg-red-50', border: 'hover:border-red-200' },
+                        { provider: 'Facebook', icon: FaFacebook, color: 'text-blue-600', bg: 'hover:bg-blue-50', border: 'hover:border-blue-200' },
+                        { provider: 'Twitter', icon: FaTwitter, color: 'text-blue-400', bg: 'hover:bg-blue-50', border: 'hover:border-blue-200' },
+                        { provider: 'Apple', icon: FaApple, color: 'text-gray-800', bg: 'hover:bg-gray-50', border: 'hover:border-gray-300' }
+                      ].map(({ provider, icon, color, bg, border }) => {
+                        const Icon = icon;
+                        return (
+                          <button
+                            key={provider}
+                            onClick={() => handleSocialLogin(provider)}
+                            disabled={loading}
+                            className={`flex items-center justify-center px-6 py-4 border-2 border-gray-200 rounded-2xl shadow-sm bg-white text-gray-700 ${bg} ${border} hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 hover:scale-105 font-bold group disabled:opacity-50 disabled:cursor-not-allowed`}
+                          >
+                            <Icon className={`${color} mr-3 text-xl transition-transform duration-300 group-hover:scale-110`} />
+                            <span className="text-sm">{provider}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="relative mb-8">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t-2 border-gray-200"></div>
+                    </div>
+                    <div className="relative flex justify-center text-base">
+                      <span className="px-6 bg-white text-gray-700 font-bold">
+                        or continue with email
+                      </span>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    {!isLogin && (
+                      <>
+                        <div>
+                          <label className="block text-base font-black text-gray-800 mb-4">
+                            Choose Your Role
+                          </label>
+                          <div className="grid grid-cols-1 gap-4">
+                            {roles.map((role) => {
+                              const IconComponent = role.icon;
+                              return (
+                                <label
+                                  key={role.value}
+                                  className={`relative flex items-center p-5 border-3 rounded-2xl cursor-pointer transition-all duration-400 transform hover:scale-105 ${
+                                    formData.role === role.value
+                                      ? 'border-blue-500 bg-gradient-to-r from-blue-50 to-blue-100 shadow-xl scale-105'
+                                      : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50 hover:shadow-lg'
+                                  }`}
+                                >
+                                  <input
+                                    type="radio"
+                                    name="role"
+                                    value={role.value}
+                                    checked={formData.role === role.value}
+                                    onChange={handleChange}
+                                    className="sr-only"
+                                  />
+                                  <IconComponent className={`text-3xl mr-4 transition-all duration-400 ${
+                                    formData.role === role.value ? 'text-blue-600 scale-110' : 'text-gray-400'
+                                  }`} />
+                                  <div className="flex-1">
+                                    <div className={`font-black text-lg transition-colors duration-300 ${
+                                      formData.role === role.value ? 'text-blue-800' : 'text-gray-700'
+                                    }`}>
+                                      {role.label}
+                                    </div>
+                                    <div className="text-sm text-gray-500 font-medium">
+                                      {role.description}
+                                    </div>
+                                  </div>
+                                  {formData.role === role.value && (
+                                    <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-blue-500 rounded-full flex items-center justify-center shadow-lg transform scale-110">
+                                      <div className="w-3 h-3 bg-white rounded-full"></div>
+                                    </div>
+                                  )}
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div>
+                          <label htmlFor="name" className="block text-base font-black text-gray-800 mb-2">
+                            Full Name <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            id="name"
+                            name="name"
+                            value={formData.name}
+                            onChange={handleChange}
+                            required
+                            placeholder="Enter your name"
+                            className="w-full px-6 py-4 rounded-2xl bg-gray-50 border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:bg-white outline-none transition-all duration-300 font-semibold placeholder-gray-400 hover:border-gray-300 text-lg"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    <div>
+                      <label htmlFor="email" className="block text-base font-black text-gray-800 mb-2">
+                        Email Address
+                      </label>
+                      <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        required
+                        placeholder="your@email.com"
+                        className={`w-full px-6 py-4 rounded-2xl bg-gray-50 border-2 border-gray-200 focus:ring-4 focus:bg-white outline-none transition-all duration-300 font-semibold placeholder-gray-400 hover:border-gray-300 text-lg ${
+                          isLogin ? 'focus:border-green-500 focus:ring-green-100' : 'focus:border-blue-500 focus:ring-blue-100'
+                        }`}
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="password" className="block text-base font-black text-gray-800 mb-2">
+                        Password
+                      </label>
+                      <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        value={formData.password}
                         onChange={handleChange}
                         required
                         minLength="6"
                         placeholder="••••••••"
-                        className="w-full px-6 py-4 rounded-2xl bg-gray-50 border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:bg-white outline-none transition-all duration-300 font-semibold placeholder-gray-400 hover:border-gray-300 text-lg"
+                        className={`w-full px-6 py-4 rounded-2xl bg-gray-50 border-2 border-gray-200 focus:ring-4 focus:bg-white outline-none transition-all duration-300 font-semibold placeholder-gray-400 hover:border-gray-300 text-lg ${
+                          isLogin ? 'focus:border-green-500 focus:ring-green-100' : 'focus:border-blue-500 focus:ring-blue-100'
+                        }`}
                       />
                     </div>
-                  )}
 
-                  {isLogin && (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <input
-                          id="remember-me"
-                          name="remember-me"
-                          type="checkbox"
-                          className="h-5 w-5 rounded-lg border-gray-300 text-green-600 focus:ring-green-500 focus:ring-2"
-                        />
-                        <label htmlFor="remember-me" className="ml-3 block text-base text-gray-700 font-semibold">
-                          Remember me
+                    {!isLogin && (
+                      <div>
+                        <label htmlFor="confirmPassword" className="block text-base font-black text-gray-800 mb-2">
+                          Confirm Password
                         </label>
+                        <input
+                          type="password"
+                          id="confirmPassword"
+                          name="confirmPassword"
+                          value={formData.confirmPassword}
+                          onChange={handleChange}
+                          required
+                          minLength="6"
+                          placeholder="••••••••"
+                          className="w-full px-6 py-4 rounded-2xl bg-gray-50 border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:bg-white outline-none transition-all duration-300 font-semibold placeholder-gray-400 hover:border-gray-300 text-lg"
+                        />
                       </div>
-
-                      <div className="text-base">
-                        <a href="#" className="text-green-600 hover:text-green-700 font-black transition-colors duration-300 hover:underline">
-                          Forgot password?
-                        </a>
-                      </div>
-                    </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className={`w-full py-5 px-8 text-white font-black rounded-2xl transition-all duration-400 focus:outline-none focus:ring-4 shadow-xl hover:shadow-2xl transform hover:-translate-y-2 active:scale-95 text-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none ${
-                      isLogin 
-                        ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 focus:ring-green-200' 
-                        : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:ring-blue-200'
-                    }`}
-                  >
-                    {loading ? (
-                      <div className="flex items-center justify-center">
-                        <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin mr-3"></div>
-                        {isLogin ? 'Signing In...' : 'Creating Account...'}
-                      </div>
-                    ) : (
-                      isLogin ? 'Sign In Now' : 'Create Account'
                     )}
-                  </button>
-                </form>
 
-                <div className="mt-10 text-center text-base text-gray-600">
-                  {isLogin ? (
-                    <>
-                      New to our platform?{' '}
-                      <button 
-                        onClick={toggleAuthMode}
-                        disabled={isAnimating}
-                        className="text-green-600 hover:text-green-700 font-black transition-colors duration-300 hover:underline disabled:opacity-50"
-                      >
-                        Create an account
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      Already have an account?{' '}
-                      <button 
-                        onClick={toggleAuthMode}
-                        disabled={isAnimating}
-                        className="text-blue-600 hover:text-blue-700 font-black transition-colors duration-300 hover:underline disabled:opacity-50"
-                      >
-                        Sign in here
-                      </button>
-                    </>
-                  )}
+                    {isLogin && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <input
+                            id="remember-me"
+                            name="remember-me"
+                            type="checkbox"
+                            className="h-5 w-5 rounded-lg border-gray-300 text-green-600 focus:ring-green-500 focus:ring-2"
+                          />
+                          <label htmlFor="remember-me" className="ml-3 block text-base text-gray-700 font-semibold">
+                            Remember me
+                          </label>
+                        </div>
+
+                        <div className="text-base">
+                          <a href="#" className="text-green-600 hover:text-green-700 font-black transition-colors duration-300 hover:underline">
+                            Forgot password?
+                          </a>
+                        </div>
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className={`w-full py-5 px-8 text-white font-black rounded-2xl transition-all duration-400 focus:outline-none focus:ring-4 shadow-xl hover:shadow-2xl transform hover:-translate-y-2 active:scale-95 text-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none ${
+                        isLogin 
+                          ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 focus:ring-green-200' 
+                          : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:ring-blue-200'
+                      }`}
+                    >
+                      {loading ? (
+                        <div className="flex items-center justify-center">
+                          <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin mr-3"></div>
+                          {isLogin ? 'Signing In...' : 'Creating Account...'}
+                        </div>
+                      ) : (
+                        isLogin ? 'Sign In Now' : 'Create Account'
+                      )}
+                    </button>
+                  </form>
+
+                  <div className="mt-10 text-center text-base text-gray-600">
+                    {isLogin ? (
+                      <>
+                        New to our platform?{' '}
+                        <button 
+                          onClick={toggleAuthMode}
+                          disabled={isAnimating}
+                          className="text-green-600 hover:text-green-700 font-black transition-colors duration-300 hover:underline disabled:opacity-50"
+                        >
+                          Create an account
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        Already have an account?{' '}
+                        <button 
+                          onClick={toggleAuthMode}
+                          disabled={isAnimating}
+                          className="text-blue-600 hover:text-blue-700 font-black transition-colors duration-300 hover:underline disabled:opacity-50"
+                        >
+                          Sign in here
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="mt-6 text-center">
+                    <button 
+                      onClick={() => setShowAdminLogin(true)}
+                      className="flex items-center justify-center mx-auto text-purple-600 hover:text-purple-700 font-bold transition-colors duration-300 hover:underline"
+                    >
+                      <FaLock className="mr-2" />
+                      Admin Login
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* Footer */}
             <div className="mt-10 text-center text-sm text-gray-500">
               <p className="font-bold text-base">© 2024 Sri Lanka Agricultural Hub</p>
               <p className="mt-2 font-medium">Revolutionizing Agriculture Together</p>
