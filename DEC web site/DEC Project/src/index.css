@@ -121,3 +121,21 @@ button:focus-visible {
     padding: 0.5em 0.75em;
   }
 }
+/* Ensure chatbot doesn't interfere with profile page */
+@media (max-width: 600px) {
+  .MuiBox-root {
+    max-width: 95vw !important;
+    right: 16px !important;
+    bottom: 16px !important;
+  }
+}
+
+/* Smooth transitions */
+.MuiSlide-root {
+  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Profile page adjustments */
+.min-h-screen {
+  padding-bottom: 120px; /* Space for chat button */
+}
