@@ -18,89 +18,12 @@ import {
   FaFilter,
   FaSort
 } from 'react-icons/fa';
+import CustomerProfile from './CustomerProfile';
 
 const EconomicCenter = ({ user, onLogout }) => {
-  const [products] = useState([
-    {
-      id: 1,
-      name: 'Ceylon Tea',
-      price: 1200,
-      seller: 'Dilmah Tea Estate',
-      location: 'Nuwara Eliya',
-      rating: 4.9,
-      image: 'https://images.unsplash.com/photo-1564894809616-9ee741318363?w=400&h=300&fit=crop',
-      category: 'Beverages',
-      discount: 10,
-      inStock: true,
-      description: 'Premium Ceylon tea from the highlands'
-    },
-    {
-      id: 2,
-      name: 'King Coconut',
-      price: 180,
-      seller: 'Sunil Rathnayake',
-      location: 'Galle',
-      rating: 4.8,
-      image: 'https://images.unsplash.com/photo-1598511757337-fe2caaa45407?w=400&h=300&fit=crop',
-      category: 'Fresh Produce',
-      discount: 5,
-      inStock: true,
-      description: 'Fresh king coconuts from coastal regions'
-    },
-    {
-      id: 3,
-      name: 'Ceylon Cinnamon',
-      price: 950,
-      seller: 'Spice Garden',
-      location: 'Kandy',
-      rating: 4.7,
-      image: 'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=400&h=300&fit=crop',
-      category: 'Spices',
-      discount: 15,
-      inStock: true,
-      description: 'Authentic Ceylon cinnamon sticks'
-    },
-    {
-      id: 4,
-      name: 'Red Rice',
-      price: 320,
-      seller: 'Lanka Rice Mills',
-      location: 'Polonnaruwa',
-      rating: 4.6,
-      image: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&h=300&fit=crop',
-      category: 'Grains',
-      discount: 8,
-      inStock: false,
-      description: 'Nutritious red rice variety'
-    },
-    {
-      id: 5,
-      name: 'Dragon Fruit',
-      price: 1500,
-      seller: 'Saman Silva',
-      location: 'Kandy',
-      rating: 4.9,
-      image: 'https://images.unsplash.com/photo-1526318472351-c75fcf070305?w=400&h=300&fit=crop',
-      category: 'Exotic Fruits',
-      discount: 20,
-      inStock: true,
-      description: 'Fresh exotic dragon fruits'
-    },
-    {
-      id: 6,
-      name: 'Fresh Strawberries',
-      price: 880,
-      seller: 'Hill Country Farms',
-      location: 'Nuwara Eliya',
-      rating: 4.9,
-      image: 'https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=400&h=300&fit=crop',
-      category: 'Premium Fruits',
-      discount: 25,
-      inStock: true,
-      description: 'Premium hill country strawberries'
-    }
-  ]);
-
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [cart, setCart] = useState([]);
   const [wishlist, setWishlist] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -108,9 +31,51 @@ const EconomicCenter = ({ user, onLogout }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const [sortBy, setSortBy] = useState('name');
   const [filterCategory, setFilterCategory] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
+
+  // Fetch products from database
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:5001/api/products');
+      if (!response.ok) {
+        throw new Error('Failed to fetch products');
+      }
+      const data = await response.json();
+      
+      // Transform the data to match the component's expected format
+      const transformedProducts = data.map(product => ({
+        id: product.id,
+        name: product.name,
+        price: parseFloat(product.price),
+        seller: product.seller,
+        sellerId: product.seller_id,
+        location: product.address || 'Sri Lanka',
+        rating: 4.5 + Math.random() * 0.5, // Random rating between 4.5-5 for demo
+        image: product.image_url || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=300&fit=crop', // Fallback image
+        category: product.category || 'General',
+        discount: Math.floor(Math.random() * 25), // Random discount for demo
+        inStock: product.quantity > 0,
+        description: product.description || 'Quality product from Sri Lanka',
+        quantity: product.quantity
+      }));
+      
+      setProducts(transformedProducts);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching products:', err);
+      setError('Failed to load products. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     // Set full viewport height and remove default margins/padding
@@ -209,12 +174,59 @@ const EconomicCenter = ({ user, onLogout }) => {
 
   const categories = ['all', ...new Set(products.map(p => p.category))];
 
+  // Helper function to parse name properly
+  const parseName = (fullName) => {
+    if (!fullName) return { firstName: '', lastName: '' };
+    const nameParts = fullName.trim().split(' ');
+    return {
+      firstName: nameParts[0] || '',
+      lastName: nameParts.slice(1).join(' ') || ''
+    };
+  };
+
   // Update the current user info in the profile section
   const currentUser = {
     name: user?.name || 'Guest User',
     email: user?.email || 'guest@example.com',
+    role: user?.role || 'customer',
     avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b05b?w=100&h=100&fit=crop&crop=face'
   };
+
+  const handleProfileClick = () => {
+    console.log('Profile button clicked!');
+    console.log('Current user:', user);
+    console.log('Setting showProfile to true');
+    setShowProfile(true);
+    setProfileOpen(false);
+  };
+
+  const handleBackToHome = () => {
+    console.log('Back to home clicked!');
+    setShowProfile(false);
+  };
+
+  // If showing profile, render CustomerProfile component
+  if (showProfile) {
+    console.log('Rendering CustomerProfile component');
+    const nameData = parseName(user?.name);
+    
+    return (
+      <CustomerProfile 
+        user={{
+          id: user?.id, // Make sure to pass 'id' not 'userId'
+          name: user?.name || currentUser.name,
+          email: user?.email || currentUser.email,
+          role: user?.role || currentUser.role,
+          firstName: user?.firstName || nameData.firstName,
+          lastName: user?.lastName || nameData.lastName
+        }}
+        onBack={handleBackToHome}
+        onLogout={onLogout}
+      />
+    );
+  }
+
+  console.log('Rendering CustomerHP component, showProfile:', showProfile);
 
   return (
     <div className="w-full min-h-screen bg-white text-gray-800 m-0 p-0 box-border" style={{ 
@@ -295,7 +307,10 @@ const EconomicCenter = ({ user, onLogout }) => {
               {/* Profile Dropdown */}
               <div className="relative">
                 <button 
-                  onClick={() => setProfileOpen(!profileOpen)}
+                  onClick={() => {
+                    console.log('Profile dropdown button clicked, current state:', profileOpen);
+                    setProfileOpen(!profileOpen);
+                  }}
                   className="profile-btn p-2 rounded-full bg-green-500/20 hover:bg-green-500/30 transition-colors"
                 >
                   <FaUser className="text-green-600 text-base sm:text-lg" />
@@ -308,21 +323,37 @@ const EconomicCenter = ({ user, onLogout }) => {
                       <p className="text-gray-600 text-xs">{currentUser.email}</p>
                     </div>
                     <div className="py-1">
-                      {['Profile', 'Orders', 'Wishlist', 'Settings'].map((item) => (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          console.log('Profile menu item clicked!');
+                          handleProfileClick();
+                        }}
+                        className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:text-green-600 hover:bg-green-500/10 transition-colors"
+                        type="button"
+                      >
+                        Profile
+                      </button>
+                      {['Orders', 'Wishlist', 'Settings'].map((item) => (
                         <a
                           key={item}
                           href="#"
+                          onClick={(e) => e.preventDefault()}
                           className="block px-3 py-2 text-sm text-gray-700 hover:text-green-600 hover:bg-green-500/10 transition-colors"
                         >
                           {item}
                         </a>
                       ))}
                       <button
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
                           console.log('Customer logout clicked');
                           onLogout();
                         }}
                         className="w-full text-left px-3 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors"
+                        type="button"
                       >
                         Logout
                       </button>
@@ -601,113 +632,146 @@ const EconomicCenter = ({ user, onLogout }) => {
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 max-w-7xl mx-auto">
-            {filteredProducts.map((product) => (
-              <div 
-                key={product.id} 
-                className={`bg-gradient-to-br from-green-50/90 to-white/90 backdrop-blur-sm rounded-lg overflow-hidden border border-green-500/15 hover:border-green-500/30 shadow-lg hover:shadow-green-500/10 transition-all duration-300 hover:scale-[1.02] group ${!product.inStock ? 'opacity-75' : ''}`}
-              >
-                <div className="relative">
-                  {product.discount > 0 && (
-                    <div className="absolute top-2 left-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-2 py-1 rounded-full text-xs font-bold shadow-lg z-10">
-                      -{product.discount}%
-                    </div>
-                  )}
+          {/* Loading State */}
+          {loading && (
+            <div className="text-center py-8">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+              <p className="text-gray-600 mt-2">Loading products...</p>
+            </div>
+          )}
 
-                  {!product.inStock && (
-                    <div className="absolute top-2 right-2 bg-gray-600 text-white px-2 py-1 rounded-full text-xs font-bold shadow-lg z-10">
-                      Out of Stock
-                    </div>
-                  )}
-
-                  <div className="absolute top-2 right-2 flex gap-1 z-10">
-                    <button
-                      onClick={() => toggleWishlist(product)}
-                      className={`p-1.5 rounded-full backdrop-blur-sm transition-colors ${
-                        wishlist.some(item => item.id === product.id)
-                          ? 'bg-green-500 text-white'
-                          : 'bg-white/20 text-gray-700 hover:bg-green-500/50'
-                      }`}
-                    >
-                      <FaHeart size={14} />
-                    </button>
-                    <button className="p-1.5 rounded-full bg-white/20 backdrop-blur-sm text-gray-700 hover:bg-white/30 transition-colors">
-                      <FaEye size={14} />
-                    </button>
-                  </div>
-
-                  <div className="h-40 sm:h-44 overflow-hidden">
-                    <img 
-                      src={product.image} 
-                      alt={product.name} 
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-green-900/30 to-transparent"></div>
-                  </div>
-                </div>
-
-                <div className="p-3 sm:p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-base sm:text-lg font-bold text-gray-800">
-                      {product.name}
-                    </h3>
-                    <span className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-600 px-2 py-0.5 rounded border border-green-500/25 text-xs">
-                      {product.category}
-                    </span>
-                  </div>
-                  
-                  <p className="text-gray-600 text-xs sm:text-sm mb-2">
-                    {product.description}
-                  </p>
-                  
-                  <p className="text-gray-600 text-xs mb-3 flex items-center">
-                    <FaMapMarkerAlt className="mr-1 text-green-600" /> {product.location}
-                  </p>
-                  
-                  <div className="flex items-center mb-3">
-                    <div className="flex text-yellow-400 mr-2">
-                      {[...Array(5)].map((_, i) => (
-                        <FaStar 
-                          key={i} 
-                          className={i < Math.floor(product.rating) ? '' : 'text-gray-300'} 
-                          size={12}
-                        />
-                      ))}
-                    </div>
-                    <span className="text-gray-500 text-xs">
-                      ({product.rating})
-                    </span>
-                  </div>
-                  
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <span className="text-lg sm:text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                        Rs.{product.price}
-                      </span>
-                      {product.discount > 0 && (
-                        <span className="block text-gray-500 line-through text-xs">
-                          Rs.{Math.round(product.price / (1 - product.discount/100))}
-                        </span>
-                      )}
-                    </div>
-                    <button 
-                      onClick={() => addToCart(product)}
-                      disabled={!product.inStock}
-                      className={`px-2 sm:px-3 py-1.5 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg text-xs sm:text-sm ${
-                        product.inStock
-                          ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white hover:shadow-green-500/30'
-                          : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                      }`}
-                    >
-                      {product.inStock ? 'Add to Cart' : 'Out of Stock'}
-                    </button>
-                  </div>
-                </div>
+          {/* Error State */}
+          {error && (
+            <div className="text-center py-8">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-w-md mx-auto">
+                <p className="text-red-600">{error}</p>
+                <button 
+                  onClick={fetchProducts}
+                  className="mt-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                >
+                  Retry
+                </button>
               </div>
-            ))}
-          </div>
+            </div>
+          )}
 
-          {filteredProducts.length === 0 && (
+          {/* Products Grid */}
+          {!loading && !error && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 max-w-7xl mx-auto">
+              {filteredProducts.map((product) => (
+                <div 
+                  key={product.id} 
+                  className={`bg-gradient-to-br from-green-50/90 to-white/90 backdrop-blur-sm rounded-lg overflow-hidden border border-green-500/15 hover:border-green-500/30 shadow-lg hover:shadow-green-500/10 transition-all duration-300 hover:scale-[1.02] group ${!product.inStock ? 'opacity-75' : ''}`}
+                >
+                  <div className="relative">
+                    {product.discount > 0 && (
+                      <div className="absolute top-2 left-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-2 py-1 rounded-full text-xs font-bold shadow-lg z-10">
+                        -{product.discount}%
+                      </div>
+                    )}
+
+                    {!product.inStock && (
+                      <div className="absolute top-2 right-2 bg-gray-600 text-white px-2 py-1 rounded-full text-xs font-bold shadow-lg z-10">
+                        Out of Stock
+                      </div>
+                    )}
+
+                    <div className="absolute top-2 right-2 flex gap-1 z-10">
+                      <button
+                        onClick={() => toggleWishlist(product)}
+                        className={`p-1.5 rounded-full backdrop-blur-sm transition-colors ${
+                          wishlist.some(item => item.id === product.id)
+                            ? 'bg-green-500 text-white'
+                            : 'bg-white/20 text-gray-700 hover:bg-green-500/50'
+                        }`}
+                      >
+                        <FaHeart size={14} />
+                      </button>
+                      <button className="p-1.5 rounded-full bg-white/20 backdrop-blur-sm text-gray-700 hover:bg-white/30 transition-colors">
+                        <FaEye size={14} />
+                      </button>
+                    </div>
+
+                    <div className="h-40 sm:h-44 overflow-hidden">
+                      <img 
+                        src={product.image} 
+                        alt={product.name} 
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        onError={(e) => {
+                          e.target.src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=300&fit=crop';
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-green-900/30 to-transparent"></div>
+                    </div>
+                  </div>
+
+                  <div className="p-3 sm:p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="text-base sm:text-lg font-bold text-gray-800">
+                        {product.name}
+                      </h3>
+                      <span className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-600 px-2 py-0.5 rounded border border-green-500/25 text-xs">
+                        {product.category}
+                      </span>
+                    </div>
+                    
+                    <p className="text-gray-600 text-xs sm:text-sm mb-2">
+                      {product.description}
+                    </p>
+                    
+                    <p className="text-gray-600 text-xs mb-1 flex items-center">
+                      <FaMapMarkerAlt className="mr-1 text-green-600" /> {product.location}
+                    </p>
+                    
+                    <p className="text-gray-600 text-xs mb-3">
+                      Seller: <span className="font-medium">{product.seller}</span>
+                    </p>
+                    
+                    <div className="flex items-center mb-3">
+                      <div className="flex text-yellow-400 mr-2">
+                        {[...Array(5)].map((_, i) => (
+                          <FaStar 
+                            key={i} 
+                            className={i < Math.floor(product.rating) ? '' : 'text-gray-300'} 
+                            size={12}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-gray-500 text-xs">
+                        ({product.rating.toFixed(1)})
+                      </span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-lg sm:text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                          Rs.{product.price.toFixed(2)}
+                        </span>
+                        {product.discount > 0 && (
+                          <span className="block text-gray-500 line-through text-xs">
+                            Rs.{(product.price / (1 - product.discount/100)).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                      <button 
+                        onClick={() => addToCart(product)}
+                        disabled={!product.inStock}
+                        className={`px-2 sm:px-3 py-1.5 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg text-xs sm:text-sm ${
+                          product.inStock
+                            ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white hover:shadow-green-500/30'
+                            : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                        }`}
+                      >
+                        {product.inStock ? 'Add to Cart' : 'Out of Stock'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!loading && !error && filteredProducts.length === 0 && (
             <div className="text-center py-8">
               <p className="text-gray-600 text-base">No products found matching your criteria.</p>
             </div>

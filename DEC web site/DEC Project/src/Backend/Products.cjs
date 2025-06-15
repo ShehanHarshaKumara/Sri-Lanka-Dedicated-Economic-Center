@@ -30,7 +30,63 @@ db.connect((err) => {
     process.exit(1);
   }
   console.log('Connected to MySQL');
+  
+  // Check and add missing columns
+  checkAndAddColumns();
 });
+
+// Function to check and add missing columns
+function checkAndAddColumns() {
+  // Check if unit column exists
+  db.query(`
+    SELECT COLUMN_NAME 
+    FROM INFORMATION_SCHEMA.COLUMNS 
+    WHERE TABLE_SCHEMA = 'dedicated_economic_center' 
+    AND TABLE_NAME = 'products' 
+    AND COLUMN_NAME = 'unit'
+  `, (err, results) => {
+    if (err) {
+      console.error('Error checking unit column:', err);
+      return;
+    }
+    
+    if (results.length === 0) {
+      // Add unit column if it doesn't exist
+      db.query(`ALTER TABLE products ADD COLUMN unit VARCHAR(20) DEFAULT 'kg'`, (err) => {
+        if (err) {
+          console.error('Error adding unit column:', err);
+        } else {
+          console.log('Unit column added successfully');
+        }
+      });
+    }
+  });
+  
+  // Check if status column exists
+  db.query(`
+    SELECT COLUMN_NAME 
+    FROM INFORMATION_SCHEMA.COLUMNS 
+    WHERE TABLE_SCHEMA = 'dedicated_economic_center' 
+    AND TABLE_NAME = 'products' 
+    AND COLUMN_NAME = 'status'
+  `, (err, results) => {
+    if (err) {
+      console.error('Error checking status column:', err);
+      return;
+    }
+    
+    if (results.length === 0) {
+      // Add status column if it doesn't exist
+      db.query(`ALTER TABLE products ADD COLUMN status VARCHAR(20) DEFAULT 'active'`, (err) => {
+        if (err) {
+          console.error('Error adding status column:', err);
+        } else {
+          console.log('Status column added successfully');
+        }
+      });
+    }
+  });
+}
 
 // Multer for multiple images
 const storage = multer.diskStorage({
@@ -55,30 +111,47 @@ app.post('/api/products/upload', upload.array('images', 5), (req, res) => {
       category,
       lat,
       lng,
-      address
+      address,
+      unit,
+      status
     } = req.body;
 
-    // Validate required fields
+    // Debug logging
+    console.log('Upload request body:', req.body);
+    console.log('Upload files:', req.files);
+
     if (!farmer_id || !name || !price || !quantity) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Save only the first image as main image with full URL
     let image_url = null;
     if (req.files && req.files.length > 0) {
-      // Store the full URL including the backend server address
       image_url = `http://localhost:5001/uploads/${req.files[0].filename}`;
     }
 
-    const sql = `
-      INSERT INTO products
-      (farmer_id, name, description, price, quantity, category, image_url, lat, lng, address)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
+    // First, check which columns exist
+    db.query(`
+      SELECT COLUMN_NAME 
+      FROM INFORMATION_SCHEMA.COLUMNS 
+      WHERE TABLE_SCHEMA = 'dedicated_economic_center' 
+      AND TABLE_NAME = 'products'
+    `, (err, columns) => {
+      if (err) {
+        console.error('Error checking columns:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
 
-    db.query(
-      sql,
-      [
+      const columnNames = columns.map(col => col.COLUMN_NAME);
+      const hasUnit = columnNames.includes('unit');
+      const hasStatus = columnNames.includes('status');
+
+      let sql = `
+        INSERT INTO products
+        (farmer_id, name, description, price, quantity, category, image_url, lat, lng, address${hasUnit ? ', unit' : ''}${hasStatus ? ', status' : ''})
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?${hasUnit ? ', ?' : ''}${hasStatus ? ', ?' : ''})
+      `;
+
+      const values = [
         parseInt(farmer_id),
         name,
         description || null,
@@ -89,39 +162,305 @@ app.post('/api/products/upload', upload.array('images', 5), (req, res) => {
         lat ? parseFloat(lat) : null,
         lng ? parseFloat(lng) : null,
         address || null
-      ],
-      (err, result) => {
+      ];
+
+      if (hasUnit) values.push(unit || 'kg');
+      if (hasStatus) values.push(status || 'active');
+
+      db.query(sql, values, (err, result) => {
         if (err) {
           console.error('Insert error:', err);
-          return res.status(500).json({ error: 'Database error' });
+          return res.status(500).json({ error: 'Database error: ' + err.message });
         }
         res.json({ success: true, productId: result.insertId });
-      }
-    );
+      });
+    });
   } catch (error) {
     console.error('Server error:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Server error: ' + error.message });
+  }
+});
+
+// Product update endpoint - FIXED to check for existing columns
+app.put('/api/products/:id', upload.array('images', 5), (req, res) => {
+  try {
+    const productId = req.params.id;
+    
+    // Debug logging
+    console.log('Update request body:', req.body);
+    console.log('Update files:', req.files);
+    console.log('Product ID:', productId);
+
+    // Safely destructure with default values
+    const name = req.body.name || '';
+    const description = req.body.description || '';
+    const price = req.body.price || 0;
+    const quantity = req.body.quantity || 0;
+    const category = req.body.category || '';
+    const lat = req.body.lat || null;
+    const lng = req.body.lng || null;
+    const address = req.body.address || '';
+    const unit = req.body.unit || 'kg';
+    const status = req.body.status || 'active';
+
+    // Handle image URL
+    let image_url = req.body.image_url || null;
+    if (req.files && req.files.length > 0) {
+      image_url = `http://localhost:5001/uploads/${req.files[0].filename}`;
+    }
+
+    // Validate required fields
+    if (!name || !price || !quantity) {
+      return res.status(400).json({ error: 'Missing required fields: name, price, or quantity' });
+    }
+
+    // First, check which columns exist
+    db.query(`
+      SELECT COLUMN_NAME 
+      FROM INFORMATION_SCHEMA.COLUMNS 
+      WHERE TABLE_SCHEMA = 'dedicated_economic_center' 
+      AND TABLE_NAME = 'products'
+    `, (err, columns) => {
+      if (err) {
+        console.error('Error checking columns:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      const columnNames = columns.map(col => col.COLUMN_NAME);
+      const hasUnit = columnNames.includes('unit');
+      const hasStatus = columnNames.includes('status');
+
+      let sql = `
+        UPDATE products SET
+          name = ?,
+          description = ?,
+          price = ?,
+          quantity = ?,
+          category = ?,
+          image_url = ?,
+          lat = ?,
+          lng = ?,
+          address = ?
+      `;
+
+      const values = [
+        name,
+        description,
+        parseFloat(price),
+        parseInt(quantity),
+        category,
+        image_url,
+        lat ? parseFloat(lat) : null,
+        lng ? parseFloat(lng) : null,
+        address
+      ];
+
+      if (hasUnit) {
+        sql += ', unit = ?';
+        values.push(unit);
+      }
+
+      if (hasStatus) {
+        sql += ', status = ?';
+        values.push(status);
+      }
+
+      sql += ' WHERE id = ?';
+      values.push(parseInt(productId));
+
+      db.query(sql, values, (err, result) => {
+        if (err) {
+          console.error('Update error:', err);
+          return res.status(500).json({ error: 'Database error: ' + err.message });
+        }
+        
+        if (result.affectedRows === 0) {
+          return res.status(404).json({ error: 'Product not found' });
+        }
+        
+        console.log('Update successful, affected rows:', result.affectedRows);
+        res.json({ success: true, affectedRows: result.affectedRows });
+      });
+    });
+  } catch (error) {
+    console.error('Server error:', error);
+    res.status(500).json({ error: 'Server error: ' + error.message });
   }
 });
 
 // GET endpoint to fetch products for a farmer
 app.get('/api/products', (req, res) => {
   const farmer_id = req.query.farmer_id;
-  let sql = 'SELECT * FROM products';
-  let params = [];
-  if (farmer_id) {
-    sql += ' WHERE farmer_id = ? ORDER BY created_at DESC';
-    params.push(farmer_id);
-  } else {
-    sql += ' ORDER BY created_at DESC';
-  }
-  db.query(sql, params, (err, results) => {
+  
+  // First check which columns exist
+  db.query(`
+    SELECT COLUMN_NAME 
+    FROM INFORMATION_SCHEMA.COLUMNS 
+    WHERE TABLE_SCHEMA = 'dedicated_economic_center' 
+    AND TABLE_NAME = 'products'
+  `, (err, columns) => {
+    if (err) {
+      console.error('Error checking columns:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    const columnNames = columns.map(col => col.COLUMN_NAME);
+    const hasUnit = columnNames.includes('unit');
+    const hasStatus = columnNames.includes('status');
+
+    let sql = `
+      SELECT 
+        id, farmer_id, name, description, price, quantity, category, 
+        image_url, lat, lng, address, created_at
+        ${hasUnit ? ', unit' : ''}
+        ${hasStatus ? ', status' : ''}
+      FROM products
+    `;
+    
+    let params = [];
+    
+    if (farmer_id) {
+      sql += ' WHERE farmer_id = ? ORDER BY created_at DESC';
+      params.push(parseInt(farmer_id));
+    } else {
+      sql += ' ORDER BY created_at DESC';
+    }
+    
+    db.query(sql, params, (err, results) => {
+      if (err) {
+        console.error('Fetch error:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      
+      // Add default values for missing columns
+      const productsWithDefaults = results.map(product => ({
+        ...product,
+        unit: hasUnit ? product.unit : 'kg',
+        status: hasStatus ? product.status : 'active'
+      }));
+      
+      res.json(productsWithDefaults);
+    });
+  });
+});
+
+// GET single product by ID
+app.get('/api/products/:id', (req, res) => {
+  const productId = req.params.id;
+  
+  const sql = 'SELECT * FROM products WHERE id = ?';
+  
+  db.query(sql, [parseInt(productId)], (err, results) => {
     if (err) {
       console.error('Fetch error:', err);
       return res.status(500).json({ error: 'Database error' });
     }
-    res.json(results);
+    
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    
+    res.json(results[0]);
   });
+});
+
+// DELETE endpoint for products
+// DELETE endpoint for products (Already exists, but here's the enhanced version)
+app.delete('/api/products/:id', (req, res) => {
+  const productId = req.params.id;
+  
+  // First, get the product to delete its image file
+  const selectSql = 'SELECT image_url FROM products WHERE id = ?';
+  
+  db.query(selectSql, [parseInt(productId)], (err, results) => {
+    if (err) {
+      console.error('Select error:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    
+    // Extract filename from URL if exists
+    const imageUrl = results[0].image_url;
+    if (imageUrl) {
+      const filename = imageUrl.split('/').pop();
+      const filepath = path.join(uploadsDir, filename);
+      
+      // Delete the file if it exists
+      if (fs.existsSync(filepath)) {
+        fs.unlinkSync(filepath);
+        console.log('Deleted image file:', filename);
+      }
+    }
+    
+    // Now delete the product from database
+    const deleteSql = 'DELETE FROM products WHERE id = ?';
+    
+    db.query(deleteSql, [parseInt(productId)], (err, result) => {
+      if (err) {
+        console.error('Delete error:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      
+      res.json({ success: true, affectedRows: result.affectedRows });
+    });
+  });
+});
+
+// Update product status endpoint
+app.patch('/api/products/:id/status', (req, res) => {
+  const productId = req.params.id;
+  const { status } = req.body;
+  
+  if (!status || !['active', 'inactive'].includes(status)) {
+    return res.status(400).json({ error: 'Invalid status' });
+  }
+
+  // Check if status column exists
+  db.query(`
+    SELECT COLUMN_NAME 
+    FROM INFORMATION_SCHEMA.COLUMNS 
+    WHERE TABLE_SCHEMA = 'dedicated_economic_center' 
+    AND TABLE_NAME = 'products' 
+    AND COLUMN_NAME = 'status'
+  `, (err, results) => {
+    if (err) {
+      console.error('Error checking status column:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    if (results.length === 0) {
+      return res.status(400).json({ error: 'Status column does not exist in database' });
+    }
+
+    const sql = 'UPDATE products SET status = ? WHERE id = ?';
+    
+    db.query(sql, [status, parseInt(productId)], (err, result) => {
+      if (err) {
+        console.error('Status update error:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'Product not found' });
+      }
+      
+      res.json({ success: true, affectedRows: result.affectedRows });
+    });
+  });
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'OK', message: 'Server is running' });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Global error handler:', err);
+  res.status(500).json({ error: 'Internal server error' });
 });
 
 const PORT = process.env.PORT || 5001;

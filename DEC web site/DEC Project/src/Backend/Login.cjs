@@ -348,6 +348,82 @@ app.get('/api/auth/profile', verifyToken, (req, res) => {
   });
 });
 
+// Update Profile Route
+app.put('/api/auth/profile', verifyToken, async (req, res) => {
+  try {
+    const { firstName, lastName, phone, dateOfBirth, address, city, country, bio } = req.body;
+    const userId = req.user.userId;
+
+    console.log('Profile update request for user:', userId, req.body);
+
+    // Validation
+    if (!firstName) {
+      return res.status(400).json({ message: 'First name is required' });
+    }
+
+    // Update user profile
+    const updateProfileQuery = `
+      UPDATE users SET 
+        name = ?,
+        phone = ?,
+        date_of_birth = ?,
+        address = ?,
+        city = ?,
+        country = ?,
+        bio = ?,
+        updated_at = NOW()
+      WHERE id = ?
+    `;
+
+    // Combine first name and last name for the name field
+    const fullName = lastName ? `${firstName} ${lastName}` : firstName;
+
+    db.query(updateProfileQuery, [
+      fullName,
+      phone,
+      dateOfBirth,
+      address,
+      city,
+      country,
+      bio,
+      userId
+    ], (err, result) => {
+      if (err) {
+        console.error('Database error during profile update:', err);
+        return res.status(500).json({ message: 'Server error during profile update' });
+      }
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      console.log('Profile updated successfully for user:', userId);
+
+      // Return updated user data
+      const getUserQuery = 'SELECT id, name, email, role FROM users WHERE id = ?';
+      db.query(getUserQuery, [userId], (err, results) => {
+        if (err) {
+          console.error('Database error:', err);
+          return res.status(500).json({ message: 'Server error' });
+        }
+
+        if (results.length === 0) {
+          return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.json({
+          message: 'Profile updated successfully',
+          user: results[0]
+        });
+      });
+    });
+
+  } catch (error) {
+    console.error('Profile update error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Health check route
 app.get('/api/health', (req, res) => {
   res.json({ message: 'Agricultural Hub API is running!' });

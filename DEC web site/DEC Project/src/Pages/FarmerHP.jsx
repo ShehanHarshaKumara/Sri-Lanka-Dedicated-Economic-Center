@@ -3,11 +3,11 @@ import {
   FaTractor, FaPlus, FaEdit, FaTrash, FaEye, FaBell, FaChartBar, FaShoppingCart, 
   FaMapMarkerAlt, FaStar, FaUpload, FaCamera, FaTimes, FaCheck, FaLeaf, FaUser, 
   FaBars, FaHome, FaBox, FaClipboardList, FaUsers, FaCog, FaSignOutAlt, FaRupeeSign, 
-  FaCalendar, FaWeight, FaTag, FaImage, FaSave, FaSpinner
+  FaCalendar, FaWeight, FaTag, FaImage, FaSave, FaSpinner, FaEllipsisV
 } from 'react-icons/fa';
+import FarmerProfile from './FarmerProfile';
 
 const FarmerPortal = ({ user, onLogout }) => {
-  // Use the passed user prop (must have correct id after login)
   const [currentUser, setCurrentUser] = useState({
     id: user?.id || 1,
     name: user?.name || 'Farmer User',
@@ -20,7 +20,6 @@ const FarmerPortal = ({ user, onLogout }) => {
     totalSales: 0
   });
 
-  // Update currentUser if user prop changes (important for logout/login)
   useEffect(() => {
     setCurrentUser({
       id: user?.id || 1,
@@ -35,20 +34,20 @@ const FarmerPortal = ({ user, onLogout }) => {
     });
   }, [user]);
 
-  // Products state
   const [products, setProducts] = useState([]);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [deletingProductId, setDeletingProductId] = useState(null);
+  const [showDropdownId, setShowDropdownId] = useState(null);
   const [notifications] = useState([
     { id: 1, message: 'New order for King Coconuts', time: '2 hours ago', type: 'order' },
     { id: 2, message: 'Product approved by admin', time: '1 day ago', type: 'approval' },
     { id: 3, message: 'Low stock alert for Cinnamon', time: '2 days ago', type: 'warning' }
   ]);
 
-  // Product form state
   const [productForm, setProductForm] = useState({
     name: '',
     price: '',
@@ -62,6 +61,9 @@ const FarmerPortal = ({ user, onLogout }) => {
 
   const [previewImages, setPreviewImages] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   const categories = [
     'Fresh Produce', 'Spices', 'Grains', 'Fruits', 'Vegetables', 
@@ -76,6 +78,9 @@ const FarmerPortal = ({ user, onLogout }) => {
       if (!event.target.closest('.sidebar') && !event.target.closest('.sidebar-toggle')) {
         setSidebarOpen(false);
       }
+      if (!event.target.closest('.dropdown-menu') && !event.target.closest('.dropdown-trigger')) {
+        setShowDropdownId(null);
+      }
     };
     window.addEventListener('scroll', handleScroll);
     document.addEventListener('click', handleClickOutside);
@@ -85,9 +90,8 @@ const FarmerPortal = ({ user, onLogout }) => {
       document.removeEventListener('click', handleClickOutside);
     };
     // eslint-disable-next-line
-  }, [currentUser.id]); // refetch when user changes
+  }, [currentUser.id]);
 
-  // Fetch products from backend for the current farmer
   const fetchProducts = async () => {
     try {
       const res = await fetch('http://localhost:5001/api/products?farmer_id=' + currentUser.id);
@@ -98,7 +102,6 @@ const FarmerPortal = ({ user, onLogout }) => {
     }
   };
 
-  // Dashboard stats
   const dashboardStats = {
     totalProducts: products.length,
     activeProducts: products.filter(p => p.status === 'active').length,
@@ -107,7 +110,6 @@ const FarmerPortal = ({ user, onLogout }) => {
     totalRevenue: products.reduce((sum, p) => sum + ((p.price || 0) * (p.sales || 0)), 0)
   };
 
-  // Handle image upload
   const handleImageUpload = (event) => {
     const files = Array.from(event.target.files);
     const newImages = [];
@@ -126,7 +128,6 @@ const FarmerPortal = ({ user, onLogout }) => {
     setPreviewImages(prev => [...prev, ...newPreviews]);
   };
 
-  // Remove image
   const removeImage = (index) => {
     const newImages = productForm.images.filter((_, i) => i !== index);
     const newPreviews = previewImages.filter((_, i) => i !== index);
@@ -134,10 +135,26 @@ const FarmerPortal = ({ user, onLogout }) => {
     setPreviewImages(newPreviews);
   };
 
-  // Handle form submission (upload to backend)
+  const showSuccessNotification = (message) => {
+    setSuccessMessage(message);
+    setShowSuccess(true);
+    setTimeout(() => {
+      setShowSuccess(false);
+    }, 3000);
+  };
+
+  // Handle form submission (upload or update)
   const handleSubmitProduct = async (e) => {
     e.preventDefault();
     setIsUploading(true);
+    setFormError('');
+
+    // Validation
+    if (!productForm.name || !productForm.price || !productForm.category || !productForm.stock || !productForm.unit || !productForm.description) {
+      setFormError('Please fill in all required fields');
+      setIsUploading(false);
+      return;
+    }
 
     const formData = new FormData();
     formData.append('farmer_id', currentUser.id);
@@ -147,19 +164,40 @@ const FarmerPortal = ({ user, onLogout }) => {
     formData.append('quantity', productForm.stock);
     formData.append('category', productForm.category);
     formData.append('address', currentUser.location || '');
-    // Optionally add lat/lng if available
-    // formData.append('lat', ...);
-    // formData.append('lng', ...);
-    productForm.images.forEach((img) => {
-      formData.append('images', img);
-    });
+    formData.append('unit', productForm.unit);
+    formData.append('status', productForm.status);
+
+    // Handle images
+    if (productForm.images && productForm.images.length > 0) {
+      productForm.images.forEach((img) => {
+        formData.append('images', img);
+      });
+    }
 
     try {
-      const response = await fetch('http://localhost:5001/api/products/upload', {
-        method: 'POST',
-        body: formData
-      });
-      const data = await response.json();
+      let response, data;
+      if (editingProduct) {
+        // If no new image is uploaded, send the existing image_url
+        if (productForm.images.length === 0 && editingProduct.image_url) {
+          formData.append('image_url', editingProduct.image_url);
+        }
+        
+        console.log('Updating product with ID:', editingProduct.id);
+        response = await fetch(`http://localhost:5001/api/products/${editingProduct.id}`, {
+          method: 'PUT',
+          body: formData
+        });
+      } else {
+        console.log('Creating new product');
+        response = await fetch('http://localhost:5001/api/products/upload', {
+          method: 'POST',
+          body: formData
+        });
+      }
+
+      data = await response.json();
+      console.log('Server response:', data);
+
       if (data.success) {
         setShowAddProduct(false);
         setEditingProduct(null);
@@ -167,46 +205,110 @@ const FarmerPortal = ({ user, onLogout }) => {
           name: '', price: '', category: '', stock: '', unit: '', description: '', images: [], status: 'active'
         });
         setPreviewImages([]);
-        fetchProducts();
-        alert('Product uploaded successfully!');
+        await fetchProducts();
+        setFormError('');
+        showSuccessNotification(editingProduct ? 'Product updated successfully!' : 'Product uploaded successfully!');
       } else {
-        alert('Error uploading product: ' + (data.error || 'Unknown error'));
+        setFormError(data.error || 'Unknown error occurred');
+        console.error('Server error:', data.error);
       }
-    } catch {
-      alert('Network or server error');
+    } catch (err) {
+      console.error('Network error:', err);
+      setFormError('Network or server error: ' + err.message);
     }
     setIsUploading(false);
   };
 
-  // Edit product (local only, not DB)
+  // Edit product (populate form)
   const editProduct = (product) => {
     setEditingProduct(product);
     setProductForm({
-      name: product.name,
-      price: product.price.toString(),
-      category: product.category,
+      name: product.name || '',
+      price: product.price ? product.price.toString() : '',
+      category: product.category || '',
       stock: product.quantity ? product.quantity.toString() : '',
-      unit: product.unit || '',
-      description: product.description,
+      unit: product.unit || 'kg',
+      description: product.description || '',
       images: [],
       status: product.status || 'active'
     });
     setPreviewImages(product.image_url ? [product.image_url] : []);
     setShowAddProduct(true);
+    setFormError(''); // Clear any previous errors
   };
 
-  // Delete product (optional, not implemented in backend)
-  const deleteProduct = (id) => {
-    if (window.confirm('Are you sure you want to delete this product?')) {
-      setProducts(prev => prev.filter(p => p.id !== id));
+  // Delete product
+  const deleteProduct = async (id) => {
+    const product = products.find(p => p.id === id);
+    if (!product) return;
+    
+    const confirmMessage = `Are you sure you want to delete "${product.name}"?\n\nThis action cannot be undone.`;
+    
+    if (window.confirm(confirmMessage)) {
+      setDeletingProductId(id);
+      try {
+        const response = await fetch(`http://localhost:5001/api/products/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          setProducts(prev => prev.filter(p => p.id !== id));
+          showSuccessNotification(`Product "${product.name}" deleted successfully!`);
+        } else {
+          const errorMessage = data.error || 'Failed to delete product';
+          alert(`Error: ${errorMessage}`);
+          console.error('Delete error:', errorMessage);
+        }
+      } catch (err) {
+        console.error('Delete error:', err);
+        alert('Network error: Could not delete product. Please check your connection and try again.');
+      } finally {
+        setDeletingProductId(null);
+        setShowDropdownId(null);
+      }
     }
   };
 
-  // Toggle product status (local only)
-  const toggleProductStatus = (id) => {
-    setProducts(prev => prev.map(p => 
-      p.id === id ? { ...p, status: p.status === 'active' ? 'inactive' : 'active' } : p
-    ));
+  const toggleProductStatus = async (id) => {
+    const product = products.find(p => p.id === id);
+    if (!product) return;
+
+    const newStatus = product.status === 'active' ? 'inactive' : 'active';
+    
+    const formData = new FormData();
+    formData.append('farmer_id', currentUser.id);
+    formData.append('name', product.name || '');
+    formData.append('description', product.description || '');
+    formData.append('price', product.price || '0');
+    formData.append('quantity', product.quantity || '0');
+    formData.append('category', product.category || '');
+    formData.append('address', product.address || '');
+    formData.append('unit', product.unit || 'kg');
+    formData.append('status', newStatus);
+    formData.append('image_url', product.image_url || '');
+
+    try {
+      const response = await fetch(`http://localhost:5001/api/products/${id}`, {
+        method: 'PUT',
+        body: formData
+      });
+      const data = await response.json();
+      if (data.success) {
+        await fetchProducts();
+        showSuccessNotification(`Product ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully!`);
+      } else {
+        console.error('Status toggle error:', data.error);
+        alert('Error updating product status: ' + data.error);
+      }
+    } catch (err) {
+      console.error('Status toggle error:', err);
+      alert('Network error while updating product status');
+    }
   };
 
   const sidebarItems = [
@@ -215,6 +317,7 @@ const FarmerPortal = ({ user, onLogout }) => {
     { id: 'orders', label: 'Orders', icon: FaClipboardList },
     { id: 'analytics', label: 'Analytics', icon: FaChartBar },
     { id: 'community', label: 'Community', icon: FaUsers },
+    { id: 'profile', label: 'Profile', icon: FaUser },
     { id: 'settings', label: 'Settings', icon: FaCog }
   ];
 
@@ -255,11 +358,16 @@ const FarmerPortal = ({ user, onLogout }) => {
                   <p className="text-sm font-semibold text-gray-800 truncate max-w-32">{currentUser.name}</p>
                   <p className="text-xs text-gray-600 truncate max-w-32">{currentUser.location}</p>
                 </div>
-                <img 
-                  src={currentUser.avatar} 
-                  alt="Profile" 
-                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-green-500/30 flex-shrink-0" 
-                />
+                <button
+                  onClick={() => setActiveTab('profile')}
+                  className="rounded-full hover:ring-2 hover:ring-green-500 transition-all"
+                >
+                  <img 
+                    src={currentUser.avatar} 
+                    alt="Profile" 
+                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-green-500/30 flex-shrink-0 cursor-pointer hover:border-green-500 transition-colors" 
+                  />
+                </button>
               </div>
             </div>
           </div>
@@ -304,7 +412,6 @@ const FarmerPortal = ({ user, onLogout }) => {
             </div>
           </div>
         </aside>
-
 
         {/* Main Content */}
         <main className="flex-1 w-full min-w-0">
@@ -387,7 +494,7 @@ const FarmerPortal = ({ user, onLogout }) => {
                         <h3 className="font-semibold text-gray-800 mb-2 text-sm lg:text-base 2xl:text-lg truncate">{product.name}</h3>
                         <p className="text-green-600 font-bold mb-2 text-sm lg:text-base 2xl:text-lg">Rs.{product.price}</p>
                         <div className="flex justify-between text-xs lg:text-sm 2xl:text-base text-gray-600">
-                          <span className="truncate">Stock: {product.quantity} {product.unit}</span>
+                          <span className="truncate">Stock: {product.quantity} {product.unit || 'kg'}</span>
                           <span className={`px-2 py-1 rounded-full text-xs 2xl:text-sm ${
                             product.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                           }`}>
@@ -425,7 +532,7 @@ const FarmerPortal = ({ user, onLogout }) => {
                           alt={product.name} 
                           className="w-full h-40 lg:h-48 2xl:h-56 object-cover" 
                         />
-                        <div className="absolute top-3 right-3">
+                        <div className="absolute top-3 right-3 flex items-center space-x-2">
                           <span className={`px-2 lg:px-3 2xl:px-4 py-1 2xl:py-2 rounded-full text-xs 2xl:text-sm font-semibold ${
                             product.status === 'active' 
                               ? 'bg-green-500 text-white' 
@@ -433,6 +540,49 @@ const FarmerPortal = ({ user, onLogout }) => {
                           }`}>
                             {product.status}
                           </span>
+                          <div className="relative">
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowDropdownId(showDropdownId === product.id ? null : product.id);
+                              }}
+                              className="dropdown-trigger p-2 bg-white/90 hover:bg-white rounded-full shadow-md transition-all"
+                            >
+                              <FaEllipsisV className="text-gray-600" />
+                            </button>
+                            {showDropdownId === product.id && (
+                              <div className="dropdown-menu absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-10">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    editProduct(product);
+                                    setShowDropdownId(null);
+                                  }}
+                                  className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center text-gray-700"
+                                >
+                                  <FaEdit className="mr-2 text-blue-600" /> Edit Product
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteProduct(product.id);
+                                  }}
+                                  disabled={deletingProductId === product.id}
+                                  className="w-full px-4 py-2 text-left hover:bg-red-50 flex items-center text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {deletingProductId === product.id ? (
+                                    <>
+                                      <FaSpinner className="mr-2 animate-spin" /> Deleting...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FaTrash className="mr-2" /> Delete Product
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="p-4 lg:p-6 2xl:p-8">
@@ -445,7 +595,7 @@ const FarmerPortal = ({ user, onLogout }) => {
                           </div>
                           <div className="flex justify-between text-xs lg:text-sm 2xl:text-base">
                             <span className="text-gray-600">Stock:</span>
-                            <span className="font-semibold">{product.quantity} {product.unit}</span>
+                            <span className="font-semibold">{product.quantity} {product.unit || 'kg'}</span>
                           </div>
                           <div className="flex justify-between text-xs lg:text-sm 2xl:text-base">
                             <span className="text-gray-600">Sales:</span>
@@ -459,25 +609,19 @@ const FarmerPortal = ({ user, onLogout }) => {
                         <div className="flex space-x-1.5 lg:space-x-2 2xl:space-x-3">
                           <button 
                             onClick={() => editProduct(product)}
-                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 lg:py-3 2xl:py-4 px-2 lg:px-3 2xl:px-4 rounded-lg text-xs lg:text-sm 2xl:text-base flex items-center justify-center"
+                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 lg:py-3 2xl:py-4 px-2 lg:px-3 2xl:px-4 rounded-lg text-xs lg:text-sm 2xl:text-base flex items-center justify-center transition-colors"
                           >
                             <FaEdit className="mr-1" /> Edit
                           </button>
                           <button 
                             onClick={() => toggleProductStatus(product.id)}
-                            className={`flex-1 py-2 lg:py-3 2xl:py-4 px-2 lg:px-3 2xl:px-4 rounded-lg text-xs lg:text-sm 2xl:text-base flex items-center justify-center ${
+                            className={`flex-1 py-2 lg:py-3 2xl:py-4 px-2 lg:px-3 2xl:px-4 rounded-lg text-xs lg:text-sm 2xl:text-base flex items-center justify-center transition-colors ${
                               product.status === 'active'
                                 ? 'bg-orange-600 hover:bg-orange-700 text-white'
                                 : 'bg-green-600 hover:bg-green-700 text-white'
                             }`}
                           >
                             {product.status === 'active' ? 'Pause' : 'Activate'}
-                          </button>
-                          <button 
-                            onClick={() => deleteProduct(product.id)}
-                            className="bg-red-600 hover:bg-red-700 text-white py-2 lg:py-3 2xl:py-4 px-2 lg:px-3 2xl:px-4 rounded-lg text-xs lg:text-sm 2xl:text-base"
-                          >
-                            <FaTrash />
                           </button>
                         </div>
                       </div>
@@ -498,6 +642,11 @@ const FarmerPortal = ({ user, onLogout }) => {
                   </div>
                 )}
               </div>
+            )}
+
+            {/* Profile Tab */}
+            {activeTab === 'profile' && (
+              <FarmerProfile user={user} />
             )}
 
             {/* Other tabs content (orders, analytics, community, settings) can remain as in your original code */}
@@ -522,6 +671,7 @@ const FarmerPortal = ({ user, onLogout }) => {
                       name: '', price: '', category: '', stock: '', unit: '', description: '', images: [], status: 'active'
                     });
                     setPreviewImages([]);
+                    setFormError('');
                   }}
                   className="p-2 lg:p-3 hover:bg-gray-100 rounded-lg transition-colors"
                 >
@@ -530,6 +680,11 @@ const FarmerPortal = ({ user, onLogout }) => {
               </div>
             </div>
             <form onSubmit={handleSubmitProduct} className="p-4 lg:p-6 2xl:p-8">
+              {formError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+                  {formError}
+                </div>
+              )}
               <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6 lg:gap-8 2xl:gap-12">
                 {/* Left Column - Product Details */}
                 <div className="space-y-4 lg:space-y-6 2xl:space-y-8 xl:col-span-1 2xl:col-span-2">
@@ -645,7 +800,7 @@ const FarmerPortal = ({ user, onLogout }) => {
                 <div className="space-y-4 lg:space-y-6 2xl:space-y-8">
                   <div>
                     <label className="block text-sm lg:text-base 2xl:text-lg font-semibold text-gray-700 mb-2 lg:mb-3">
-                      Product Images *
+                      Product Images {editingProduct ? '(Leave empty to keep existing)' : '*'}
                     </label>
                     <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 lg:p-8 2xl:p-12 text-center hover:border-green-500 transition-colors">
                       <input
@@ -752,6 +907,7 @@ const FarmerPortal = ({ user, onLogout }) => {
                       name: '', price: '', category: '', stock: '', unit: '', description: '', images: [], status: 'active'
                     });
                     setPreviewImages([]);
+                    setFormError('');
                   }}
                   className="flex-1 sm:flex-none px-6 lg:px-8 2xl:px-10 py-3 lg:py-4 2xl:py-5 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors text-sm lg:text-base 2xl:text-lg"
                 >
@@ -786,11 +942,11 @@ const FarmerPortal = ({ user, onLogout }) => {
       )}
 
       {/* Success Message */}
-    
-      {!showAddProduct && products.length > 0 && (
-        <div className="fixed bottom-4 lg:bottom-6 2xl:bottom-8 right-4 lg:right-6 2xl:right-8 z-40">
-          <div className="bg-green-500 text-white px-4 lg:px-6 2xl:px-8 py-2 lg:py-3 2xl:py-4 rounded-lg shadow-lg text-sm lg:text-base 2xl:text-lg">
-            Product saved successfully!
+      {showSuccess && (
+        <div className="fixed bottom-4 lg:bottom-6 2xl:bottom-8 right-4 lg:right-6 2xl:right-8 z-40 animate-in slide-in-from-bottom-2">
+          <div className="bg-green-500 text-white px-4 lg:px-6 2xl:px-8 py-2 lg:py-3 2xl:py-4 rounded-lg shadow-lg text-sm lg:text-base 2xl:text-lg flex items-center">
+            <FaCheck className="mr-2" />
+            {successMessage}
           </div>
         </div>
       )}
