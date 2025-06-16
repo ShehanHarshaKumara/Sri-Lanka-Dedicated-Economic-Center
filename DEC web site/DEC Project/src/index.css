@@ -48,28 +48,60 @@ h1 {
 }
 
 /* Button Styling */
-button {
-  border-radius: 0.5rem;
-  border: 1px solid transparent;
-  padding: 0.75em 1.5em;
-  font-size: 1rem;
-  font-weight: 600;
-  font-family: inherit;
-  background-color: #2563eb;
-  color: #fff;
+/* From Uiverse.io by adamgiebl */ 
+/* Simple Button Styling */
+.button-3d {
+  position: relative;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: bold;
+  color: white;
+  background-color: #4CAF50; /* Green base color */
+  border: none;
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.3s ease;
-}
-button:hover {
-  background-color: #1d4ed8;
-  border-color: #3b82f6;
-}
-button:focus,
-button:focus-visible {
-  outline: 3px solid #93c5fd;
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 
+    0 6px 0 #3e8e41, /* Bottom shadow for 3D effect */
+    0 5px 10px rgba(0, 0, 0, 0.2);
+  transition: all 0.1s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
+.button-3d:hover {
+  background-color: #45a049;
+  box-shadow: 
+    0 6px 0 #3e8e41,
+    0 8px 15px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px);
+}
+
+.button-3d:active {
+  background-color: #3e8e41;
+  box-shadow: 
+    0 2px 0 #2d6a30, /* Reduced shadow when pressed */
+    0 3px 5px rgba(0, 0, 0, 0.2);
+  transform: translateY(4px); /* Moves button down when clicked */
+}
+
+/* Optional: Add a subtle glow effect on hover */
+.button-3d::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.button-3d:hover::after {
+  opacity: 1;
+}
 /* Light Theme Overrides */
 @media (prefers-color-scheme: light) {
   :root {

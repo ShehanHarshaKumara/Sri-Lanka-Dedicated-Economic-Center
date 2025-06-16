@@ -3,8 +3,9 @@ import {
   ChevronLeft, MapPin, Phone, Mail, Star, Wheat, Users, Award, 
   Calendar, ShoppingCart, Heart, Share2, Truck, Filter, Search,
   TrendingUp, Shield, Leaf, Clock, MessageCircle, Globe, X,
-  Menu, ChevronRight, BarChart3, Package, Plus, Minus, Check,
-  ArrowRight, ArrowLeft, Home, Info, Settings, LogOut, User
+  ChevronRight, BarChart3, Package, Plus, Minus, Check,
+  ArrowRight, ArrowLeft, Home, Info, Settings, LogOut, User,
+  Send, Smile, Paperclip, Camera
 } from 'lucide-react';
 
 const ModernFarmerMarketplace = () => {
@@ -14,8 +15,10 @@ const ModernFarmerMarketplace = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortBy, setSortBy] = useState('rating');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [showMessaging, setShowMessaging] = useState(false);
+  const [messageText, setMessageText] = useState('');
+  const [messages, setMessages] = useState([]);
 
   // Enhanced farmer data with more products and details
   const farmers = [
@@ -39,6 +42,8 @@ const ModernFarmerMarketplace = () => {
       sustainability: 95,
       totalProducts: 45,
       totalOrders: 3420,
+      isOnline: true,
+      lastSeen: "2 minutes ago",
       products: [
         {
           id: 101,
@@ -107,6 +112,8 @@ const ModernFarmerMarketplace = () => {
       sustainability: 98,
       totalProducts: 32,
       totalOrders: 2150,
+      isOnline: false,
+      lastSeen: "1 hour ago",
       products: [
         {
           id: 201,
@@ -139,6 +146,46 @@ const ModernFarmerMarketplace = () => {
           farmingMethod: "Free-range Goats"
         }
       ]
+    },
+    {
+      id: 3,
+      name: "Miguel Rodriguez",
+      location: "Sunshine Ranch, Texas",
+      image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face",
+      coverImage: "https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=1200&h=400&fit=crop",
+      rating: 4.7,
+      specialties: ["Citrus Fruits", "Avocados", "Herbs"],
+      experience: "18 years",
+      farmSize: "320 acres",
+      phone: "+1 (555) 456-7890",
+      email: "miguel@sunshineranch.com",
+      bio: "Third-generation farmer specializing in citrus and avocado cultivation. We focus on water-efficient farming and premium quality fruits that bring sunshine to your table.",
+      achievements: ["Water Conservation Award", "Premium Quality Certification", "Family Farm Heritage"],
+      followers: 2100,
+      deliveryTime: "1-3 days",
+      responseTime: "< 3 hours",
+      sustainability: 88,
+      totalProducts: 28,
+      totalOrders: 4560,
+      isOnline: true,
+      lastSeen: "Active now",
+      products: [
+        {
+          id: 301,
+          name: "Premium Avocados",
+          price: 6.99,
+          unit: "per 4-pack",
+          image: "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=300&h=200&fit=crop",
+          description: "Perfectly ripe Hass avocados with creamy texture and rich flavor. Hand-picked at optimal ripeness.",
+          inStock: true,
+          harvest: "Weekly",
+          category: "Fruits",
+          rating: 4.8,
+          reviews: 445,
+          nutrients: "Healthy Fats, Potassium, Fiber",
+          farmingMethod: "Sustainable Water Management"
+        }
+      ]
     }
   ];
 
@@ -164,6 +211,7 @@ const ModernFarmerMarketplace = () => {
 
   const handleBackClick = () => {
     setSelectedFarmer(null);
+    setShowMessaging(false);
   };
 
   const toggleLike = (productId) => {
@@ -198,17 +246,188 @@ const ModernFarmerMarketplace = () => {
     }
   };
 
-  const categories = ['all', 'Vegetables', 'Dairy', 'Grains', 'Meat'];
-
-  // Theme colors
-  const theme = {
-    primary: darkMode ? '#10b981' : '#059669',
-    background: darkMode ? '#1a1a1a' : '#f8fafc',
-    card: darkMode ? '#2d2d2d' : '#ffffff',
-    text: darkMode ? '#f3f4f6' : '#1f2937',
-    textSecondary: darkMode ? '#d1d5db' : '#6b7280',
-    border: darkMode ? '#3d3d3d' : '#e5e7eb',
+  const sendMessage = () => {
+    if (messageText.trim() && selectedFarmer) {
+      const newMessage = {
+        id: Date.now(),
+        text: messageText,
+        sender: 'user',
+        timestamp: new Date(),
+        farmerId: selectedFarmer.id
+      };
+      setMessages([...messages, newMessage]);
+      setMessageText('');
+      
+      // Simulate farmer response
+      setTimeout(() => {
+        const response = {
+          id: Date.now() + 1,
+          text: "Thanks for your message! I'll get back to you soon with details about our fresh produce.",
+          sender: 'farmer',
+          timestamp: new Date(),
+          farmerId: selectedFarmer.id
+        };
+        setMessages(prev => [...prev, response]);
+      }, 2000);
+    }
   };
+
+  const categories = ['all', 'Vegetables', 'Dairy', 'Grains', 'Meat', 'Fruits'];
+
+  // Enhanced theme with light green, yellow, and white
+  const theme = {
+    primary: darkMode ? '#22c55e' : '#16a34a',
+    secondary: darkMode ? '#eab308' : '#facc15',
+    background: darkMode ? '#0f172a' : 'linear-gradient(135deg, #f0fdf4 0%, #fefce8 50%, #ffffff 100%)',
+    card: darkMode ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+    text: darkMode ? '#f1f5f9' : '#1e293b',
+    textSecondary: darkMode ? '#cbd5e1' : '#64748b',
+    border: darkMode ? 'rgba(71, 85, 105, 0.3)' : 'rgba(34, 197, 94, 0.2)',
+    shadow: darkMode ? 'rgba(0, 0, 0, 0.3)' : 'rgba(34, 197, 94, 0.1)',
+  };
+
+  // Messaging Component
+  const MessagingView = () => {
+    const farmerMessages = messages.filter(m => m.farmerId === selectedFarmer.id);
+    
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col" style={{ 
+        background: theme.background,
+        backdropFilter: 'blur(20px)'
+      }}>
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b backdrop-blur-md" style={{
+          backgroundColor: theme.card,
+          borderColor: theme.border,
+          boxShadow: `0 4px 20px ${theme.shadow}`
+        }}>
+          <button
+            onClick={() => setShowMessaging(false)}
+            className="flex items-center gap-2 text-lg font-medium transition-all hover:scale-105"
+            style={{ color: theme.primary }}
+          >
+            <ChevronLeft className="w-6 h-6" />
+            <span className="hidden sm:inline">Back</span>
+          </button>
+          
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <img
+                src={selectedFarmer.image}
+                alt={selectedFarmer.name}
+                className="w-10 h-10 rounded-full border-2"
+                style={{ borderColor: theme.primary }}
+              />
+              {selectedFarmer.isOnline && (
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white"
+                  style={{ backgroundColor: theme.primary }}></div>
+              )}
+            </div>
+            <div>
+              <h3 className="font-semibold" style={{ color: theme.text }}>{selectedFarmer.name}</h3>
+              <p className="text-sm" style={{ color: theme.textSecondary }}>
+                {selectedFarmer.isOnline ? 'Online' : `Last seen ${selectedFarmer.lastSeen}`}
+              </p>
+            </div>
+          </div>
+          
+          <button className="p-2 rounded-full transition-all hover:scale-110" style={{ color: theme.text }}>
+            <Phone className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {farmerMessages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" 
+                style={{ backgroundColor: `${theme.primary}20` }}>
+                <MessageCircle className="w-8 h-8" style={{ color: theme.primary }} />
+              </div>
+              <h3 className="text-lg font-semibold mb-2" style={{ color: theme.text }}>
+                Start a conversation
+              </h3>
+              <p style={{ color: theme.textSecondary }}>
+                Send a message to {selectedFarmer.name} about their products
+              </p>
+            </div>
+          ) : (
+            farmerMessages.map((message) => (
+              <div key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl shadow-lg transform transition-all hover:scale-105 ${
+                  message.sender === 'user' 
+                    ? 'rounded-br-md' 
+                    : 'rounded-bl-md'
+                }`} style={{
+                  backgroundColor: message.sender === 'user' ? theme.primary : theme.card,
+                  color: message.sender === 'user' ? 'white' : theme.text,
+                  boxShadow: `0 4px 15px ${theme.shadow}`
+                }}>
+                  <p>{message.text}</p>
+                  <p className={`text-xs mt-1 ${
+                    message.sender === 'user' ? 'text-white/70' : ''
+                  }`} style={{
+                    color: message.sender === 'user' ? 'rgba(255,255,255,0.7)' : theme.textSecondary
+                  }}>
+                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Message Input */}
+        <div className="p-4 border-t backdrop-blur-md" style={{
+          backgroundColor: theme.card,
+          borderColor: theme.border
+        }}>
+          <div className="flex items-center gap-3">
+            <button className="p-2 rounded-full transition-all hover:scale-110" style={{ color: theme.textSecondary }}>
+              <Paperclip className="w-5 h-5" />
+            </button>
+            <button className="p-2 rounded-full transition-all hover:scale-110" style={{ color: theme.textSecondary }}>
+              <Camera className="w-5 h-5" />
+            </button>
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                placeholder={`Message ${selectedFarmer.name}...`}
+                className="w-full px-4 py-3 rounded-2xl focus:outline-none focus:ring-2 transition-all"
+                style={{
+                  backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.8)' : 'rgba(248, 250, 252, 0.9)',
+                  border: `1px solid ${theme.border}`,
+                  color: theme.text,
+                  focusRingColor: theme.primary
+                }}
+              />
+              <button 
+                onClick={sendMessage}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 rounded-full transition-all hover:scale-110"
+                style={{ 
+                  backgroundColor: theme.primary,
+                  color: 'white'
+                }}
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+            <button className="p-2 rounded-full transition-all hover:scale-110" style={{ color: theme.textSecondary }}>
+              <Smile className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Show messaging view
+  if (showMessaging && selectedFarmer) {
+    return <MessagingView />;
+  }
 
   // Individual Farmer Profile View
   if (selectedFarmer) {
@@ -218,33 +437,46 @@ const ModernFarmerMarketplace = () => {
 
     return (
       <div className="fixed inset-0 flex flex-col" style={{ 
-        backgroundColor: theme.background,
+        background: theme.background,
         color: theme.text
       }}>
         {/* Header */}
-        <header className="sticky top-0 z-30 shadow-sm" style={{
+        <header className="sticky top-0 z-30 backdrop-blur-md" style={{
           backgroundColor: theme.card,
-          borderBottom: `1px solid ${theme.border}`
+          borderBottom: `1px solid ${theme.border}`,
+          boxShadow: `0 4px 20px ${theme.shadow}`
         }}>
           <div className="container mx-auto px-4 py-3 flex items-center justify-between">
             <button
               onClick={handleBackClick}
-              className="flex items-center gap-2 transition-colors"
+              className="flex items-center gap-2 transition-all hover:scale-105 transform"
               style={{ color: theme.primary }}
             >
               <ChevronLeft className="w-5 h-5" />
-              <span className="hidden sm:inline">Back to Farmers</span>
+              <span className="hidden sm:inline font-medium">Back to Farmers</span>
             </button>
             
             <div className="flex items-center gap-4">
-              <button className="p-2 transition-colors" style={{ color: theme.text }}>
+              <button 
+                onClick={() => setShowMessaging(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-full transition-all hover:scale-105 transform shadow-lg"
+                style={{ 
+                  backgroundColor: theme.primary,
+                  color: 'white',
+                  boxShadow: `0 4px 15px ${theme.shadow}`
+                }}
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span className="hidden sm:inline">Message</span>
+              </button>
+              <button className="p-2 transition-all hover:scale-110 transform" style={{ color: theme.text }}>
                 <Share2 className="w-5 h-5" />
               </button>
-              <button className="p-2 transition-colors relative" style={{ color: theme.text }}>
+              <button className="p-2 transition-all hover:scale-110 transform relative" style={{ color: theme.text }}>
                 <ShoppingCart className="w-5 h-5" />
                 {cartItems.size > 0 && (
-                  <span className="absolute -top-1 -right-1 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center"
-                    style={{ backgroundColor: theme.primary }}>
+                  <span className="absolute -top-1 -right-1 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse"
+                    style={{ backgroundColor: theme.secondary }}>
                     {cartItems.size}
                   </span>
                 )}
@@ -255,24 +487,34 @@ const ModernFarmerMarketplace = () => {
 
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto">
-          {/* Hero Section */}
-          <div className="relative h-64 sm:h-80 lg:h-96 w-full">
-            <img 
-              src={selectedFarmer.coverImage} 
-              alt="Farm landscape" 
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+          {/* Hero Section with 3D Effect */}
+          <div className="relative h-64 sm:h-80 lg:h-96 w-full overflow-hidden">
+            <div className="absolute inset-0 transform transition-transform duration-700 hover:scale-110">
+              <img 
+                src={selectedFarmer.coverImage} 
+                alt="Farm landscape" 
+                className="w-full h-full object-cover"
+                style={{ filter: 'brightness(0.9)' }}
+              />
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
             
             <div className="absolute bottom-0 left-0 right-0 container mx-auto px-4 pb-6">
               <div className="flex items-end gap-4">
-                <img
-                  src={selectedFarmer.image}
-                  alt={selectedFarmer.name}
-                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-white shadow-lg"
-                />
+                <div className="relative transform transition-all duration-300 hover:scale-110">
+                  <img
+                    src={selectedFarmer.image}
+                    alt={selectedFarmer.name}
+                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-white shadow-2xl"
+                    style={{ boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}
+                  />
+                  {selectedFarmer.isOnline && (
+                    <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-3 border-white animate-pulse"
+                      style={{ backgroundColor: theme.primary }}></div>
+                  )}
+                </div>
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-white">{selectedFarmer.name}</h1>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-white drop-shadow-lg">{selectedFarmer.name}</h1>
                   <div className="flex items-center gap-2 text-white/90">
                     <MapPin className="w-4 h-4" />
                     <span>{selectedFarmer.location}</span>
@@ -286,17 +528,21 @@ const ModernFarmerMarketplace = () => {
 
           {/* Content Container */}
           <div className="container mx-auto px-4 py-6">
-            {/* About Section */}
-            <section className="mb-8 rounded-xl shadow-sm p-6" style={{
+            {/* About Section with 3D Cards */}
+            <section className="mb-8 rounded-2xl shadow-2xl p-6 transform transition-all duration-300 hover:shadow-3xl hover:-translate-y-1" style={{
               backgroundColor: theme.card,
               border: `1px solid ${theme.border}`,
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+              boxShadow: `0 10px 40px ${theme.shadow}`,
+              backdropFilter: 'blur(20px)'
             }}>
               <h2 className="text-xl font-bold mb-4">About the Farm</h2>
               <p className="leading-relaxed mb-6" style={{ color: theme.textSecondary }}>{selectedFarmer.bio}</p>
               
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="p-4 rounded-lg" style={{ backgroundColor: darkMode ? '#333' : '#f9fafb' }}>
+                <div className="p-4 rounded-xl transform transition-all duration-300 hover:scale-105 hover:shadow-xl" style={{ 
+                  background: `linear-gradient(135deg, ${theme.primary}15, ${theme.secondary}15)`,
+                  boxShadow: `0 4px 15px ${theme.shadow}`
+                }}>
                   <div className="flex items-center gap-2 mb-1" style={{ color: theme.textSecondary }}>
                     <Wheat className="w-5 h-5" style={{ color: theme.primary }} />
                     <span className="font-medium">Farm Size</span>
@@ -304,7 +550,10 @@ const ModernFarmerMarketplace = () => {
                   <div className="text-lg font-bold" style={{ color: theme.text }}>{selectedFarmer.farmSize}</div>
                 </div>
                 
-                <div className="p-4 rounded-lg" style={{ backgroundColor: darkMode ? '#333' : '#f9fafb' }}>
+                <div className="p-4 rounded-xl transform transition-all duration-300 hover:scale-105 hover:shadow-xl" style={{ 
+                  background: `linear-gradient(135deg, ${theme.secondary}15, ${theme.primary}15)`,
+                  boxShadow: `0 4px 15px ${theme.shadow}`
+                }}>
                   <div className="flex items-center gap-2 mb-1" style={{ color: theme.textSecondary }}>
                     <Calendar className="w-5 h-5" style={{ color: '#3b82f6' }} />
                     <span className="font-medium">Experience</span>
@@ -312,7 +561,10 @@ const ModernFarmerMarketplace = () => {
                   <div className="text-lg font-bold" style={{ color: theme.text }}>{selectedFarmer.experience}</div>
                 </div>
                 
-                <div className="p-4 rounded-lg" style={{ backgroundColor: darkMode ? '#333' : '#f9fafb' }}>
+                <div className="p-4 rounded-xl transform transition-all duration-300 hover:scale-105 hover:shadow-xl" style={{ 
+                  background: `linear-gradient(135deg, ${theme.primary}15, ${theme.secondary}15)`,
+                  boxShadow: `0 4px 15px ${theme.shadow}`
+                }}>
                   <div className="flex items-center gap-2 mb-1" style={{ color: theme.textSecondary }}>
                     <Leaf className="w-5 h-5" style={{ color: theme.primary }} />
                     <span className="font-medium">Sustainability</span>
@@ -320,7 +572,10 @@ const ModernFarmerMarketplace = () => {
                   <div className="text-lg font-bold" style={{ color: theme.text }}>{selectedFarmer.sustainability}%</div>
                 </div>
                 
-                <div className="p-4 rounded-lg" style={{ backgroundColor: darkMode ? '#333' : '#f9fafb' }}>
+                <div className="p-4 rounded-xl transform transition-all duration-300 hover:scale-105 hover:shadow-xl" style={{ 
+                  background: `linear-gradient(135deg, ${theme.secondary}15, ${theme.primary}15)`,
+                  boxShadow: `0 4px 15px ${theme.shadow}`
+                }}>
                   <div className="flex items-center gap-2 mb-1" style={{ color: theme.textSecondary }}>
                     <Users className="w-5 h-5" style={{ color: '#8b5cf6' }} />
                     <span className="font-medium">Followers</span>
@@ -330,19 +585,20 @@ const ModernFarmerMarketplace = () => {
               </div>
             </section>
 
-            {/* Achievements */}
+            {/* Achievements with 3D Effect */}
             {selectedFarmer.achievements.length > 0 && (
               <section className="mb-8">
                 <h2 className="text-xl font-bold mb-4" style={{ color: theme.text }}>Achievements</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {selectedFarmer.achievements.map((achievement, index) => (
-                    <div key={index} className="flex items-center gap-3 p-4 rounded-lg shadow-sm"
+                    <div key={index} className="flex items-center gap-3 p-4 rounded-xl shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-2xl"
                       style={{
                         backgroundColor: theme.card,
-                        border: `1px solid ${theme.border}`
+                        border: `1px solid ${theme.border}`,
+                        backdropFilter: 'blur(10px)'
                       }}>
-                      <div className="flex-shrink-0 p-2 rounded-full" style={{ backgroundColor: darkMode ? '#374151' : '#fef3c7' }}>
-                        <Award className="w-5 h-5" style={{ color: darkMode ? '#f59e0b' : '#d97706' }} />
+                      <div className="flex-shrink-0 p-2 rounded-full animate-pulse" style={{ backgroundColor: `${theme.secondary}30` }}>
+                        <Award className="w-5 h-5" style={{ color: theme.secondary }} />
                       </div>
                       <div className="font-medium" style={{ color: theme.text }}>{achievement}</div>
                     </div>
@@ -361,13 +617,16 @@ const ModernFarmerMarketplace = () => {
                     <button
                       key={category}
                       onClick={() => setSelectedCategory(category)}
-                      className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                      className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300 transform hover:scale-105 ${
                         selectedCategory === category
-                          ? 'text-white'
-                          : darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-200'
+                          ? 'text-white shadow-lg'
+                          : 'hover:shadow-md'
                       }`}
                       style={{
-                        backgroundColor: selectedCategory === category ? theme.primary : darkMode ? '#333' : '#f3f4f6'
+                        backgroundColor: selectedCategory === category ? theme.primary : theme.card,
+                        color: selectedCategory === category ? 'white' : theme.text,
+                        border: `1px solid ${theme.border}`,
+                        boxShadow: selectedCategory === category ? `0 4px 15px ${theme.shadow}` : `0 2px 8px ${theme.shadow}`
                       }}
                     >
                       {category}
@@ -377,9 +636,10 @@ const ModernFarmerMarketplace = () => {
               </div>
 
               {filteredProducts.length === 0 ? (
-                <div className="rounded-xl shadow-sm p-8 text-center" style={{
+                <div className="rounded-2xl shadow-lg p-8 text-center transform transition-all duration-300 hover:shadow-2xl" style={{
                   backgroundColor: theme.card,
-                  border: `1px solid ${theme.border}`
+                  border: `1px solid ${theme.border}`,
+                  backdropFilter: 'blur(20px)'
                 }}>
                   <Package className="w-12 h-12 mx-auto mb-4" style={{ color: theme.textSecondary }} />
                   <h3 className="text-lg font-medium mb-2" style={{ color: theme.text }}>No products found</h3>
@@ -392,28 +652,30 @@ const ModernFarmerMarketplace = () => {
                     const cartQuantity = isInCart ? cartItems.get(product.id).quantity : 1;
                     
                     return (
-                      <div key={product.id} className="rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 transform hover:-translate-y-1"
+                      <div key={product.id} className="rounded-2xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 hover:scale-105"
                         style={{
                           backgroundColor: theme.card,
                           border: `1px solid ${theme.border}`,
-                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                          boxShadow: `0 10px 30px ${theme.shadow}`,
+                          backdropFilter: 'blur(20px)'
                         }}>
                         {/* Product Image */}
-                        <div className="relative h-48">
+                        <div className="relative h-48 overflow-hidden">
                           <img 
                             src={product.image} 
                             alt={product.name}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover transform transition-transform duration-700 hover:scale-110"
                           />
                           
                           {/* Badges */}
                           <div className="absolute top-3 left-3 flex gap-2">
-                            <span className="px-2 py-1 text-white text-xs rounded-full font-medium"
-                              style={{ backgroundColor: theme.primary }}>
+                            <span className="px-2 py-1 text-white text-xs rounded-full font-medium backdrop-blur-md"
+                              style={{ backgroundColor: `${theme.primary}CC` }}>
                               {product.category}
                             </span>
                             {product.farmingMethod && (
-                              <span className="px-2 py-1 bg-blue-600 text-white text-xs rounded-full font-medium">
+                              <span className="px-2 py-1 text-white text-xs rounded-full font-medium backdrop-blur-md"
+                                style={{ backgroundColor: `${theme.secondary}CC` }}>
                                 {product.farmingMethod}
                               </span>
                             )}
@@ -422,11 +684,15 @@ const ModernFarmerMarketplace = () => {
                           {/* Like Button */}
                           <button 
                             onClick={() => toggleLike(product.id)}
-                            className={`absolute top-3 right-3 p-2 rounded-full transition-all ${
+                            className={`absolute top-3 right-3 p-2 rounded-full transition-all duration-300 transform hover:scale-110 ${
                               likedProducts.has(product.id) 
-                                ? 'bg-red-500 text-white' 
-                                : darkMode ? 'bg-gray-700/90 text-gray-300' : 'bg-white/90 text-gray-600'
+                                ? 'bg-red-500 text-white shadow-lg' 
+                                : 'backdrop-blur-md shadow-md'
                             }`}
+                            style={{
+                              backgroundColor: likedProducts.has(product.id) ? '#ef4444' : `${theme.card}CC`,
+                              color: likedProducts.has(product.id) ? 'white' : theme.text
+                            }}
                           >
                             <Heart className="w-5 h-5" fill={likedProducts.has(product.id) ? "currentColor" : "none"} />
                           </button>
@@ -459,27 +725,30 @@ const ModernFarmerMarketplace = () => {
                           {/* Quantity Selector */}
                           {isInCart ? (
                             <div className="flex items-center justify-between gap-3">
-                              <div className="flex items-center rounded-lg" style={{ border: `1px solid ${theme.border}` }}>
+                              <div className="flex items-center rounded-lg shadow-md" style={{ 
+                                border: `1px solid ${theme.border}`,
+                                backgroundColor: theme.card
+                              }}>
                                 <button 
                                   onClick={() => updateQuantity(product.id, cartQuantity - 1)}
-                                  className="px-3 py-2 hover:bg-gray-100 transition-colors"
-                                  style={{ color: theme.text, ...(darkMode && { backgroundColor: '#333' }) }}
+                                  className="px-3 py-2 transition-all hover:scale-110 transform"
+                                  style={{ color: theme.text }}
                                 >
                                   <Minus className="w-4 h-4" />
                                 </button>
                                 <span className="px-3 py-2 font-medium" style={{ color: theme.text }}>{cartQuantity}</span>
                                 <button 
                                   onClick={() => updateQuantity(product.id, cartQuantity + 1)}
-                                  className="px-3 py-2 hover:bg-gray-100 transition-colors"
-                                  style={{ color: theme.text, ...(darkMode && { backgroundColor: '#333' }) }}
+                                  className="px-3 py-2 transition-all hover:scale-110 transform"
+                                  style={{ color: theme.text }}
                                 >
                                   <Plus className="w-4 h-4" />
                                 </button>
                               </div>
                               <button 
                                 onClick={() => toggleCart(product.id)}
-                                className="flex-1 py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 text-white"
-                                style={{ backgroundColor: theme.primary, hover: { backgroundColor: darkMode ? '#0ea5e9' : '#0284c7' } }}
+                                className="flex-1 py-2 px-4 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2 text-white shadow-lg"
+                                style={{ backgroundColor: theme.primary }}
                               >
                                 <Check className="w-4 h-4" />
                                 Added
@@ -489,11 +758,15 @@ const ModernFarmerMarketplace = () => {
                             <button 
                               onClick={() => toggleCart(product.id, product)}
                               disabled={!product.inStock}
-                              className={`w-full py-2 px-4 rounded-lg font-medium transition-all text-sm flex items-center justify-center gap-2 ${
+                              className={`w-full py-2 px-4 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 text-sm flex items-center justify-center gap-2 shadow-lg ${
                                 product.inStock
-                                  ? darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                  ? 'hover:shadow-2xl'
+                                  : 'cursor-not-allowed opacity-50'
                               }`}
+                              style={{
+                                backgroundColor: product.inStock ? theme.secondary : theme.border,
+                                color: product.inStock ? 'white' : theme.textSecondary
+                              }}
                             >
                               <ShoppingCart className="w-4 h-4" />
                               Add to Cart
@@ -515,29 +788,27 @@ const ModernFarmerMarketplace = () => {
   // Farmers List View
   return (
     <div className="fixed inset-0 flex flex-col" style={{ 
-      backgroundColor: theme.background,
+      background: theme.background,
       color: theme.text
     }}>
       {/* Header */}
-      <header className="sticky top-0 z-20 shadow-sm" style={{
+      <header className="sticky top-0 z-20 backdrop-blur-md" style={{
         backgroundColor: theme.card,
-        borderBottom: `1px solid ${theme.border}`
+        borderBottom: `1px solid ${theme.border}`,
+        boxShadow: `0 4px 20px ${theme.shadow}`
       }}>
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            <button 
-              className="p-2 hover:text-gray-900 transition-colors"
-              onClick={() => setIsMobileMenuOpen(true)}
-              style={{ color: theme.text }}
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            
-            <h1 className="text-xl font-bold" style={{ color: theme.text }}>FarmConnect</h1>
+            <h1 className="text-2xl font-bold bg-gradient-to-r bg-clip-text text-transparent" 
+              style={{ 
+                backgroundImage: `linear-gradient(45deg, ${theme.primary}, ${theme.secondary})`
+              }}>
+              🌱 FarmConnect
+            </h1>
             
             <div className="flex items-center gap-2">
               <button 
-                className="p-2 transition-colors"
+                className="p-2 transition-all hover:scale-110 transform rounded-full"
                 onClick={() => setDarkMode(!darkMode)}
                 style={{ color: theme.text }}
               >
@@ -551,11 +822,11 @@ const ModernFarmerMarketplace = () => {
                   </svg>
                 )}
               </button>
-              <button className="p-2 relative" style={{ color: theme.text }}>
+              <button className="p-2 relative transition-all hover:scale-110 transform rounded-full" style={{ color: theme.text }}>
                 <ShoppingCart className="w-5 h-5" />
                 {cartItems.size > 0 && (
-                  <span className="absolute top-0 right-0 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center"
-                    style={{ backgroundColor: theme.primary }}>
+                  <span className="absolute top-0 right-0 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-bounce"
+                    style={{ backgroundColor: theme.secondary }}>
                     {cartItems.size}
                   </span>
                 )}
@@ -568,20 +839,15 @@ const ModernFarmerMarketplace = () => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: theme.textSecondary }} />
             <input
               type="text"
-              placeholder="Search farmers, products..."
+              placeholder="Search farmers, products, locations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-full focus:ring-2 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-3 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 shadow-lg backdrop-blur-md"
               style={{
-                backgroundColor: darkMode ? '#333' : '#f3f4f6',
+                backgroundColor: `${theme.card}CC`,
                 border: `1px solid ${theme.border}`,
                 color: theme.text,
-                outline: 'none',
-                boxShadow: 'none',
-                focus: {
-                  ringColor: theme.primary,
-                  borderColor: 'transparent'
-                }
+                focusRingColor: theme.primary
               }}
             />
           </div>
@@ -591,49 +857,49 @@ const ModernFarmerMarketplace = () => {
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto">
         <div className="container mx-auto px-4 py-6">
-          {/* Hero Banner */}
-          <div className="relative rounded-xl overflow-hidden mb-8 h-48" style={{
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+          {/* Hero Banner with 3D Effect - Adjusted without button */}
+          <div className="relative rounded-2xl overflow-hidden mb-8 h-48 sm:h-56 transform transition-all duration-300 hover:scale-105" style={{
+            boxShadow: `0 20px 50px ${theme.shadow}`
           }}>
             <img 
               src="https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=1200&h=400&fit=crop" 
               alt="Farm landscape"
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover transform transition-transform duration-1000 hover:scale-110"
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/40 to-transparent flex items-center p-6">
-              <div className="max-w-md">
-                <h2 className="text-2xl font-bold text-white mb-2">Fresh From the Farm</h2>
-                <p className="text-white/90 mb-4">Connect directly with local farmers for the freshest produce</p>
-                <button className="bg-white px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors"
-                  style={{ color: theme.primary }}>
-                  Learn More
-                </button>
+            <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/40 flex items-center p-6">
+              <div className="max-w-lg transform transition-all duration-500 hover:scale-105">
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3 drop-shadow-lg">Fresh From the Farm</h2>
+                <p className="text-white/90 text-sm sm:text-base lg:text-lg drop-shadow leading-relaxed">Connect directly with local farmers for the freshest produce and build sustainable communities together</p>
               </div>
             </div>
           </div>
 
-          {/* Categories */}
+          {/* Categories with 3D Cards */}
           <section className="mb-8">
-            <h2 className="text-lg font-bold mb-4" style={{ color: theme.text }}>Categories</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <h2 className="text-2xl font-bold mb-6" style={{ color: theme.text }}>Shop by Category</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {categories.filter(c => c !== 'all').map((category) => (
                 <button
                   key={category}
                   onClick={() => setSelectedCategory(category)}
-                  className="rounded-lg shadow-sm p-4 flex flex-col items-center hover:shadow-md transition-all duration-300 transform hover:-translate-y-1"
+                  className="rounded-2xl shadow-lg p-6 flex flex-col items-center transition-all duration-300 transform hover:shadow-2xl hover:-translate-y-2 hover:scale-105"
                   style={{
                     backgroundColor: theme.card,
-                    border: `1px solid ${theme.border}`
+                    border: `1px solid ${theme.border}`,
+                    backdropFilter: 'blur(20px)'
                   }}
                 >
-                  <div className="w-12 h-12 rounded-full flex items-center justify-center mb-2"
-                    style={{ backgroundColor: darkMode ? '#333' : '#ecfdf5' }}>
-                    {category === 'Vegetables' && <Leaf className="w-6 h-6" style={{ color: theme.primary }} />}
-                    {category === 'Dairy' && <Wheat className="w-6 h-6" style={{ color: '#d97706' }} />}
-                    {category === 'Grains' && <Package className="w-6 h-6" style={{ color: '#2563eb' }} />}
-                    {category === 'Meat' && <TrendingUp className="w-6 h-6" style={{ color: '#dc2626' }} />}
+                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-3 transform transition-all duration-300 hover:rotate-12"
+                    style={{ 
+                      background: `linear-gradient(135deg, ${theme.primary}20, ${theme.secondary}20)`
+                    }}>
+                    {category === 'Vegetables' && <Leaf className="w-8 h-8" style={{ color: theme.primary }} />}
+                    {category === 'Dairy' && <Wheat className="w-8 h-8" style={{ color: '#d97706' }} />}
+                    {category === 'Grains' && <Package className="w-8 h-8" style={{ color: '#2563eb' }} />}
+                    {category === 'Meat' && <TrendingUp className="w-8 h-8" style={{ color: '#dc2626' }} />}
+                    {category === 'Fruits' && <Globe className="w-8 h-8" style={{ color: '#ea580c' }} />}
                   </div>
-                  <span className="font-medium" style={{ color: theme.text }}>{category}</span>
+                  <span className="font-semibold text-lg" style={{ color: theme.text }}>{category}</span>
                 </button>
               ))}
             </div>
@@ -641,87 +907,95 @@ const ModernFarmerMarketplace = () => {
 
           {/* Farmers List */}
           <section>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold" style={{ color: theme.text }}>Local Farmers</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold" style={{ color: theme.text }}>Featured Farmers</h2>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="text-sm rounded-lg px-3 py-1 focus:ring-2 focus:border-transparent"
+                className="text-sm rounded-xl px-4 py-2 focus:outline-none focus:ring-2 transition-all duration-300 shadow-lg backdrop-blur-md"
                 style={{
-                  backgroundColor: darkMode ? '#333' : '#f3f4f6',
+                  backgroundColor: theme.card,
                   border: `1px solid ${theme.border}`,
                   color: theme.text,
-                  outline: 'none',
-                  focus: {
-                    ringColor: theme.primary
-                  }
+                  focusRingColor: theme.primary
                 }}
               >
-                <option value="rating">Top Rated</option>
-                <option value="followers">Most Popular</option>
-                <option value="experience">Most Experienced</option>
+                <option value="rating">⭐ Top Rated</option>
+                <option value="followers">👥 Most Popular</option>
+                <option value="experience">🎯 Most Experienced</option>
               </select>
             </div>
 
             {filteredFarmers.length === 0 ? (
-              <div className="rounded-xl shadow-sm p-8 text-center" style={{
+              <div className="rounded-2xl shadow-lg p-12 text-center transform transition-all duration-300 hover:shadow-2xl" style={{
                 backgroundColor: theme.card,
-                border: `1px solid ${theme.border}`
+                border: `1px solid ${theme.border}`,
+                backdropFilter: 'blur(20px)'
               }}>
-                <User className="w-12 h-12 mx-auto mb-4" style={{ color: theme.textSecondary }} />
-                <h3 className="text-lg font-medium mb-2" style={{ color: theme.text }}>No farmers found</h3>
-                <p style={{ color: theme.textSecondary }}>Try adjusting your search or filters</p>
+                <User className="w-16 h-16 mx-auto mb-4" style={{ color: theme.textSecondary }} />
+                <h3 className="text-xl font-semibold mb-2" style={{ color: theme.text }}>No farmers found</h3>
+                <p style={{ color: theme.textSecondary }}>Try adjusting your search or filters to discover amazing local farmers</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-1 gap-6">
                 {filteredFarmers.map((farmer) => (
                   <div
                     key={farmer.id}
                     onClick={() => handleCardClick(farmer)}
-                    className="rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 cursor-pointer"
+                    className="rounded-2xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 cursor-pointer group"
                     style={{
                       backgroundColor: theme.card,
-                      border: `1px solid ${theme.border}`
+                      border: `1px solid ${theme.border}`,
+                      backdropFilter: 'blur(20px)'
                     }}
                   >
                     <div className="flex">
                       {/* Farmer Image */}
-                      <div className="w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0">
+                      <div className="w-32 h-32 sm:w-40 sm:h-40 flex-shrink-0 relative overflow-hidden">
                         <img
                           src={farmer.image}
                           alt={farmer.name}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-110"
                         />
+                        {farmer.isOnline && (
+                          <div className="absolute top-2 right-2 w-4 h-4 rounded-full border-2 border-white animate-pulse"
+                            style={{ backgroundColor: theme.primary }}></div>
+                        )}
                       </div>
                       
                       {/* Farmer Info */}
-                      <div className="p-4 flex-1">
-                        <div className="flex justify-between items-start">
-                          <h3 className="text-lg font-bold" style={{ color: theme.text }}>{farmer.name}</h3>
-                          <div className="flex items-center gap-1 px-2 py-1 rounded-full"
-                            style={{ backgroundColor: darkMode ? '#374151' : '#ecfdf5' }}>
+                      <div className="p-6 flex-1">
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="text-xl font-bold" style={{ color: theme.text }}>{farmer.name}</h3>
+                          <div className="flex items-center gap-1 px-3 py-1 rounded-full shadow-md transform transition-all duration-300 hover:scale-105"
+                            style={{ 
+                              background: `linear-gradient(45deg, ${theme.primary}20, ${theme.secondary}20)`
+                            }}>
                             <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                            <span className="text-sm font-medium" style={{ color: darkMode ? '#f3f4f6' : theme.primary }}>{farmer.rating}</span>
+                            <span className="text-sm font-bold" style={{ color: theme.text }}>{farmer.rating}</span>
                           </div>
                         </div>
                         
-                        <div className="flex items-center text-sm mb-2" style={{ color: theme.textSecondary }}>
-                          <MapPin className="w-4 h-4 mr-1" />
+                        <div className="flex items-center text-sm mb-3" style={{ color: theme.textSecondary }}>
+                          <MapPin className="w-4 h-4 mr-2" />
                           <span>{farmer.location}</span>
+                          <span className="mx-2">•</span>
+                          <span>{farmer.isOnline ? '🟢 Online' : `⏰ ${farmer.lastSeen}`}</span>
                         </div>
                         
-                        <p className="text-sm mb-3 line-clamp-2" style={{ color: theme.textSecondary }}>
-                          {farmer.bio.substring(0, 100)}...
+                        <p className="text-sm mb-4 line-clamp-2" style={{ color: theme.textSecondary }}>
+                          {farmer.bio.substring(0, 120)}...
                         </p>
                         
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-wrap gap-2 mb-4">
                           {farmer.specialties.slice(0, 3).map((specialty, index) => (
                             <span
                               key={index}
-                              className="px-2 py-1 rounded-full text-xs font-medium"
+                              className="px-3 py-1 rounded-full text-xs font-medium shadow-sm"
                               style={{ 
-                                backgroundColor: darkMode ? '#333' : '#f3f4f6',
-                                color: theme.text
+                                backgroundColor: `${theme.primary}15`,
+                                color: theme.primary,
+                                border: `1px solid ${theme.primary}30`
                               }}
                             >
                               {specialty}
@@ -731,20 +1005,47 @@ const ModernFarmerMarketplace = () => {
                       </div>
                     </div>
                     
-                    <div className="px-4 py-3 flex justify-between items-center"
+                    <div className="px-6 py-4 flex justify-between items-center"
                       style={{
-                        backgroundColor: darkMode ? '#333' : '#f9fafb',
+                        backgroundColor: `${theme.primary}08`,
                         borderTop: `1px solid ${theme.border}`
                       }}>
-                      <div className="flex items-center gap-2 text-sm" style={{ color: theme.textSecondary }}>
-                        <Users className="w-4 h-4" />
-                        <span>{farmer.followers} followers</span>
+                      <div className="flex items-center gap-4 text-sm" style={{ color: theme.textSecondary }}>
+                        <div className="flex items-center gap-1">
+                          <Users className="w-4 h-4" />
+                          <span>{farmer.followers} followers</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-4 h-4" />
+                          <span>{farmer.responseTime} response</span>
+                        </div>
                       </div>
-                      <button className="font-medium flex items-center gap-1"
-                        style={{ color: theme.primary }}>
-                        View Profile
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
+                      
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedFarmer(farmer);
+                            setShowMessaging(true);
+                          }}
+                          className="flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-md"
+                          style={{ 
+                            backgroundColor: theme.primary,
+                            color: 'white'
+                          }}
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                          <span className="hidden sm:inline">Message</span>
+                        </button>
+                        <button className="font-medium flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 transform hover:scale-105"
+                          style={{ 
+                            color: theme.primary,
+                            backgroundColor: `${theme.primary}15`
+                          }}>
+                          <span>View Profile</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -753,97 +1054,6 @@ const ModernFarmerMarketplace = () => {
           </section>
         </div>
       </main>
-
-      {/* Mobile Menu */}
-      {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-50 backdrop-blur-sm" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="absolute right-0 top-0 h-full w-64 shadow-xl animate-in slide-in-from-right"
-            style={{ 
-              backgroundColor: theme.card,
-              boxShadow: '-4px 0 6px -1px rgba(0, 0, 0, 0.1), -2px 0 4px -1px rgba(0, 0, 0, 0.06)'
-            }}>
-            <div className="p-4 border-b flex items-center justify-between"
-              style={{ borderColor: theme.border }}>
-              <h3 className="font-semibold" style={{ color: theme.text }}>Menu</h3>
-              <button onClick={() => setIsMobileMenuOpen(false)}>
-                <X className="w-5 h-5" style={{ color: theme.textSecondary }} />
-              </button>
-            </div>
-            
-            <nav className="p-4">
-              <ul className="space-y-4">
-                <li>
-                  <button className="w-full flex items-center gap-3 p-3 rounded-lg transition-colors"
-                    style={{ 
-                      color: theme.text,
-                      hover: { backgroundColor: darkMode ? '#333' : '#f3f4f6' }
-                    }}>
-                    <Home className="w-5 h-5" />
-                    <span>Home</span>
-                  </button>
-                </li>
-                <li>
-                  <button className="w-full flex items-center gap-3 p-3 rounded-lg transition-colors"
-                    style={{ 
-                      color: theme.text,
-                      hover: { backgroundColor: darkMode ? '#333' : '#f3f4f6' }
-                    }}>
-                    <User className="w-5 h-5" />
-                    <span>My Account</span>
-                  </button>
-                </li>
-                <li>
-                  <button className="w-full flex items-center gap-3 p-3 rounded-lg transition-colors"
-                    style={{ 
-                      color: theme.text,
-                      hover: { backgroundColor: darkMode ? '#333' : '#f3f4f6' }
-                    }}>
-                    <ShoppingCart className="w-5 h-5" />
-                    <span>My Orders</span>
-                    {cartItems.size > 0 && (
-                      <span className="ml-auto text-white text-xs rounded-full h-5 w-5 flex items-center justify-center"
-                        style={{ backgroundColor: theme.primary }}>
-                        {cartItems.size}
-                      </span>
-                    )}
-                  </button>
-                </li>
-                <li>
-                  <button className="w-full flex items-center gap-3 p-3 rounded-lg transition-colors"
-                    style={{ 
-                      color: theme.text,
-                      hover: { backgroundColor: darkMode ? '#333' : '#f3f4f6' }
-                    }}>
-                    <Info className="w-5 h-5" />
-                    <span>About Us</span>
-                  </button>
-                </li>
-                <li>
-                  <button className="w-full flex items-center gap-3 p-3 rounded-lg transition-colors"
-                    style={{ 
-                      color: theme.text,
-                      hover: { backgroundColor: darkMode ? '#333' : '#f3f4f6' }
-                    }}>
-                    <Settings className="w-5 h-5" />
-                    <span>Settings</span>
-                  </button>
-                </li>
-              </ul>
-              
-              <div className="mt-8 pt-4" style={{ borderTop: `1px solid ${theme.border}` }}>
-                <button className="w-full flex items-center gap-3 p-3 rounded-lg transition-colors"
-                  style={{ 
-                    color: '#ef4444',
-                    hover: { backgroundColor: darkMode ? '#333' : '#fee2e2' }
-                  }}>
-                  <LogOut className="w-5 h-5" />
-                  <span>Sign Out</span>
-                </button>
-              </div>
-            </nav>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
