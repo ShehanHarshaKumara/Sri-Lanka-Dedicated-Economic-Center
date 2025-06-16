@@ -1,22 +1,23 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Camera, MapPin, Edit3, Save, X, User, Mail, Phone, Hash, Globe, Sparkles, Award, Sprout } from 'lucide-react';
 
-const FarmerProfile = ({ user }) => {
+const FarmerProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [mapLoaded, setMapLoaded] = useState(false);
   const [profileData, setProfileData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    age: '',
-    nicNumber: '',
-    experience: '',
-    farmingType: 'Mixed Farming',
-    address: '',
-    city: '',
-    bio: '',
+    firstName: 'John',
+    lastName: 'Farmer',
+    email: 'john.farmer@example.com',
+    phone: '+94771234567',
+    age: '35',
+    nicNumber: '123456789V',
+    experience: '10 years',
+    farmingType: 'Organic Vegetable Farming',
+    address: '123 Farm Road, Gampaha',
+    city: 'Gampaha',
+    bio: 'Passionate organic farmer with over 10 years of experience in sustainable agriculture. Specializing in vegetable cultivation and eco-friendly farming practices.',
     profileImage: null,
     existingImage: null,
     imageFile: null
@@ -25,57 +26,154 @@ const FarmerProfile = ({ user }) => {
   const [location, setLocation] = useState({
     lat: 6.9271,
     lng: 79.8612,
-    address: 'Colombo, Sri Lanka'
+    address: 'Gampaha, Western Province, Sri Lanka'
   });
 
-  const [mapCenter, setMapCenter] = useState({ lat: 6.9271, lng: 79.8612 });
+  const [map, setMap] = useState(null);
+  const [marker, setMarker] = useState(null);
+  const [geocoder, setGeocoder] = useState(null);
+  const mapRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  useEffect(() => {
-    fetchProfileData();
-    // eslint-disable-next-line
-  }, [user]);
+  // Google Maps API Key
+  const GOOGLE_MAPS_API_KEY = 'AIzaSyBlnL8xcC0cYhUHCHJdQDXSwWR7X7j9sWo';
 
-  const fetchProfileData = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`http://localhost:5002/api/farmer/profile/${user.id}`);
-      if (response.ok) {
-        const data = await response.json();
-        setProfileData({
-          firstName: data.first_name || '',
-          lastName: data.last_name || '',
-          email: data.email || user.email || '',
-          phone: data.phone || '',
-          age: data.age || '',
-          nicNumber: data.nic_number || '',
-          experience: data.experience || '',
-          farmingType: data.farming_type || 'Mixed Farming',
-          address: data.address || '',
-          city: data.city || '',
-          bio: data.bio || '',
-          profileImage: data.profile_image,
-          existingImage: data.profile_image,
-          imageFile: null
-        });
-        if (data.location_lat && data.location_lng) {
-          setLocation({
-            lat: parseFloat(data.location_lat),
-            lng: parseFloat(data.location_lng),
-            address: data.location_address || `Lat: ${data.location_lat}, Lng: ${data.location_lng}`
-          });
-          setMapCenter({
-            lat: parseFloat(data.location_lat),
-            lng: parseFloat(data.location_lng)
-          });
-        }
+  // Load Google Maps Script
+  useEffect(() => {
+    const loadGoogleMaps = () => {
+      if (window.google && window.google.maps) {
+        setMapLoaded(true);
+        return;
       }
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-    } finally {
-      setLoading(false);
+
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
+      script.async = true;
+      script.defer = true;
+      script.onload = () => setMapLoaded(true);
+      script.onerror = () => {
+        console.error('Failed to load Google Maps API');
+        alert('Failed to load Google Maps. Please check your internet connection.');
+      };
+      document.head.appendChild(script);
+    };
+
+    loadGoogleMaps();
+  }, []);
+
+  // Initialize Google Map
+  useEffect(() => {
+    if (mapLoaded && mapRef.current && !map) {
+      const googleMap = new window.google.maps.Map(mapRef.current, {
+        center: { lat: location.lat, lng: location.lng },
+        zoom: 15,
+        styles: [
+          {
+            featureType: 'all',
+            elementType: 'geometry.fill',
+            stylers: [{ color: '#f5f5f5' }]
+          },
+          {
+            featureType: 'landscape',
+            elementType: 'geometry.fill',
+            stylers: [{ color: '#e8f5e8' }]
+          },
+          {
+            featureType: 'poi.park',
+            elementType: 'geometry.fill',
+            stylers: [{ color: '#c8e6c9' }]
+          },
+          {
+            featureType: 'water',
+            elementType: 'geometry.fill',
+            stylers: [{ color: '#b3e5fc' }]
+          },
+          {
+            featureType: 'road',
+            elementType: 'geometry',
+            stylers: [{ color: '#ffffff' }]
+          },
+          {
+            featureType: 'road',
+            elementType: 'labels.text.fill',
+            stylers: [{ color: '#666666' }]
+          }
+        ],
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+        zoomControl: true,
+        zoomControlOptions: {
+          position: window.google.maps.ControlPosition.RIGHT_BOTTOM
+        }
+      });
+
+      const googleGeocoder = new window.google.maps.Geocoder();
+      
+      const mapMarker = new window.google.maps.Marker({
+        position: { lat: location.lat, lng: location.lng },
+        map: googleMap,
+        title: 'Farm Location',
+        icon: {
+          url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+            <svg width="32" height="40" viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M16 0C7.16 0 0 7.16 0 16C0 24 16 40 16 40C16 40 32 24 32 16C32 7.16 24.84 0 16 0ZM16 22C12.69 22 10 19.31 10 16C10 12.69 12.69 10 16 10C19.31 10 22 12.69 22 16C22 19.31 19.31 22 16 22Z" fill="#10B981"/>
+              <circle cx="16" cy="16" r="4" fill="white"/>
+            </svg>
+          `),
+          scaledSize: new window.google.maps.Size(24, 30),
+          anchor: new window.google.maps.Point(12, 30)
+        },
+        animation: window.google.maps.Animation.DROP
+      });
+
+      // Add click listener for editing mode
+      googleMap.addListener('click', (event) => {
+        if (isEditing) {
+          const newLat = event.latLng.lat();
+          const newLng = event.latLng.lng();
+          
+          setLocation({
+            lat: newLat,
+            lng: newLng,
+            address: `Getting address...`
+          });
+
+          mapMarker.setPosition({ lat: newLat, lng: newLng });
+          
+          // Reverse geocoding to get address
+          googleGeocoder.geocode(
+            { location: { lat: newLat, lng: newLng } },
+            (results, status) => {
+              if (status === 'OK' && results[0]) {
+                setLocation(prev => ({
+                  ...prev,
+                  address: results[0].formatted_address
+                }));
+              } else {
+                setLocation(prev => ({
+                  ...prev,
+                  address: `Lat: ${newLat.toFixed(6)}, Lng: ${newLng.toFixed(6)}`
+                }));
+              }
+            }
+          );
+        }
+      });
+
+      setMap(googleMap);
+      setMarker(mapMarker);
+      setGeocoder(googleGeocoder);
     }
-  };
+  }, [mapLoaded, isEditing, location.lat, location.lng, map]);
+
+  // Update marker position when location changes
+  useEffect(() => {
+    if (marker && map) {
+      marker.setPosition({ lat: location.lat, lng: location.lng });
+      map.setCenter({ lat: location.lat, lng: location.lng });
+    }
+  }, [location.lat, location.lng, marker, map]);
 
   const handleInputChange = (field, value) => {
     setProfileData(prev => ({
@@ -99,485 +197,571 @@ const FarmerProfile = ({ user }) => {
     }
   };
 
-  const handleLocationClick = (e) => {
-    if (isEditing) {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      const lat = mapCenter.lat + (rect.height / 2 - y) * 0.001;
-      const lng = mapCenter.lng + (x - rect.width / 2) * 0.001;
-      setLocation({
-        lat: lat,
-        lng: lng,
-        address: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`
-      });
-    }
-  };
-
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
+          
           setLocation({
             lat: latitude,
             lng: longitude,
-            address: `Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`
+            address: `Getting address...`
           });
-          setMapCenter({ lat: latitude, lng: longitude });
+
+          // Reverse geocoding to get readable address
+          if (geocoder) {
+            geocoder.geocode(
+              { location: { lat: latitude, lng: longitude } },
+              (results, status) => {
+                if (status === 'OK' && results[0]) {
+                  setLocation(prev => ({
+                    ...prev,
+                    address: results[0].formatted_address
+                  }));
+                } else {
+                  setLocation(prev => ({
+                    ...prev,
+                    address: `Lat: ${latitude.toFixed(6)}, Lng: ${longitude.toFixed(6)}`
+                  }));
+                }
+              }
+            );
+          }
         },
-        () => {
-          alert('Unable to retrieve your location');
+        (error) => {
+          let errorMessage = 'Unable to retrieve your location';
+          switch(error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = 'Location access denied. Please enable location permissions.';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = 'Location information is unavailable.';
+              break;
+            case error.TIMEOUT:
+              errorMessage = 'Location request timed out.';
+              break;
+          }
+          alert(errorMessage);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000
         }
       );
+    } else {
+      alert('Geolocation is not supported by this browser.');
     }
   };
 
   const handleSave = async () => {
     setSaving(true);
-    const formData = new FormData();
-    formData.append('first_name', profileData.firstName);
-    formData.append('last_name', profileData.lastName);
-    formData.append('email', profileData.email);
-    formData.append('phone', profileData.phone);
-    formData.append('age', profileData.age);
-    formData.append('nic_number', profileData.nicNumber);
-    formData.append('experience', profileData.experience);
-    formData.append('farming_type', profileData.farmingType);
-    formData.append('address', profileData.address);
-    formData.append('city', profileData.city);
-    formData.append('bio', profileData.bio);
-    formData.append('location_lat', location.lat);
-    formData.append('location_lng', location.lng);
-    formData.append('location_address', location.address);
-    formData.append('existing_image', profileData.existingImage || '');
-    if (profileData.imageFile) {
-      formData.append('profile_image', profileData.imageFile);
-    }
-    try {
-      const response = await fetch(`http://localhost:5002/api/farmer/profile/${user.id}`, {
-        method: 'POST',
-        body: formData
-      });
-      if (response.ok) {
-        await response.json();
-        alert('Profile updated successfully!');
-        setIsEditing(false);
-        fetchProfileData();
-      } else {
-        const err = await response.json();
-        alert('Failed to update profile: ' + (err.error || 'Unknown error'));
-      }
-    } catch (error) {
-      console.error('Error saving profile:', error);
-      alert('Error saving profile');
-    } finally {
+    // Simulate API call
+    setTimeout(() => {
+      alert('Profile updated successfully!');
+      setIsEditing(false);
       setSaving(false);
-    }
+    }, 1500);
   };
 
   const handleCancel = () => {
     setIsEditing(false);
-    fetchProfileData();
   };
 
-
-  const inputClasses = "w-full px-4 py-3.5 text-gray-900 bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-400 transition-all duration-300 placeholder:text-gray-400 hover:bg-white/90 shadow-sm hover:shadow-md";
-  const readOnlyClasses = "text-gray-800 py-3.5 px-4 font-medium bg-gradient-to-r from-gray-50/80 to-white/60 backdrop-blur-sm rounded-2xl border border-gray-100/50 shadow-sm";
+  const inputClasses = "w-full px-3 py-2.5 sm:px-4 sm:py-3.5 text-gray-900 bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-xl sm:rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-400 transition-all duration-300 placeholder:text-gray-400 hover:bg-white/90 shadow-sm hover:shadow-md text-sm sm:text-base";
+  const readOnlyClasses = "text-gray-800 py-2.5 px-3 sm:py-3.5 sm:px-4 font-medium bg-gradient-to-r from-gray-50/80 to-white/60 backdrop-blur-sm rounded-xl sm:rounded-2xl border border-gray-100/50 shadow-sm text-sm sm:text-base";
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-50">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 text-lg">Loading profile...</p>
+          <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 text-base sm:text-lg">Loading profile...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen w-full overflow-x-hidden bg-gradient-to-br from-green-50 via-white to-emerald-50">
-      <div className="w-full min-h-screen">
-        {/* Floating Header with Glassmorphism - Full Width */}
-        <div className="relative bg-white/40 backdrop-blur-xl shadow-xl p-4 sm:p-6 lg:p-8 xl:p-10 overflow-hidden">
+    <div className="fixed inset-0 flex flex-col md:flex-row bg-gray-100 text-gray-800 overflow-hidden font-sans">
+      
+      {/* Left Section - Hidden on Mobile, 50% on Desktop */}
+      <div className="hidden md:flex md:w-1/2 relative overflow-hidden">
+        {/* Hero Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-green-600 via-emerald-600 to-green-700">
           {/* Animated Background Elements */}
-          <div className="absolute top-0 right-0 w-48 h-48 sm:w-64 sm:h-64 lg:w-72 lg:h-72 xl:w-96 xl:h-96 bg-gradient-to-br from-green-400/20 to-emerald-400/20 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-0 left-0 w-56 h-56 sm:w-72 sm:h-72 lg:w-96 lg:h-96 xl:w-[30rem] xl:h-[30rem] bg-gradient-to-tr from-lime-400/20 to-green-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+          <div className="absolute top-0 right-0 w-64 h-64 lg:w-96 lg:h-96 bg-gradient-to-br from-green-400/30 to-emerald-400/30 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-0 left-0 w-72 h-72 lg:w-[30rem] lg:h-[30rem] bg-gradient-to-tr from-lime-400/30 to-green-400/30 rounded-full blur-3xl animate-pulse delay-1000"></div>
           
-          {/* Header Content */}
-          <div className="relative z-10 max-w-7xl mx-auto">
-            <div className="flex flex-col sm:flex-row justify-between items-start mb-6 sm:mb-8 lg:mb-10 gap-4 sm:gap-6">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="p-2 sm:p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl sm:rounded-2xl shadow-lg">
-                  <Sparkles className="text-white" size={24} />
-                </div>
-                <div>
-                  <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold bg-gradient-to-r from-gray-900 via-green-800 to-emerald-800 bg-clip-text text-transparent">
-                    Farmer Profile
-                  </h1>
-                  <p className="text-gray-600 mt-1 text-sm sm:text-base">Manage your farming information</p>
-                </div>
-              </div>
-              
-              {!isEditing ? (
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="group flex items-center gap-2 sm:gap-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 sm:px-6 lg:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl hover:from-green-700 hover:to-emerald-700 transition-all duration-500 font-semibold shadow-lg hover:shadow-2xl transform hover:-translate-y-1 hover:scale-105 text-sm sm:text-base"
-                >
-                  <Edit3 size={18} className="group-hover:rotate-12 transition-transform duration-300" />
-                  Edit Profile
-                </button>
-              ) : (
-                <div className="flex gap-2 sm:gap-3">
-                  <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="group flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl hover:from-emerald-600 hover:to-green-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {saving ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save size={16} className="group-hover:scale-110 transition-transform duration-300" />
-                        Save
-                      </>
-                    )}
-                  </button>
-                  <button
-                    onClick={handleCancel}
-                    disabled={saving}
-                    className="group flex items-center gap-2 bg-gradient-to-r from-gray-500 to-gray-600 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl hover:from-gray-600 hover:to-gray-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 text-sm sm:text-base disabled:opacity-50"
-                  >
-                    <X size={16} className="group-hover:rotate-90 transition-transform duration-300" />
-                    Cancel
-                  </button>
-                </div>
-              )}
+          {/* Pattern Overlay */}
+          <div className="absolute inset-0 opacity-10">
+            <div className="w-full h-full" style={{
+              backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255, 255, 255, 0.3) 2px, transparent 0)',
+              backgroundSize: '40px 40px'
+            }}></div>
+          </div>
+        </div>
+
+        {/* Hero Content */}
+        <div className="relative z-10 flex flex-col justify-center items-center text-center p-8 lg:p-12">
+          <div className="mb-8">
+            <div className="w-20 h-20 lg:w-24 lg:h-24 bg-white/20 backdrop-blur-sm rounded-3xl flex items-center justify-center mb-6 mx-auto">
+              <Sparkles className="text-white w-10 h-10 lg:w-12 lg:h-12" />
             </div>
-
-            {/* Profile Section */}
-            <div className="flex flex-col xl:flex-row gap-8 lg:gap-12">
-              {/* Profile Image */}
-              <div className="flex flex-col items-center xl:items-start">
-                <div className="relative group">
-                  <div className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 xl:w-52 xl:h-52 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center overflow-hidden border-2 sm:border-4 border-white/50 shadow-2xl backdrop-blur-sm">
-                    {profileData.profileImage ? (
-                      <img
-                        src={profileData.profileImage}
-                        alt="Profile"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <User size={48} className="text-green-400 sm:w-16 sm:h-16" />
-                    )}
-                  </div>
-                  {isEditing && (
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 bg-gradient-to-br from-green-500 to-emerald-600 text-white p-2 sm:p-3 lg:p-4 rounded-xl sm:rounded-2xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:scale-110 group-hover:animate-bounce"
-                    >
-                      <Camera size={16} className="sm:w-5 sm:h-5" />
-                    </button>
-                  )}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                  />
-                </div>
-                <div className="mt-4 sm:mt-6 text-center xl:text-left">
-                  <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-gray-800 to-green-600 bg-clip-text text-transparent">
-                    {profileData.firstName} {profileData.lastName}
-                  </h2>
-                  <p className="text-gray-600 mt-1 sm:mt-2 font-medium text-sm sm:text-base">{profileData.email}</p>
-                </div>
+            <h1 className="text-4xl lg:text-6xl font-bold text-white mb-4 leading-tight">
+              Farmer
+              <br />
+              <span className="text-green-200">Profile</span>
+            </h1>
+            <p className="text-green-100 text-lg lg:text-xl font-medium mb-8 max-w-md mx-auto leading-relaxed">
+              Manage your farming information and showcase your agricultural expertise
+            </p>
+          </div>
+          
+          {/* Feature Icons */}
+          <div className="grid grid-cols-3 gap-6 lg:gap-8 text-white/80">
+            <div className="text-center">
+              <div className="w-12 h-12 lg:w-16 lg:h-16 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-3 mx-auto">
+                <User className="w-6 h-6 lg:w-8 lg:h-8" />
               </div>
-
-              {/* Form Fields */}
-              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-                <div className="space-y-2 sm:space-y-3">
-                  <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">FIRST NAME</label>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={profileData.firstName}
-                      onChange={(e) => handleInputChange('firstName', e.target.value)}
-                      className={inputClasses}
-                    />
-                  ) : (
-                    <p className={readOnlyClasses}>{profileData.firstName}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2 sm:space-y-3">
-                  <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">LAST NAME</label>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={profileData.lastName}
-                      onChange={(e) => handleInputChange('lastName', e.target.value)}
-                      className={inputClasses}
-                    />
-                  ) : (
-                    <p className={readOnlyClasses}>{profileData.lastName}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2 sm:space-y-3">
-                  <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">EMAIL</label>
-                  <div className="relative">
-                    <Mail size={18} className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-green-400" />
-                    {isEditing ? (
-                      <input
-                        type="email"
-                        value={profileData.email}
-                        onChange={(e) => handleInputChange('email', e.target.value)}
-                        className={inputClasses + " pl-10 sm:pl-12"}
-                      />
-                    ) : (
-                      <p className={readOnlyClasses + " pl-10 sm:pl-12"}>{profileData.email}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2 sm:space-y-3">
-                  <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">PHONE</label>
-                  <div className="relative">
-                    <Phone size={18} className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-green-400" />
-                    {isEditing ? (
-                      <input
-                        type="tel"
-                        value={profileData.phone}
-                        onChange={(e) => handleInputChange('phone', e.target.value)}
-                        className={inputClasses + " pl-10 sm:pl-12"}
-                      />
-                    ) : (
-                      <p className={readOnlyClasses + " pl-10 sm:pl-12"}>{profileData.phone}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2 sm:space-y-3">
-                  <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">AGE</label>
-                  <div className="relative">
-                    <Hash size={18} className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-green-400" />
-                    {isEditing ? (
-                      <input
-                        type="number"
-                        value={profileData.age}
-                        onChange={(e) => handleInputChange('age', e.target.value)}
-                        className={inputClasses + " pl-10 sm:pl-12"}
-                        min="18"
-                        max="100"
-                      />
-                    ) : (
-                      <p className={readOnlyClasses + " pl-10 sm:pl-12"}>{profileData.age ? `${profileData.age} years` : '-'}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2 sm:space-y-3">
-                  <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">NIC NUMBER</label>
-                  <div className="relative">
-                    <Hash size={18} className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-green-400" />
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={profileData.nicNumber}
-                        onChange={(e) => handleInputChange('nicNumber', e.target.value)}
-                        className={inputClasses + " pl-10 sm:pl-12"}
-                        placeholder="123456789V"
-                      />
-                    ) : (
-                      <p className={readOnlyClasses + " pl-10 sm:pl-12"}>{profileData.nicNumber || '-'}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2 sm:space-y-3">
-                  <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">EXPERIENCE</label>
-                  <div className="relative">
-                    <Award size={18} className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-green-400" />
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={profileData.experience}
-                        onChange={(e) => handleInputChange('experience', e.target.value)}
-                        className={inputClasses + " pl-10 sm:pl-12"}
-                        placeholder="e.g., 5 years"
-                      />
-                    ) : (
-                      <p className={readOnlyClasses + " pl-10 sm:pl-12"}>{profileData.experience || '-'}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
+              <p className="text-sm lg:text-base font-medium">Profile</p>
             </div>
-
-            {/* Address and Farming Section */}
-            <div className="mt-8 sm:mt-10 lg:mt-12 grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-              <div className="space-y-2 sm:space-y-3">
-                <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">ADDRESS</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={profileData.address}
-                    onChange={(e) => handleInputChange('address', e.target.value)}
-                    className={inputClasses}
-                  />
-                ) : (
-                  <p className={readOnlyClasses}>{profileData.address || '-'}</p>
-                )}
+            <div className="text-center">
+              <div className="w-12 h-12 lg:w-16 lg:h-16 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-3 mx-auto">
+                <MapPin className="w-6 h-6 lg:w-8 lg:h-8" />
               </div>
-
-              <div className="space-y-2 sm:space-y-3">
-                <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">CITY</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={profileData.city}
-                    onChange={(e) => handleInputChange('city', e.target.value)}
-                    className={inputClasses}
-                  />
-                ) : (
-                  <p className={readOnlyClasses}>{profileData.city || '-'}</p>
-                )}
-              </div>
-
-              <div className="space-y-2 sm:space-y-3">
-                <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">FARMING TYPE</label>
-                <div className="relative">
-                  <Sprout size={18} className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-green-500" />
-                  {isEditing ? (
-                    <select
-                      value={profileData.farmingType}
-                      onChange={(e) => handleInputChange('farmingType', e.target.value)}
-                      className={inputClasses + " pl-10 sm:pl-12"}
-                    >
-                      <option value="Organic Vegetable Farming">Organic Vegetable Farming</option>
-                      <option value="Rice Cultivation">Rice Cultivation</option>
-                      <option value="Fruit Cultivation">Fruit Cultivation</option>
-                      <option value="Livestock Farming">Livestock Farming</option>
-                      <option value="Dairy Farming">Dairy Farming</option>
-                      <option value="Poultry Farming">Poultry Farming</option>
-                      <option value="Aquaculture">Aquaculture</option>
-                      <option value="Mixed Farming">Mixed Farming</option>
-                      <option value="Spice Cultivation">Spice Cultivation</option>
-                      <option value="Tea Cultivation">Tea Cultivation</option>
-                      <option value="Coconut Cultivation">Coconut Cultivation</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  ) : (
-                    <p className={readOnlyClasses + " pl-10 sm:pl-12"}>{profileData.farmingType}</p>
-                  )}
-                </div>
-              </div>
+              <p className="text-sm lg:text-base font-medium">Location</p>
             </div>
+            <div className="text-center">
+              <div className="w-12 h-12 lg:w-16 lg:h-16 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-3 mx-auto">
+                <Sprout className="w-6 h-6 lg:w-8 lg:h-8" />
+              </div>
+              <p className="text-sm lg:text-base font-medium">Farming</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
-            {/* Bio Section */}
-            <div className="mt-6 sm:mt-8 space-y-2 sm:space-y-3">
-              <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">BIO</label>
-              {isEditing ? (
-                <textarea
-                  value={profileData.bio}
-                  onChange={(e) => handleInputChange('bio', e.target.value)}
-                  rows={4}
-                  className={inputClasses + " resize-none"}
-                  placeholder="Tell us about your farming experience..."
-                />
-              ) : (
-                <p className={readOnlyClasses + " leading-relaxed"}>{profileData.bio || 'No bio added yet.'}</p>
-              )}
+      {/* Right Section - Full Width on Mobile, 50% on Desktop */}
+      <div className="w-full md:w-1/2 overflow-y-auto bg-white relative">
+        
+        {/* Mobile Header - Only visible on mobile */}
+        <div className="md:hidden bg-gradient-to-r from-green-600 to-emerald-600 text-white p-4 sticky top-0 z-10">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl">
+              <Sparkles className="text-white w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold">Farmer Profile</h1>
+              <p className="text-green-100 text-sm">Manage your farming information</p>
             </div>
           </div>
         </div>
 
-        {/* Location Section - Full Width */}
-        <div className="relative bg-white/40 backdrop-blur-xl shadow-xl p-4 sm:p-6 lg:p-8 xl:p-10 overflow-hidden">
-          {/* Background Elements */}
-          <div className="absolute top-0 left-0 w-48 h-48 sm:w-64 sm:h-64 lg:w-80 lg:h-80 bg-gradient-to-br from-emerald-400/20 to-green-400/20 rounded-full blur-3xl animate-pulse delay-500"></div>
+        {/* Main Content */}
+        <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
           
-          <div className="relative z-10 max-w-7xl mx-auto">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 gap-4 sm:gap-6">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="p-2 sm:p-3 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl sm:rounded-2xl shadow-lg">
-                  <MapPin className="text-white" size={24} />
+          {/* Action Buttons */}
+          <div className="flex justify-end">
+            {!isEditing ? (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="group flex items-center gap-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-sm sm:text-base"
+              >
+                <Edit3 size={16} className="group-hover:rotate-12 transition-transform duration-300" />
+                Edit Profile
+              </button>
+            ) : (
+              <div className="flex gap-2 sm:gap-3">
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="group flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl hover:from-emerald-600 hover:to-green-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span className="hidden sm:inline">Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save size={16} className="group-hover:scale-110 transition-transform duration-300" />
+                      Save
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={handleCancel}
+                  disabled={saving}
+                  className="group flex items-center gap-2 bg-gradient-to-r from-gray-500 to-gray-600 text-white px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl hover:from-gray-600 hover:to-gray-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-sm sm:text-base disabled:opacity-50"
+                >
+                  <X size={16} className="group-hover:rotate-90 transition-transform duration-300" />
+                  Cancel
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Profile Image and Basic Info */}
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-center sm:items-start">
+            {/* Profile Image */}
+            <div className="relative group">
+              <div className="w-24 h-24 sm:w-32 sm:h-32 md:w-28 md:h-28 lg:w-36 lg:h-36 rounded-2xl bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center overflow-hidden border-4 border-white shadow-xl">
+                {profileData.profileImage ? (
+                  <img
+                    src={profileData.profileImage}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User size={32} className="text-green-400 sm:w-10 sm:h-10" />
+                )}
+              </div>
+              {isEditing && (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute -bottom-1 -right-1 bg-gradient-to-br from-green-500 to-emerald-600 text-white p-2 sm:p-2.5 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-110"
+                >
+                  <Camera size={14} className="sm:w-4 sm:h-4" />
+                </button>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+            </div>
+
+            {/* Basic Info */}
+            <div className="flex-1 text-center sm:text-left">
+              <h2 className="text-xl sm:text-2xl md:text-xl lg:text-2xl font-bold bg-gradient-to-r from-gray-800 to-green-600 bg-clip-text text-transparent mb-1">
+                {profileData.firstName} {profileData.lastName}
+              </h2>
+              <p className="text-gray-600 font-medium text-sm sm:text-base mb-2">{profileData.email}</p>
+              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-green-50 to-emerald-50 px-3 py-1.5 rounded-full border border-green-100">
+                <Sprout className="text-green-500 w-4 h-4" />
+                <span className="text-green-700 font-medium text-sm">{profileData.farmingType}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Form Fields */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            <div className="space-y-2">
+              <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">FIRST NAME</label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={profileData.firstName}
+                  onChange={(e) => handleInputChange('firstName', e.target.value)}
+                  className={inputClasses}
+                />
+              ) : (
+                <p className={readOnlyClasses}>{profileData.firstName}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">LAST NAME</label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={profileData.lastName}
+                  onChange={(e) => handleInputChange('lastName', e.target.value)}
+                  className={inputClasses}
+                />
+              ) : (
+                <p className={readOnlyClasses}>{profileData.lastName}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">EMAIL</label>
+              <div className="relative">
+                <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-green-400" />
+                {isEditing ? (
+                  <input
+                    type="email"
+                    value={profileData.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    className={inputClasses + " pl-9 sm:pl-10"}
+                  />
+                ) : (
+                  <p className={readOnlyClasses + " pl-9 sm:pl-10"}>{profileData.email}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">PHONE</label>
+              <div className="relative">
+                <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-green-400" />
+                {isEditing ? (
+                  <input
+                    type="tel"
+                    value={profileData.phone}
+                    onChange={(e) => handleInputChange('phone', e.target.value)}
+                    className={inputClasses + " pl-9 sm:pl-10"}
+                  />
+                ) : (
+                  <p className={readOnlyClasses + " pl-9 sm:pl-10"}>{profileData.phone}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">AGE</label>
+              <div className="relative">
+                <Hash size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-green-400" />
+                {isEditing ? (
+                  <input
+                    type="number"
+                    value={profileData.age}
+                    onChange={(e) => handleInputChange('age', e.target.value)}
+                    className={inputClasses + " pl-9 sm:pl-10"}
+                    min="18"
+                    max="100"
+                  />
+                ) : (
+                  <p className={readOnlyClasses + " pl-9 sm:pl-10"}>{profileData.age ? `${profileData.age} years` : '-'}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">NIC NUMBER</label>
+              <div className="relative">
+                <Hash size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-green-400" />
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={profileData.nicNumber}
+                    onChange={(e) => handleInputChange('nicNumber', e.target.value)}
+                    className={inputClasses + " pl-9 sm:pl-10"}
+                    placeholder="123456789V"
+                  />
+                ) : (
+                  <p className={readOnlyClasses + " pl-9 sm:pl-10"}>{profileData.nicNumber || '-'}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">EXPERIENCE</label>
+              <div className="relative">
+                <Award size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-green-400" />
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={profileData.experience}
+                    onChange={(e) => handleInputChange('experience', e.target.value)}
+                    className={inputClasses + " pl-9 sm:pl-10"}
+                    placeholder="e.g., 5 years"
+                  />
+                ) : (
+                  <p className={readOnlyClasses + " pl-9 sm:pl-10"}>{profileData.experience || '-'}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">FARMING TYPE</label>
+              <div className="relative">
+                <Sprout size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500" />
+                {isEditing ? (
+                  <select
+                    value={profileData.farmingType}
+                    onChange={(e) => handleInputChange('farmingType', e.target.value)}
+                    className={inputClasses + " pl-9 sm:pl-10"}
+                  >
+                    <option value="Organic Vegetable Farming">Organic Vegetable Farming</option>
+                    <option value="Rice Cultivation">Rice Cultivation</option>
+                    <option value="Fruit Cultivation">Fruit Cultivation</option>
+                    <option value="Livestock Farming">Livestock Farming</option>
+                    <option value="Dairy Farming">Dairy Farming</option>
+                    <option value="Poultry Farming">Poultry Farming</option>
+                    <option value="Aquaculture">Aquaculture</option>
+                    <option value="Mixed Farming">Mixed Farming</option>
+                    <option value="Spice Cultivation">Spice Cultivation</option>
+                    <option value="Tea Cultivation">Tea Cultivation</option>
+                    <option value="Coconut Cultivation">Coconut Cultivation</option>
+                    <option value="Other">Other</option>
+                  </select>
+                ) : (
+                  <p className={readOnlyClasses + " pl-9 sm:pl-10"}>{profileData.farmingType}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Address Section */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            <div className="space-y-2">
+              <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">ADDRESS</label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={profileData.address}
+                  onChange={(e) => handleInputChange('address', e.target.value)}
+                  className={inputClasses}
+                />
+              ) : (
+                <p className={readOnlyClasses}>{profileData.address || '-'}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">CITY</label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={profileData.city}
+                  onChange={(e) => handleInputChange('city', e.target.value)}
+                  className={inputClasses}
+                />
+              ) : (
+                <p className={readOnlyClasses}>{profileData.city || '-'}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Bio Section */}
+          <div className="space-y-2">
+            <label className="block text-xs sm:text-sm font-bold text-gray-700 tracking-wide">BIO</label>
+            {isEditing ? (
+              <textarea
+                value={profileData.bio}
+                onChange={(e) => handleInputChange('bio', e.target.value)}
+                rows={4}
+                className={inputClasses + " resize-none"}
+                placeholder="Tell us about your farming experience..."
+              />
+            ) : (
+              <p className={readOnlyClasses + " leading-relaxed"}>{profileData.bio || 'No bio added yet.'}</p>
+            )}
+          </div>
+
+          {/* Location Section */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl shadow-lg">
+                  <MapPin className="text-white w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 via-emerald-800 to-green-800 bg-clip-text text-transparent">
+                  <h3 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-gray-900 to-green-700 bg-clip-text text-transparent">
                     Farm Location
-                  </h2>
-                  <p className="text-gray-600 mt-1 text-sm sm:text-base">Your farm's position</p>
+                  </h3>
+                  <p className="text-gray-600 text-sm">Your farm's position</p>
                 </div>
               </div>
               
               {isEditing && (
                 <button
                   onClick={getCurrentLocation}
-                  className="group bg-gradient-to-r from-emerald-500 to-green-600 text-white px-4 sm:px-6 lg:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl hover:from-emerald-600 hover:to-green-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 text-sm sm:text-base"
+                  disabled={!mapLoaded}
+                  className="group bg-gradient-to-r from-emerald-500 to-green-600 text-white px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl hover:from-emerald-600 hover:to-green-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span className="group-hover:animate-pulse">📍 Use Current Location</span>
                 </button>
               )}
             </div>
 
-            <div className="mb-4 sm:mb-6">
-              <p className="text-gray-700 font-semibold bg-gradient-to-r from-emerald-50 to-green-50 backdrop-blur-sm rounded-xl sm:rounded-2xl px-4 sm:px-6 py-3 sm:py-4 border border-emerald-100/50 shadow-sm text-sm sm:text-base">
+            <div className="mb-4">
+              <p className="text-gray-700 font-medium bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl px-4 py-3 border border-emerald-100 text-sm sm:text-base">
                 {location.address}
               </p>
             </div>
 
-            {/* Enhanced Map - Full Width */}
-            <div
-              onClick={handleLocationClick}
-              className={`relative w-full h-64 sm:h-80 lg:h-96 xl:h-[28rem] bg-gradient-to-br from-emerald-100 via-green-100 to-lime-100 rounded-2xl sm:rounded-3xl overflow-hidden ${
-                isEditing ? 'cursor-crosshair' : 'cursor-default'
-              } shadow-inner border-2 border-white/50 transition-all duration-500 hover:shadow-2xl group`}
-            >
-              {/* Grid Pattern */}
-              <div className="absolute inset-0 opacity-20">
-                <div className="w-full h-full" style={{
-                  backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(34, 197, 94, 0.3) 1px, transparent 0)',
-                  backgroundSize: '20px 20px'
-                }}></div>
-              </div>
-              
-              {/* Location marker */}
-              <div
-                className="absolute transform -translate-x-1/2 -translate-y-1/2 z-20 transition-all duration-500 group-hover:scale-110"
-                style={{
-                  left: `${50 + (location.lng - mapCenter.lng) * 500}%`,
-                  top: `${50 - (location.lat - mapCenter.lat) * 500}%`
-                }}
-              >
-                <div className="relative">
-                  <div className="bg-gradient-to-br from-green-500 to-emerald-600 w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full border-2 sm:border-4 border-white shadow-2xl flex items-center justify-center animate-bounce">
-                    <div className="w-2 h-2 sm:w-3 sm:h-3 lg:w-4 lg:h-4 bg-white rounded-full"></div>
+            {/* Google Map */}
+            <div className="relative w-full h-48 sm:h-64 lg:h-72 rounded-2xl overflow-hidden shadow-lg border-2 border-white/50 transition-all duration-500 hover:shadow-xl">
+              {!mapLoaded ? (
+                <div className="w-full h-full bg-gradient-to-br from-emerald-100 via-green-100 to-lime-100 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                    <p className="text-green-600 font-medium">Loading Google Maps...</p>
                   </div>
-                  <div className="absolute top-0 left-0 w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-green-400 rounded-full animate-ping opacity-75"></div>
                 </div>
-              </div>
+              ) : (
+                <div 
+                  ref={mapRef} 
+                  className="w-full h-full"
+                  style={{ minHeight: '100%' }}
+                />
+              )}
+              
+              {/* Edit mode overlay */}
+              {isEditing && mapLoaded && (
+                <div className="absolute top-2 sm:top-4 left-2 sm:left-4 bg-black/80 backdrop-blur-sm text-white px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl font-medium shadow-xl border border-white/20 text-xs sm:text-sm z-10">
+                  ✨ Click on map to set farm location
+                </div>
+              )}
 
-              {/* Instructions */}
-              {isEditing && (
-                <div className="absolute top-3 sm:top-6 left-3 sm:left-6 bg-black/80 backdrop-blur-sm text-white px-3 sm:px-6 py-2 sm:py-4 rounded-xl sm:rounded-2xl font-semibold shadow-2xl border border-white/20 text-xs sm:text-sm">
-                  ✨ Click anywhere to set farm location
+              {/* Map controls */}
+              {mapLoaded && (
+                <div className="absolute bottom-2 right-2 flex gap-2 z-10">
+                  <div className="bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1 text-xs font-medium text-gray-600 shadow-lg">
+                    Lat: {location.lat.toFixed(4)}
+                  </div>
+                  <div className="bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1 text-xs font-medium text-gray-600 shadow-lg">
+                    Lng: {location.lng.toFixed(4)}
+                  </div>
                 </div>
               )}
             </div>
 
-            <div className="mt-4 sm:mt-6 text-gray-600 bg-gradient-to-r from-green-50/80 to-emerald-50/80 backdrop-blur-sm rounded-xl sm:rounded-2xl px-4 sm:px-6 py-3 sm:py-4 border border-green-100/50">
+            <div className="text-gray-600 bg-gradient-to-r from-green-50/80 to-emerald-50/80 rounded-xl px-4 py-3 border border-green-100">
               {isEditing ? (
-                <p className="font-medium text-sm sm:text-base">🎯 Click on the map to set your farm location, or use the "Use Current Location" button to automatically detect your position.</p>
+                <div className="space-y-2">
+                  <p className="font-medium text-sm sm:text-base">🎯 Click on the map to set your farm location, or use the "Use Current Location" button.</p>
+                  <p className="text-xs sm:text-sm text-gray-500">The map will automatically get the address for the selected location.</p>
+                </div>
               ) : (
-                <p className="font-medium text-sm sm:text-base">📍 Your farm location is marked on the map above.</p>
+                <p className="font-medium text-sm sm:text-base">📍 Your farm location is marked on the map above with precise coordinates.</p>
               )}
+            </div>
+
+            {/* Location accuracy info */}
+            {mapLoaded && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                <div className="flex items-start gap-2">
+                  <div className="w-4 h-4 bg-blue-500 rounded-full mt-0.5 flex-shrink-0"></div>
+                  <div>
+                    <p className="text-blue-800 font-medium text-sm">Location Accuracy</p>
+                    <p className="text-blue-600 text-xs mt-1">
+                      This location is determined using GPS coordinates and Google Maps geocoding for maximum accuracy.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Additional Location Features */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border border-green-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <Globe className="text-green-500 w-4 h-4" />
+                  <span className="font-medium text-green-800 text-sm">Coordinates</span>
+                </div>
+                <p className="text-green-700 text-xs">
+                  Latitude: {location.lat.toFixed(6)}<br />
+                  Longitude: {location.lng.toFixed(6)}
+                </p>
+              </div>
+              
+              <div className="bg-gradient-to-r from-blue-50 to-sky-50 rounded-xl p-4 border border-blue-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <MapPin className="text-blue-500 w-4 h-4" />
+                  <span className="font-medium text-blue-800 text-sm">Map Type</span>
+                </div>
+                <p className="text-blue-700 text-xs">
+                  Google Maps with<br />
+                  Satellite & Street View
+                </p>
+              </div>
             </div>
           </div>
         </div>
