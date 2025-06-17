@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, MapPin, Edit3, Save, X, User, Mail, Phone, Hash, Globe, ShoppingBag } from 'lucide-react';
+import { Camera, MapPin, Edit3, Save, X, User, Mail, Phone, Hash, Globe, ShoppingBag, ArrowLeft } from 'lucide-react';
 
-const CustomerProfile = () => {
+const CustomerProfile = ({ user, onBack, onLogout }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [loading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -35,6 +35,9 @@ const CustomerProfile = () => {
 
   // Google Maps API Key
   const GOOGLE_MAPS_API_KEY = 'AIzaSyBlnL8xcC0cYhUHCHJdQDXSwWR7X7j9sWo';
+
+  // API configuration - Updated to use the correct port
+  const API_BASE_URL = 'http://localhost:3000/api/customer';
 
   // Load Google Maps Script
   useEffect(() => {
@@ -173,6 +176,87 @@ const CustomerProfile = () => {
     }
   }, [location.lat, location.lng, marker, map]);
 
+  // Add useEffect to load profile data from backend using the passed user ID
+  useEffect(() => {
+    const loadProfileFromAPI = async () => {
+      try {
+        // Use the user ID from props, fallback to localStorage, then default
+        const userId = user?.id || localStorage.getItem('userId') || '1';
+        
+        console.log('Loading profile for user ID:', userId);
+        console.log('User prop received:', user);
+        
+        // Get token for authenticated requests
+        const token = localStorage.getItem('token');
+        
+        const response = await fetch(`${API_BASE_URL}/profile/${userId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Profile data loaded:', data);
+          
+          // Update profileData with backend data
+          setProfileData(prev => ({
+            ...prev,
+            firstName: data.first_name || '',
+            lastName: data.last_name || '',
+            email: data.email || user?.email || '',
+            phone: data.phone || '',
+            age: data.age?.toString() || '',
+            nicNumber: data.nic_number || '',
+            address: data.address || '',
+            city: data.city || '',
+            bio: data.bio || '',
+            profileImage: data.profile_image || null
+          }));
+
+          // Update location if available
+          if (data.location_lat && data.location_lng) {
+            setLocation({
+              lat: parseFloat(data.location_lat),
+              lng: parseFloat(data.location_lng),
+              address: data.location_address || 'Unknown location'
+            });
+          }
+        } else {
+          console.error('Failed to load profile:', response.status, response.statusText);
+          // If profile doesn't exist, initialize with user data
+          if (user) {
+            const names = user.name ? user.name.split(' ') : ['', ''];
+            setProfileData(prev => ({
+              ...prev,
+              firstName: names[0] || '',
+              lastName: names.slice(1).join(' ') || '',
+              email: user.email || ''
+            }));
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load profile:', error);
+        // Initialize with user data if API fails
+        if (user) {
+          const names = user.name ? user.name.split(' ') : ['', ''];
+          setProfileData(prev => ({
+            ...prev,
+            firstName: names[0] || '',
+            lastName: names.slice(1).join(' ') || '',
+            email: user.email || ''
+          }));
+        }
+      }
+    };
+
+    // Only load if user prop is available
+    if (user?.id) {
+      loadProfileFromAPI();
+    }
+  }, [user, API_BASE_URL]);
+
   const handleInputChange = (field, value) => {
     setProfileData(prev => ({
       ...prev,
@@ -255,12 +339,80 @@ const CustomerProfile = () => {
 
   const handleSave = async () => {
     setSaving(true);
-    // Simulate API call
-    setTimeout(() => {
-      alert('Profile updated successfully!');
-      setIsEditing(false);
+    
+    try {
+      // Use the user ID from props
+      const userId = user?.id || localStorage.getItem('userId') || '1';
+      const token = localStorage.getItem('token');
+      
+      console.log('Saving profile for user ID:', userId);
+      
+      // Prepare form data
+      const formData = new FormData();
+      
+      // Add text fields
+      formData.append('first_name', profileData.firstName);
+      formData.append('last_name', profileData.lastName);
+      formData.append('email', profileData.email);
+      formData.append('phone', profileData.phone);
+      formData.append('age', profileData.age);
+      formData.append('nic_number', profileData.nicNumber);
+      formData.append('address', profileData.address);
+      formData.append('city', profileData.city);
+      formData.append('country', 'Sri Lanka');
+      formData.append('bio', profileData.bio);
+      
+      // Add location data
+      formData.append('location_lat', location.lat.toString());
+      formData.append('location_lng', location.lng.toString());
+      formData.append('location_address', location.address);
+      
+      // Add existing image URL if no new image
+      if (profileData.profileImage && !profileData.imageFile) {
+        formData.append('existing_image', profileData.profileImage);
+      }
+      
+      // Add new image file if selected
+      if (profileData.imageFile) {
+        formData.append('profile_image', profileData.imageFile);
+      }
+      
+      console.log('Sending data to backend for user:', userId);
+      
+      // Send to backend with authentication
+      const response = await fetch(`${API_BASE_URL}/profile/${userId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        alert('Profile updated successfully!');
+        
+        // Update profile image URL if new image was uploaded
+        if (result.profileImageUrl) {
+          setProfileData(prev => ({
+            ...prev,
+            profileImage: result.profileImageUrl,
+            imageFile: null
+          }));
+        }
+        
+        setIsEditing(false);
+        console.log('Profile saved successfully:', result);
+      } else {
+        throw new Error(result.error || 'Failed to save profile');
+      }
+    } catch (error) {
+      console.error('Save error:', error);
+      alert('Failed to save profile: ' + error.message);
+    } finally {
       setSaving(false);
-    }, 1500);
+    }
   };
 
   const handleCancel = () => {
@@ -344,22 +496,61 @@ const CustomerProfile = () => {
       {/* Right Section - Full Width on Mobile, 50% on Desktop */}
       <div className="w-full md:w-1/2 overflow-y-auto bg-white relative">
         
-        {/* Mobile Header - Only visible on mobile */}
+        {/* Mobile Header with Back Button */}
         <div className="md:hidden bg-gradient-to-r from-green-600 to-emerald-600 text-white p-4 sticky top-0 z-10">
           <div className="flex items-center gap-3">
+            <button
+              onClick={onBack}
+              className="p-2 bg-white/20 backdrop-blur-sm rounded-xl hover:bg-white/30 transition-colors"
+            >
+              <ArrowLeft className="text-white w-5 h-5" />
+            </button>
             <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl">
               <ShoppingBag className="text-white w-5 h-5" />
             </div>
             <div>
               <h1 className="text-xl font-bold">Customer Profile</h1>
-              <p className="text-green-100 text-sm">Manage your shopping preferences</p>
+              <p className="text-green-100 text-sm">
+                {user?.name || 'Manage your shopping preferences'}
+              </p>
             </div>
+          </div>
+        </div>
+
+        {/* Desktop Header with Back Button */}
+        <div className="hidden md:block p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={onBack}
+                className="p-2 bg-green-500/20 hover:bg-green-500/30 rounded-xl transition-colors"
+              >
+                <ArrowLeft className="text-green-600 w-5 h-5" />
+              </button>
+              <div>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                  Customer Profile
+                </h1>
+                <p className="text-gray-600">
+                  Welcome, {user?.name || 'Customer'}
+                </p>
+              </div>
+            </div>
+            
+            {/* Logout Button */}
+            <button
+              onClick={onLogout}
+              className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-600 rounded-xl transition-colors font-medium"
+            >
+              Logout
+            </button>
           </div>
         </div>
 
         {/* Main Content */}
         <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
           
+
           {/* Action Buttons */}
           <div className="flex justify-end">
             {!isEditing ? (

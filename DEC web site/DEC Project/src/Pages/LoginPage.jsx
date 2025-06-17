@@ -54,8 +54,14 @@ const AuthPage = ({ onLogin }) => {
         console.log('Login response:', data);
 
         if (response.ok) {
+          // Store both token and user data
           localStorage.setItem('token', data.token);
           localStorage.setItem('user', JSON.stringify(data.user));
+          localStorage.setItem('userId', data.user.id.toString()); // Explicitly store user ID
+          
+          console.log('Login successful, stored user data:', data.user);
+          console.log('User ID stored:', data.user.id);
+          console.log('Token stored:', data.token);
           
           setFormData({
             name: '',
@@ -154,8 +160,13 @@ const AuthPage = ({ onLogin }) => {
       const data = await response.json();
 
       if (response.ok) {
+        // Store both token and user data for admin
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
+        
+        console.log('Admin login successful, stored user data:', data.user);
+        console.log('Admin ID stored:', data.user.id);
+        console.log('Token stored:', data.token);
         
         if (onLogin) {
           onLogin(data.user);

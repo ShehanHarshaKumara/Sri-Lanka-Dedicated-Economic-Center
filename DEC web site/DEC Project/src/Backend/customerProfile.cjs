@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
@@ -8,44 +10,87 @@ const { google } = require('googleapis');
 const { Readable } = require('stream');
 const router = express.Router();
 
-const PROFILE_PORT = 3000;
+const PROFILE_PORT = process.env.PROFILE_PORT || 3000;
 
-// Google Drive Configuration
-const GOOGLE_DRIVE_FOLDER_ID = '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms'; // Replace with your folder ID
-const GOOGLE_DRIVE_CREDENTIALS = {
-  type: "service_account",
-  project_id: "your-project-id",
-  private_key_id: "your-private-key-id",
-  private_key: "-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY\n-----END PRIVATE KEY-----\n",
-  client_email: "your-service-account@your-project-id.iam.gserviceaccount.com",
-  client_id: "your-client-id",
-  auth_uri: "https://accounts.google.com/o/oauth2/auth",
-  token_uri: "https://oauth2.googleapis.com/token",
-  auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
-  client_x509_cert_url: "https://www.googleapis.com/robot/v1/metadata/x509/your-service-account%40your-project-id.iam.gserviceaccount.com"
+let GOOGLE_DRIVE_ENABLED = false;
+let auth, drive;
+
+// Add missing validation function
+const validateGoogleDriveConfig = () => {
+  const requiredVars = [
+    'GOOGLE_PROJECT_ID',
+    'GOOGLE_PRIVATE_KEY_ID', 
+    'GOOGLE_PRIVATE_KEY',
+    'GOOGLE_CLIENT_EMAIL',
+    'GOOGLE_CLIENT_ID'
+  ];
+  
+  for (const varName of requiredVars) {
+    if (!process.env[varName]) {
+      console.log(`❌ Missing Google Drive config: ${varName}`);
+      return false;
+    }
+  }
+  return true;
 };
 
 // Initialize Google Drive API
-const auth = new google.auth.GoogleAuth({
-  credentials: GOOGLE_DRIVE_CREDENTIALS,
-  scopes: ['https://www.googleapis.com/auth/drive.file']
-});
+const initializeGoogleDrive = async () => {
+  try {
+    GOOGLE_DRIVE_ENABLED = validateGoogleDriveConfig();
+    
+    if (!GOOGLE_DRIVE_ENABLED) {
+      console.log('💾 Using local storage for images (Google Drive not configured)');
+      return;
+    }
 
-const drive = google.drive({ version: 'v3', auth });
+    const credentials = {
+      type: "service_account",
+      project_id: process.env.GOOGLE_PROJECT_ID,
+      private_key_id: process.env.GOOGLE_PRIVATE_KEY_ID,
+      private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      client_email: process.env.GOOGLE_CLIENT_EMAIL,
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      auth_uri: "https://accounts.google.com/o/oauth2/auth",
+      token_uri: "https://oauth2.googleapis.com/token",
+      auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
+      client_x509_cert_url: `https://www.googleapis.com/robot/v1/metadata/x509/${encodeURIComponent(process.env.GOOGLE_CLIENT_EMAIL)}`
+    };
 
-// Ensure uploads directory exists (for temporary storage)
+    auth = new google.auth.GoogleAuth({
+      credentials: credentials,
+      scopes: ['https://www.googleapis.com/auth/drive']
+    });
+
+    drive = google.drive({ version: 'v3', auth });
+    
+    // Test connection
+    await drive.files.list({ pageSize: 1 });
+    console.log('✅ Google Drive API initialized successfully');
+    GOOGLE_DRIVE_ENABLED = true;
+  } catch (error) {
+    console.error('❌ Failed to initialize Google Drive API:', error.message);
+    console.log('🔧 Falling back to local storage');
+    GOOGLE_DRIVE_ENABLED = false;
+  }
+};
+
+// Initialize Google Drive on startup
+initializeGoogleDrive();
+
+// Ensure uploads directory exists
 const profileUploadsDir = path.join(__dirname, 'uploads', 'customer-profiles');
 if (!fs.existsSync(profileUploadsDir)) {
   fs.mkdirSync(profileUploadsDir, { recursive: true });
   console.log('✓ Customer profile uploads directory created');
 }
 
-// MySQL connection
+// MySQL connection - Fixed database name to match your table
 const db = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: '',
-  database: 'dedicated_economic_center'
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'dedicated_economic_center'
 });
 
 db.connect((err) => {
@@ -57,12 +102,20 @@ db.connect((err) => {
   }
 });
 
-// Enhanced Multer configuration with Google Drive upload
-const storage = multer.memoryStorage(); // Store in memory for direct upload to Google Drive
+// Multer configuration
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, profileUploadsDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'customer-profile-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
 
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -75,11 +128,13 @@ const upload = multer({
   }
 });
 
-// Function to upload file to Google Drive
+// Upload to Google Drive function
 async function uploadToGoogleDrive(fileBuffer, originalName, mimeType, userId) {
+  if (!GOOGLE_DRIVE_ENABLED) {
+    throw new Error('Google Drive is not configured');
+  }
+
   try {
-    console.log('Uploading to Google Drive:', { originalName, mimeType, size: fileBuffer.length });
-    
     const fileName = `customer-profile-${userId}-${Date.now()}-${originalName}`;
     
     const fileMetadata = {
@@ -95,10 +150,9 @@ async function uploadToGoogleDrive(fileBuffer, originalName, mimeType, userId) {
     const response = await drive.files.create({
       resource: fileMetadata,
       media: media,
-      fields: 'id, name, webViewLink, webContentLink'
+      fields: 'id, name'
     });
 
-    // Make the file publicly accessible
     await drive.permissions.create({
       fileId: response.data.id,
       resource: {
@@ -107,61 +161,19 @@ async function uploadToGoogleDrive(fileBuffer, originalName, mimeType, userId) {
       }
     });
 
-    // Get the direct download link
-    const directLink = `https://drive.google.com/uc?export=view&id=${response.data.id}`;
+    const directLink = `https://drive.google.com/uc?id=${response.data.id}`;
     
-    console.log('File uploaded to Google Drive successfully:', {
-      fileId: response.data.id,
-      name: response.data.name,
-      directLink
-    });
-
     return {
       fileId: response.data.id,
       fileName: response.data.name,
-      webViewLink: response.data.webViewLink,
       directLink: directLink
     };
   } catch (error) {
-    console.error('Error uploading to Google Drive:', error);
-    throw new Error('Failed to upload image to Google Drive: ' + error.message);
+    throw new Error('Failed to upload to Google Drive: ' + error.message);
   }
 }
 
-// Function to delete file from Google Drive
-async function deleteFromGoogleDrive(fileId) {
-  try {
-    if (!fileId) return;
-    
-    console.log('Deleting file from Google Drive:', fileId);
-    await drive.files.delete({ fileId: fileId });
-    console.log('File deleted successfully from Google Drive');
-  } catch (error) {
-    console.error('Error deleting from Google Drive:', error);
-    // Don't throw error as it's not critical
-  }
-}
-
-// Function to extract Google Drive file ID from URL
-function extractGoogleDriveFileId(url) {
-  if (!url) return null;
-  
-  // Match various Google Drive URL formats
-  const patterns = [
-    /\/d\/([a-zA-Z0-9-_]+)/,
-    /id=([a-zA-Z0-9-_]+)/,
-    /file\/d\/([a-zA-Z0-9-_]+)$/
-  ];
-  
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match) return match[1];
-  }
-  
-  return null;
-}
-
-// Get customer profile - Updated to work with login system
+// Get customer profile - Fixed query structure
 router.get('/profile/:userId', async (req, res) => {
   try {
     const userId = req.params.userId;
@@ -173,30 +185,28 @@ router.get('/profile/:userId', async (req, res) => {
     );
     
     if (rows.length === 0) {
-      console.log('No customer profile found, checking users table');
-      // If no profile exists, get basic user data from users table
+      // Get user info from users table
       const [userRows] = await db.promise().query(
         'SELECT id, name, email, role FROM users WHERE id = ?',
         [userId]
       );
       
       if (userRows.length === 0) {
-        console.log('User not found in users table');
         return res.status(404).json({ error: 'User not found' });
       }
       
       const user = userRows[0];
       const names = user.name ? user.name.split(' ') : ['', ''];
       
-      console.log('Returning default profile data for user:', user);
-      
+      // Return default profile structure
       return res.json({
         user_id: user.id,
         first_name: names[0] || '',
         last_name: names.slice(1).join(' ') || '',
         email: user.email,
         phone: '',
-        date_of_birth: '',
+        age: null,
+        nic_number: '',
         address: '',
         city: '',
         country: 'Sri Lanka',
@@ -208,7 +218,6 @@ router.get('/profile/:userId', async (req, res) => {
       });
     }
     
-    console.log('Found existing customer profile:', rows[0]);
     res.json(rows[0]);
   } catch (error) {
     console.error('Profile fetch error:', error);
@@ -216,20 +225,17 @@ router.get('/profile/:userId', async (req, res) => {
   }
 });
 
-// Create or update customer profile
+// Create or update customer profile - Fixed insert/update logic
 router.post('/profile/:userId', upload.single('profile_image'), async (req, res) => {
   try {
     const userId = req.params.userId;
-    console.log('Saving profile for userId:', userId);
-    console.log('File uploaded:', req.file ? req.file.originalname : 'No file');
-    console.log('Form data:', req.body);
-    
     const {
       first_name,
       last_name,
       email,
       phone,
-      date_of_birth,
+      age,
+      nic_number,
       address,
       city,
       country,
@@ -240,7 +246,9 @@ router.post('/profile/:userId', upload.single('profile_image'), async (req, res)
       existing_image
     } = req.body;
 
-    // Only first name and email are required
+    console.log('Profile save request for userId:', userId);
+    console.log('Request body:', req.body);
+
     if (!first_name || !email) {
       return res.status(400).json({ 
         success: false, 
@@ -248,97 +256,90 @@ router.post('/profile/:userId', upload.single('profile_image'), async (req, res)
       });
     }
 
-    const lastName = last_name && last_name.trim() ? last_name.trim() : '';
     let profile_image = existing_image || null;
-    let oldImageFileId = null;
 
-    // If a new image is uploaded, upload to Google Drive
     if (req.file) {
       console.log('Processing new image upload...');
+      profile_image = `http://localhost:${PROFILE_PORT}/uploads/customer-profiles/${req.file.filename}`;
       
-      try {
-        // Extract old image file ID for deletion
-        if (existing_image) {
-          oldImageFileId = extractGoogleDriveFileId(existing_image);
+      // Delete old local image if exists
+      if (existing_image && existing_image.startsWith(`http://localhost:${PROFILE_PORT}/uploads/customer-profiles/`)) {
+        const oldImagePath = path.join(__dirname, 'uploads', 'customer-profiles', path.basename(existing_image));
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath);
+          console.log('🗑️ Old local image deleted');
         }
-
-        // Upload new image to Google Drive
-        const driveUpload = await uploadToGoogleDrive(
-          req.file.buffer,
-          req.file.originalname,
-          req.file.mimetype,
-          userId
-        );
-        
-        profile_image = driveUpload.directLink;
-        console.log('New image uploaded to Google Drive:', profile_image);
-        
-        // Delete old image from Google Drive (if exists)
-        if (oldImageFileId) {
-          console.log('Deleting old image from Google Drive...');
-          await deleteFromGoogleDrive(oldImageFileId);
-        }
-        
-      } catch (uploadError) {
-        console.error('Google Drive upload failed:', uploadError);
-        return res.status(500).json({
-          success: false,
-          error: 'Failed to upload image to Google Drive: ' + uploadError.message
-        });
       }
     }
 
     // Check if profile exists
     const [existing] = await db.promise().query(
-      'SELECT id, profile_image FROM customer_profiles WHERE user_id = ?',
+      'SELECT id FROM customer_profiles WHERE user_id = ?',
       [userId]
     );
 
     if (existing.length > 0) {
-      console.log('Updating existing profile for user:', userId);
       // Update existing profile
       await db.promise().query(
         `UPDATE customer_profiles SET
-          first_name = ?, last_name = ?, email = ?, phone = ?,
-          date_of_birth = ?, address = ?, city = ?, country = ?, bio = ?, profile_image = ?,
+          first_name = ?, last_name = ?, email = ?, phone = ?, age = ?, nic_number = ?,
+          address = ?, city = ?, country = ?, bio = ?, profile_image = ?,
           location_lat = ?, location_lng = ?, location_address = ?,
           updated_at = CURRENT_TIMESTAMP
         WHERE user_id = ?`,
         [
-          first_name, lastName, email, phone || null,
-          date_of_birth || null, address || null, city || null, country || 'Sri Lanka', bio || null, profile_image,
-          location_lat || null, location_lng || null, location_address || null,
+          first_name, 
+          last_name || '', 
+          email, 
+          phone || null, 
+          age ? parseInt(age) : null, 
+          nic_number || null,
+          address || null, 
+          city || null, 
+          country || 'Sri Lanka', 
+          bio || null, 
+          profile_image, 
+          location_lat ? parseFloat(location_lat) : null, 
+          location_lng ? parseFloat(location_lng) : null, 
+          location_address || null, 
           userId
         ]
       );
-      
-      res.json({ 
-        success: true, 
-        message: 'Profile updated successfully',
-        profileImageUrl: profile_image
-      });
+      console.log('Profile updated successfully');
     } else {
-      console.log('Creating new profile for user:', userId);
-      // Create new profile
+      // Insert new profile
       await db.promise().query(
         `INSERT INTO customer_profiles (
-          user_id, first_name, last_name, email, phone,
-          date_of_birth, address, city, country, bio, profile_image,
+          user_id, first_name, last_name, email, phone, age, nic_number,
+          address, city, country, bio, profile_image,
           location_lat, location_lng, location_address
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          userId, first_name, lastName, email, phone || null,
-          date_of_birth || null, address || null, city || null, country || 'Sri Lanka', bio || null, profile_image,
-          location_lat || null, location_lng || null, location_address || null
+          userId, 
+          first_name, 
+          last_name || '', 
+          email, 
+          phone || null, 
+          age ? parseInt(age) : null, 
+          nic_number || null,
+          address || null, 
+          city || null, 
+          country || 'Sri Lanka', 
+          bio || null, 
+          profile_image, 
+          location_lat ? parseFloat(location_lat) : null, 
+          location_lng ? parseFloat(location_lng) : null, 
+          location_address || null
         ]
       );
-      
-      res.json({ 
-        success: true, 
-        message: 'Profile created successfully',
-        profileImageUrl: profile_image
-      });
+      console.log('Profile created successfully');
     }
+    
+    res.json({ 
+      success: true, 
+      message: existing.length > 0 ? 'Profile updated successfully' : 'Profile created successfully',
+      profileImageUrl: profile_image
+    });
   } catch (error) {
     console.error('Profile save error:', error);
     res.status(500).json({ 
@@ -358,15 +359,17 @@ router.delete('/profile/:userId/image', async (req, res) => {
     );
     
     if (rows.length > 0 && rows[0].profile_image) {
-      // Extract Google Drive file ID and delete
-      const fileId = extractGoogleDriveFileId(rows[0].profile_image);
-      if (fileId) {
-        await deleteFromGoogleDrive(fileId);
+      const imageUrl = rows[0].profile_image;
+      
+      if (imageUrl.startsWith(`http://localhost:${PROFILE_PORT}/uploads/customer-profiles/`)) {
+        const imagePath = path.join(__dirname, 'uploads', 'customer-profiles', path.basename(imageUrl));
+        if (fs.existsSync(imagePath)) {
+          fs.unlinkSync(imagePath);
+        }
       }
       
-      // Update database
       await db.promise().query(
-        'UPDATE customer_profiles SET profile_image = NULL, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?',
+        'UPDATE customer_profiles SET profile_image = NULL WHERE user_id = ?',
         [userId]
       );
     }
@@ -377,28 +380,6 @@ router.delete('/profile/:userId/image', async (req, res) => {
     res.status(500).json({ 
       success: false, 
       error: 'Failed to delete image: ' + error.message 
-    });
-  }
-});
-
-// Test Google Drive connection
-router.get('/test-drive', async (req, res) => {
-  try {
-    const response = await drive.files.list({
-      pageSize: 1,
-      fields: 'files(id, name)'
-    });
-    
-    res.json({
-      success: true,
-      message: 'Google Drive connection successful',
-      files: response.data.files
-    });
-  } catch (error) {
-    console.error('Google Drive test failed:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Google Drive connection failed: ' + error.message
     });
   }
 });
@@ -420,3 +401,30 @@ if (require.main === module) {
 }
 
 module.exports = router;
+
+/*CREATE TABLE IF NOT EXISTS customer_profiles (
+id int(11) NOT NULL AUTO_INCREMENT,
+user_id int(11) NOT NULL,
+first_name varchar(100) NOT NULL,
+last_name varchar(100) DEFAULT NULL,
+email varchar(255) NOT NULL,
+phone varchar(20) DEFAULT NULL,
+age int(3) DEFAULT NULL,
+nic_number varchar(20) DEFAULT NULL,
+address text DEFAULT NULL,
+city varchar(100) DEFAULT NULL,
+country varchar(100) DEFAULT 'Sri Lanka',
+bio text DEFAULT NULL,
+profile_image text DEFAULT NULL,
+location_lat decimal(10,8) DEFAULT NULL,
+location_lng decimal(11,8) DEFAULT NULL,
+location_address text DEFAULT NULL,
+created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+updated_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+PRIMARY KEY (id),
+UNIQUE KEY unique_user_id (user_id),
+KEY idx_email (email),
+KEY idx_phone (phone),
+KEY idx_city (city),
+KEY idx_location (location_lat, location_lng)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;*/

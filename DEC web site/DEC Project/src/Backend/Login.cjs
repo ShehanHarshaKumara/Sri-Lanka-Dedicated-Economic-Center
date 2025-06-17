@@ -195,6 +195,7 @@ app.post('/api/auth/login', async (req, res) => {
 
       const userData = {
         id: user.id,
+        userId: user.id, // Add both id and userId for compatibility
         name: user.name,
         email: user.email,
         role: user.role
@@ -211,6 +212,113 @@ app.post('/api/auth/login', async (req, res) => {
 
   } catch (error) {
     console.error('Login error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Admin Login Route
+app.post('/api/auth/admin-login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    console.log('Admin login attempt for email:', email);
+
+    // Validation
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
+
+    // Check if admin exists
+    const getAdminQuery = 'SELECT * FROM admin WHERE email = ?';
+    db.query(getAdminQuery, [email], async (err, results) => {
+      if (err) {
+        console.error('Database error:', err);
+        return res.status(500).json({ message: 'Server error' });
+      }
+
+      if (results.length === 0) {
+        console.log('No admin found with email:', email);
+        return res.status(400).json({ message: 'Invalid admin credentials' });
+      }
+
+      const admin = results[0];
+      console.log('Found admin:', { id: admin.id, email: admin.email });
+
+      // Check if password is hashed
+      const isPasswordHashed = admin.password.startsWith('$2a$') || 
+                              admin.password.startsWith('$2b$') || 
+                              admin.password.startsWith('$2y$');
+      
+      let isPasswordValid = false;
+      
+      if (isPasswordHashed) {
+        isPasswordValid = await bcrypt.compare(password, admin.password);
+      } else {
+        isPasswordValid = (password === admin.password);
+        
+        // Hash the password for future use
+        if (isPasswordValid) {
+          try {
+            const hashedPassword = await bcrypt.hash(password, 10);
+            const updatePasswordQuery = 'UPDATE admin SET password = ? WHERE id = ?';
+            db.query(updatePasswordQuery, [hashedPassword, admin.id], (err) => {
+              if (err) {
+                console.error('Error updating admin password hash:', err);
+              } else {
+                console.log('Admin password has been hashed and updated in database');
+              }
+            });
+          } catch (hashError) {
+            console.error('Error hashing password:', hashError);
+          }
+        }
+      }
+
+      if (!isPasswordValid) {
+        console.log('Invalid password for admin:', email);
+        return res.status(400).json({ message: 'Invalid admin credentials' });
+      }
+
+      // Update last login
+      const updateLoginQuery = 'UPDATE admin SET updated_at = NOW() WHERE id = ?';
+      db.query(updateLoginQuery, [admin.id], (err) => {
+        if (err) {
+          console.error('Error updating admin last login:', err);
+        }
+      });
+
+      console.log('Admin logged in successfully:', { id: admin.id, email: admin.email });
+
+      // Create JWT token with admin role
+      const token = jwt.sign(
+        { 
+          userId: admin.id, 
+          email: admin.email, 
+          role: 'admin',
+          isAdmin: true
+        },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+
+      const adminData = {
+        id: admin.id,
+        name: 'Administrator',
+        email: admin.email,
+        role: 'admin'
+      };
+
+      console.log('Sending admin login response with admin data:', adminData);
+
+      res.json({
+        message: 'Admin login successful',
+        token: token,
+        user: adminData
+      });
+    });
+
+  } catch (error) {
+    console.error('Admin login error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -366,7 +474,6 @@ app.put('/api/auth/profile', verifyToken, async (req, res) => {
       UPDATE users SET 
         name = ?,
         phone = ?,
-        date_of_birth = ?,
         address = ?,
         city = ?,
         country = ?,
@@ -434,3 +541,30 @@ app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`API Health check: http://localhost:${PORT}/api/health`);
 });
+
+/*CREATE TABLE IF NOT EXISTS customer_profiles (
+id int(11) NOT NULL AUTO_INCREMENT,
+user_id int(11) NOT NULL,
+first_name varchar(100) NOT NULL,
+last_name varchar(100) DEFAULT NULL,
+email varchar(255) NOT NULL,
+phone varchar(20) DEFAULT NULL,
+age int(3) DEFAULT NULL,
+nic_number varchar(20) DEFAULT NULL,
+address text DEFAULT NULL,
+city varchar(100) DEFAULT NULL,
+country varchar(100) DEFAULT 'Sri Lanka',
+bio text DEFAULT NULL,
+profile_image text DEFAULT NULL,
+location_lat decimal(10,8) DEFAULT NULL,
+location_lng decimal(11,8) DEFAULT NULL,
+location_address text DEFAULT NULL,
+created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+updated_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+PRIMARY KEY (id),
+UNIQUE KEY unique_user_id (user_id),
+KEY idx_email (email),
+KEY idx_phone (phone),
+KEY idx_city (city),
+KEY idx_location (location_lat, location_lng)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;*/

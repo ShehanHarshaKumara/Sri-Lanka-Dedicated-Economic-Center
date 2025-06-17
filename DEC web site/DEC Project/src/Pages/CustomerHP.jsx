@@ -195,34 +195,38 @@ const EconomicCenter = ({ user, onLogout }) => {
   const handleProfileClick = () => {
     console.log('Profile button clicked!');
     console.log('Current user:', user);
+    console.log('Current showProfile state:', showProfile);
     console.log('Setting showProfile to true');
     setShowProfile(true);
     setProfileOpen(false);
+    setMobileMenuOpen(false); // Close mobile menu if open
   };
 
   const handleBackToHome = () => {
     console.log('Back to home clicked!');
+    console.log('Setting showProfile to false');
     setShowProfile(false);
   };
 
   // If showing profile, render CustomerProfile component
   if (showProfile) {
     console.log('Rendering CustomerProfile component');
-    const nameData = parseName(user?.name);
+    console.log('User data being passed:', user);
+    console.log('UserId available:', user?.id);
     
     return (
-      <CustomerProfile 
-        user={{
-          id: user?.id, // Make sure to pass 'id' not 'userId'
-          name: user?.name || currentUser.name,
-          email: user?.email || currentUser.email,
-          role: user?.role || currentUser.role,
-          firstName: user?.firstName || nameData.firstName,
-          lastName: user?.lastName || nameData.lastName
-        }}
-        onBack={handleBackToHome}
-        onLogout={onLogout}
-      />
+      <div style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
+        <CustomerProfile 
+          user={{
+            id: user?.id || user?.userId || localStorage.getItem('userId'), // Ensure we pass the correct user ID
+            name: user?.name || currentUser.name,
+            email: user?.email || currentUser.email,
+            role: user?.role || currentUser.role
+          }}
+          onBack={handleBackToHome}
+          onLogout={onLogout}
+        />
+      </div>
     );
   }
 
@@ -307,8 +311,11 @@ const EconomicCenter = ({ user, onLogout }) => {
               {/* Profile Dropdown */}
               <div className="relative">
                 <button 
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     console.log('Profile dropdown button clicked, current state:', profileOpen);
+                    console.log('Current user data:', user);
                     setProfileOpen(!profileOpen);
                   }}
                   className="profile-btn p-2 rounded-full bg-green-500/20 hover:bg-green-500/30 transition-colors"
@@ -317,10 +324,11 @@ const EconomicCenter = ({ user, onLogout }) => {
                 </button>
                 
                 {profileOpen && (
-                  <div className="profile-dropdown absolute right-0 mt-2 w-44 bg-white/95 backdrop-blur-md rounded-lg border border-green-500/10 shadow-xl">
+                  <div className="profile-dropdown absolute right-0 mt-2 w-44 bg-white/95 backdrop-blur-md rounded-lg border border-green-500/10 shadow-xl z-50">
                     <div className="p-3 border-b border-green-500/10">
-                      <p className="text-gray-800 font-semibold text-sm">{currentUser.name}</p>
-                      <p className="text-gray-600 text-xs">{currentUser.email}</p>
+                      <p className="text-gray-800 font-semibold text-sm truncate">{currentUser.name}</p>
+                      <p className="text-gray-600 text-xs truncate">{currentUser.email}</p>
+                      <p className="text-green-600 text-xs">ID: {user?.id || 'No ID'}</p>
                     </div>
                     <div className="py-1">
                       <button
@@ -328,6 +336,7 @@ const EconomicCenter = ({ user, onLogout }) => {
                           e.preventDefault();
                           e.stopPropagation();
                           console.log('Profile menu item clicked!');
+                          console.log('About to call handleProfileClick');
                           handleProfileClick();
                         }}
                         className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:text-green-600 hover:bg-green-500/10 transition-colors"
@@ -336,14 +345,19 @@ const EconomicCenter = ({ user, onLogout }) => {
                         Profile
                       </button>
                       {['Orders', 'Wishlist', 'Settings'].map((item) => (
-                        <a
+                        <button
                           key={item}
-                          href="#"
-                          onClick={(e) => e.preventDefault()}
-                          className="block px-3 py-2 text-sm text-gray-700 hover:text-green-600 hover:bg-green-500/10 transition-colors"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setProfileOpen(false);
+                            // Add navigation logic for other menu items here
+                          }}
+                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:text-green-600 hover:bg-green-500/10 transition-colors"
+                          type="button"
                         >
                           {item}
-                        </a>
+                        </button>
                       ))}
                       <button
                         onClick={(e) => {
