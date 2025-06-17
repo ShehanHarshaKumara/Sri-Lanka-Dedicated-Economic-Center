@@ -44,7 +44,7 @@ import {
   FaPercent
 } from 'react-icons/fa';
 
-const AdminPortal = () => {
+const AdminPortal = ({ user, onLogout }) => {
   // Current admin user
   const [currentAdmin] = useState({
     id: 1,
@@ -372,6 +372,12 @@ const AdminPortal = () => {
     { id: 'settings', label: 'Settings', icon: FaCog }
   ];
 
+  const handleLogout = () => {
+    if (onLogout) {
+      onLogout();
+    }
+  };
+
   return (
     <div className="min-h-screen w-full bg-green-50">
       {/* Navigation Header */}
@@ -454,7 +460,10 @@ const AdminPortal = () => {
 
             {/* Logout Button */}
             <div className="absolute bottom-6 left-6 right-6">
-              <button className="w-full flex items-center px-4 py-3 text-left rounded-xl text-red-600 hover:bg-red-50 transition-colors">
+              <button 
+                onClick={handleLogout}
+                className="w-full flex items-center px-4 py-3 text-left rounded-xl text-red-600 hover:bg-red-50 transition-colors"
+              >
                 <FaSignOutAlt className="mr-3 text-xl" />
                 Logout
               </button>
@@ -1497,6 +1506,7 @@ const AdminPortal = () => {
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
                               Active
+                           
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
