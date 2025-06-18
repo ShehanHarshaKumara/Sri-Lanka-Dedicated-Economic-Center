@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ChevronLeft, MapPin, Phone, Mail, Star, Wheat, Users, Award, 
   Calendar, ShoppingCart, Heart, Share2, Truck, Filter, Search,
@@ -19,175 +19,111 @@ const ModernFarmerMarketplace = () => {
   const [showMessaging, setShowMessaging] = useState(false);
   const [messageText, setMessageText] = useState('');
   const [messages, setMessages] = useState([]);
+  const [farmers, setFarmers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Enhanced farmer data with more products and details
-  const farmers = [
-    {
-      id: 1,
-      name: "John Martinez",
-      location: "Valley Farm, California",
-      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face",
-      coverImage: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=1200&h=400&fit=crop",
-      rating: 4.8,
-      specialties: ["Organic Vegetables", "Wheat", "Corn"],
-      experience: "15 years",
-      farmSize: "250 acres",
-      phone: "+1 (555) 123-4567",
-      email: "john.martinez@farm.com",
-      bio: "Passionate organic farmer dedicated to sustainable agriculture and community-supported farming initiatives. Our farm uses regenerative practices to ensure the highest quality produce while protecting the environment.",
-      achievements: ["Certified Organic", "Sustainable Farming Award 2023", "Community Leader"],
-      followers: 1250,
-      deliveryTime: "2-3 days",
-      responseTime: "< 2 hours",
-      sustainability: 95,
-      totalProducts: 45,
-      totalOrders: 3420,
-      isOnline: true,
-      lastSeen: "2 minutes ago",
-      products: [
-        {
-          id: 101,
-          name: "Organic Tomatoes",
-          price: 4.99,
-          unit: "per lb",
-          image: "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=300&h=200&fit=crop",
-          description: "Fresh, vine-ripened organic tomatoes grown without synthetic pesticides. Perfect for salads, sauces, and fresh eating.",
-          inStock: true,
-          harvest: "Weekly",
-          category: "Vegetables",
-          rating: 4.9,
-          reviews: 234,
-          nutrients: "High in Vitamin C, Lycopene",
-          farmingMethod: "Regenerative Agriculture"
-        },
-        {
-          id: 102,
-          name: "Sweet Corn",
-          price: 3.50,
-          unit: "per dozen",
-          image: "https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=300&h=200&fit=crop",
-          description: "Fresh sweet corn harvested daily at peak ripeness. Non-GMO variety with exceptional sweetness and crunch.",
-          inStock: true,
-          harvest: "Daily",
-          category: "Vegetables",
-          rating: 4.7,
-          reviews: 156,
-          nutrients: "Fiber, Vitamin B, Antioxidants",
-          farmingMethod: "No-till Farming"
-        },
-        {
-          id: 103,
-          name: "Organic Kale",
-          price: 2.99,
-          unit: "per bunch",
-          image: "https://images.unsplash.com/photo-1541013406131-3ca4c2a10c1a?w=300&h=200&fit=crop",
-          description: "Nutrient-dense organic kale packed with vitamins. Grown in rich composted soil for optimal flavor.",
-          inStock: true,
-          harvest: "Twice Weekly",
-          category: "Vegetables",
-          rating: 4.6,
-          reviews: 98,
-          nutrients: "Vitamin K, Vitamin A, Calcium",
-          farmingMethod: "Organic Certified"
+  // Fetch farmers data from backend API
+  useEffect(() => {
+    const fetchFarmers = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('http://localhost:5003/api/farmers');
+        if (!response.ok) {
+          throw new Error('Failed to fetch farmers data');
         }
-      ]
-    },
-    {
-      id: 2,
-      name: "Sarah Chen",
-      location: "Green Meadows, Oregon",
-      image: "https://images.unsplash.com/photo-1494790108755-2616b69e4b9c?w=400&h=400&fit=crop&crop=face",
-      coverImage: "https://images.unsplash.com/photo-1560493676-04071c5f467b?w=1200&h=400&fit=crop",
-      rating: 4.9,
-      specialties: ["Dairy Farming", "Cheese Production"],
-      experience: "12 years",
-      farmSize: "180 acres",
-      phone: "+1 (555) 987-6543",
-      email: "sarah.chen@meadowfarms.com",
-      bio: "Award-winning dairy farmer specializing in artisanal cheese production and sustainable livestock management. Our animals are pasture-raised with the highest welfare standards.",
-      achievements: ["Best Cheese Producer 2024", "Sustainable Dairy Award", "Organic Certified"],
-      followers: 890,
-      deliveryTime: "1-2 days",
-      responseTime: "< 1 hour",
-      sustainability: 98,
-      totalProducts: 32,
-      totalOrders: 2150,
-      isOnline: false,
-      lastSeen: "1 hour ago",
-      products: [
-        {
-          id: 201,
-          name: "Aged Cheddar",
-          price: 12.99,
-          unit: "per lb",
-          image: "https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?w=300&h=200&fit=crop",
-          description: "12-month aged artisanal cheddar with complex flavors and smooth texture. Made from grass-fed cow's milk.",
-          inStock: true,
-          harvest: "Monthly",
-          category: "Dairy",
-          rating: 5.0,
-          reviews: 342,
-          nutrients: "Calcium, Protein, Vitamin B12",
-          farmingMethod: "Grass-fed, Pasture-raised"
-        },
-        {
-          id: 202,
-          name: "Fresh Goat Cheese",
-          price: 8.50,
-          unit: "8 oz",
-          image: "https://images.unsplash.com/photo-1452195100486-9cc805987862?w=300&h=200&fit=crop",
-          description: "Creamy fresh goat cheese with a mild, tangy flavor. Perfect for salads, spreads, and cooking.",
-          inStock: true,
-          harvest: "Weekly",
-          category: "Dairy",
-          rating: 4.8,
-          reviews: 189,
-          nutrients: "Probiotics, Calcium, Easily Digestible",
-          farmingMethod: "Free-range Goats"
+        const data = await response.json();
+        
+        // Transform API data to match frontend structure
+        const transformedFarmers = data.map(farmer => ({
+          id: farmer.user_id,
+          name: farmer.full_name,
+          location: `${farmer.city || 'Unknown'}, ${farmer.farming_type || 'Farm'}`,
+          image: farmer.profile_image || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face',
+          coverImage: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=1200&h=400&fit=crop',
+          rating: 4.5, // Default rating since API doesn't provide this
+          specialties: farmer.farming_type ? [farmer.farming_type] : ['Organic Farming'],
+          experience: farmer.experience || '10+ years',
+          farmSize: '100 acres', // Default since API doesn't provide this
+          phone: farmer.phone || '+1 (555) 000-0000',
+          email: farmer.email || 'farmer@example.com',
+          bio: farmer.bio || 'Passionate farmer dedicated to sustainable agriculture.',
+          achievements: ['Certified Organic', 'Local Farming Award'],
+          followers: 500, // Default
+          deliveryTime: "2-3 days",
+          responseTime: "< 2 hours",
+          sustainability: 90, // Default
+          totalProducts: farmer.total_products || 0,
+          totalOrders: 1000, // Default
+          isOnline: Math.random() > 0.5, // Random online status
+          lastSeen: Math.random() > 0.5 ? "Active now" : "1 hour ago",
+          products: farmer.products ? farmer.products.map(product => ({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            unit: "per item",
+            image: product.image_url || 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=300&h=200&fit=crop',
+            description: product.description || 'Fresh farm product',
+            inStock: product.quantity > 0,
+            harvest: "Weekly",
+            category: product.category || 'Vegetables',
+            rating: 4.5, // Default
+            reviews: 50, // Default
+            nutrients: "Rich in vitamins",
+            farmingMethod: "Organic"
+          })) : []
+        }));
+        
+        setFarmers(transformedFarmers);
+        setLoading(false);
+      } catch (err) {
+        setError(err.message);
+        setLoading(false);
+      }
+    };
+
+    fetchFarmers();
+  }, []);
+
+  // Fetch single farmer details when selected
+  useEffect(() => {
+    if (selectedFarmer) {
+      const fetchFarmerDetails = async () => {
+        try {
+          const response = await fetch(`http://localhost:5003/api/farmers/${selectedFarmer.id}`);
+          if (!response.ok) {
+            throw new Error('Failed to fetch farmer details');
+          }
+          const data = await response.json();
+          
+          // Update the selected farmer with detailed data
+          setSelectedFarmer(prev => ({
+            ...prev,
+            products: data.products.map(product => ({
+              id: product.id,
+              name: product.name,
+              price: product.price,
+              unit: "per item",
+              image: product.image_url || 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=300&h=200&fit=crop',
+              description: product.description || 'Fresh farm product',
+              inStock: product.quantity > 0,
+              harvest: "Weekly",
+              category: product.category || 'Vegetables',
+              rating: 4.5,
+              reviews: 50,
+              nutrients: "Rich in vitamins",
+              farmingMethod: "Organic"
+            })),
+            stats: data.stats
+          }));
+        } catch (err) {
+          console.error('Error fetching farmer details:', err);
         }
-      ]
-    },
-    {
-      id: 3,
-      name: "Miguel Rodriguez",
-      location: "Sunshine Ranch, Texas",
-      image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face",
-      coverImage: "https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=1200&h=400&fit=crop",
-      rating: 4.7,
-      specialties: ["Citrus Fruits", "Avocados", "Herbs"],
-      experience: "18 years",
-      farmSize: "320 acres",
-      phone: "+1 (555) 456-7890",
-      email: "miguel@sunshineranch.com",
-      bio: "Third-generation farmer specializing in citrus and avocado cultivation. We focus on water-efficient farming and premium quality fruits that bring sunshine to your table.",
-      achievements: ["Water Conservation Award", "Premium Quality Certification", "Family Farm Heritage"],
-      followers: 2100,
-      deliveryTime: "1-3 days",
-      responseTime: "< 3 hours",
-      sustainability: 88,
-      totalProducts: 28,
-      totalOrders: 4560,
-      isOnline: true,
-      lastSeen: "Active now",
-      products: [
-        {
-          id: 301,
-          name: "Premium Avocados",
-          price: 6.99,
-          unit: "per 4-pack",
-          image: "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=300&h=200&fit=crop",
-          description: "Perfectly ripe Hass avocados with creamy texture and rich flavor. Hand-picked at optimal ripeness.",
-          inStock: true,
-          harvest: "Weekly",
-          category: "Fruits",
-          rating: 4.8,
-          reviews: 445,
-          nutrients: "Healthy Fats, Potassium, Fiber",
-          farmingMethod: "Sustainable Water Management"
-        }
-      ]
+      };
+
+      fetchFarmerDetails();
     }
-  ];
+  }, [selectedFarmer]);
 
   // Filter and sort farmers
   const filteredFarmers = farmers
@@ -781,6 +717,53 @@ const ModernFarmerMarketplace = () => {
             </section>
           </div>
         </main>
+      </div>
+    );
+  }
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center" style={{ 
+        background: theme.background,
+        color: theme.text
+      }}>
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-t-4 border-gray-200 border-t-green-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <h2 className="text-xl font-semibold">Loading Farmers...</h2>
+          <p style={{ color: theme.textSecondary }}>Connecting you with local farmers</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center" style={{ 
+        background: theme.background,
+        color: theme.text
+      }}>
+        <div className="text-center p-6 rounded-xl shadow-xl" style={{ 
+          backgroundColor: theme.card,
+          border: `1px solid ${theme.border}`
+        }}>
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <X className="w-8 h-8 text-red-500" />
+          </div>
+          <h2 className="text-xl font-semibold mb-2">Error Loading Data</h2>
+          <p className="mb-4" style={{ color: theme.textSecondary }}>{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 rounded-lg font-medium transition-all duration-300 transform hover:scale-105"
+            style={{ 
+              backgroundColor: theme.primary,
+              color: 'white'
+            }}
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }

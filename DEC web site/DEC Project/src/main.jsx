@@ -1,4 +1,4 @@
-import { StrictMode } from 'react'
+import { StrictMode, useState, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 // import ProductCard from './Pages/ProductCard'
@@ -11,13 +11,11 @@ import './index.css'
 // import Map from './Pages/Map.jsx'
 // import Chatbot from './Pages/Chatbot.jsx'
 // import ChatHp from './Pages/chatHp.jsx'
-// import FramerPage from './Pages/FramerPage.jsx'
-import ProductPage from './Pages/productPage.jsx'
+import FramerPage from './Pages/FramerPage.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <ProductPage />
-    {/* <FramerPage /> */}
+    <FramerPage />
     {/* <ChatHp /> */}
     {/* <Chatbot /> */}
     {/* <Map/> */}
