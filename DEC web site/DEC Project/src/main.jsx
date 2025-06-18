@@ -11,11 +11,13 @@ import './index.css'
 // import Map from './Pages/Map.jsx'
 // import Chatbot from './Pages/Chatbot.jsx'
 // import ChatHp from './Pages/chatHp.jsx'
-import FramerPage from './Pages/FramerPage.jsx'
+// import FramerPage from './Pages/FramerPage.jsx'
+import ProductPage from './Pages/productPage.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <FramerPage />
+    <ProductPage />
+    {/* <FramerPage /> */}
     {/* <ChatHp /> */}
     {/* <Chatbot /> */}
     {/* <Map/> */}
