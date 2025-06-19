@@ -1,4 +1,4 @@
-import { StrictMode, useState, useEffect } from 'react'
+import { StrictMode, } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 // import ProductCard from './Pages/ProductCard'
@@ -11,11 +11,21 @@ import './index.css'
 // import Map from './Pages/Map.jsx'
 // import Chatbot from './Pages/Chatbot.jsx'
 // import ChatHp from './Pages/chatHp.jsx'
-import FramerPage from './Pages/FramerPage.jsx'
+// import FramerPage from './Pages/FramerPage.jsx'
+// import Payemntpage from './Pages/Payemntpage.jsx'
+// import Message from './Pages/message.jsx'
+// import Review from './Pages/Review.jsx'
+// import RiveAndFeedback from './Pages/RiveAndFeedback.jsx'
+import PaymentAndReting from './Pages/PaymentAndReting.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <FramerPage />
+    <PaymentAndReting />
+    {/* <RiveAndFeedback /> */}
+    {/* <Review/> */}
+    {/* <Message/> */}
+    {/* <Payemntpage /> */}
+    {/* <FramerPage /> */}
     {/* <ChatHp /> */}
     {/* <Chatbot /> */}
     {/* <Map/> */}
