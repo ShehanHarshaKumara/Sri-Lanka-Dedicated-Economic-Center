@@ -45,11 +45,11 @@ import {
 } from 'react-icons/fa';
 
 const AdminPortal = ({ user, onLogout }) => {
-  // Current admin user
+  // Current admin user - use the actual logged-in user data
   const [currentAdmin] = useState({
-    id: 1,
-    name: 'Admin Silva',
-    email: 'admin@srilankanfarmers.lk',
+    id: user?.id || user?.userId || 1,
+    name: user?.name || 'Administrator',
+    email: user?.email || 'admin@srilankanfarmers.lk',
     role: 'Super Administrator',
     avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'
   });
@@ -155,51 +155,19 @@ const AdminPortal = ({ user, onLogout }) => {
     }
   ]);
 
-  // Mock data for products
-  const [products] = useState([
-    {
-      id: 1,
-      name: 'Organic Rice',
-      category: 'Grains',
-      farmer: 'Sunil Rathnayake',
-      farmerId: 1,
-      price: 150,
-      stock: 500,
-      image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=100&h=100&fit=crop',
-      status: 'active',
-      sales: 1200,
-      rating: 4.8,
-      description: 'Premium organic rice grown without pesticides'
-    },
-    {
-      id: 2,
-      name: 'Fresh Vegetables Mix',
-      category: 'Vegetables',
-      farmer: 'Kamala Fernando',
-      farmerId: 2,
-      price: 200,
-      stock: 50,
-      image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=100&h=100&fit=crop',
-      status: 'active',
-      sales: 450,
-      rating: 4.6,
-      description: 'Fresh seasonal vegetables harvested daily'
-    },
-    {
-      id: 3,
-      name: 'Ceylon Cinnamon',
-      category: 'Spices',
-      farmer: 'Nimal Perera',
-      farmerId: 3,
-      price: 800,
-      stock: 25,
-      image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=100&h=100&fit=crop',
-      status: 'active',
-      sales: 320,
-      rating: 4.9,
-      description: 'Authentic Ceylon cinnamon sticks'
-    }
-  ]);
+  // Replace mock products with real state
+  const [products, setProducts] = useState([]);
+  const [productStats, setProductStats] = useState({
+    total_products: 0,
+    active_products: 0,
+    low_stock_products: 0,
+    total_categories: 0
+  });
+  const [loading, setLoading] = useState({
+    products: false,
+    stats: false
+  });
+  const [error, setError] = useState(null);
 
   // Mock data for orders
   const [orders] = useState([
@@ -277,6 +245,59 @@ const AdminPortal = ({ user, onLogout }) => {
     };
   }, []);
 
+  // Fetch products from API
+  const fetchProducts = async () => {
+    setLoading(prev => ({ ...prev, products: true }));
+    setError(null);
+    try {
+      console.log('Fetching products from API...');
+      const response = await fetch('http://localhost:5001/api/admin/products');
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to fetch products: ${response.status} - ${errorText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Products fetched successfully:', data);
+      setProducts(data);
+    } catch (err) {
+      console.error('Error fetching products:', err);
+      setError(`Failed to load products: ${err.message}`);
+    } finally {
+      setLoading(prev => ({ ...prev, products: false }));
+    }
+  };
+
+  // Fetch product statistics
+  const fetchProductStats = async () => {
+    setLoading(prev => ({ ...prev, stats: true }));
+    try {
+      console.log('Fetching product stats from API...');
+      const response = await fetch('http://localhost:5001/api/admin/product-stats');
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to fetch product stats: ${response.status} - ${errorText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Product stats fetched successfully:', data);
+      setProductStats(data);
+    } catch (err) {
+      console.error('Error fetching product stats:', err);
+      // Don't show error for stats, just use defaults
+    } finally {
+      setLoading(prev => ({ ...prev, stats: false }));
+    }
+  };
+
+  // Add useEffect to fetch data on component mount
+  useEffect(() => {
+    fetchProducts();
+    fetchProductStats();
+  }, []);
+
   // Calculate dashboard statistics
   const dashboardStats = {
     totalFarmers: farmers.length,
@@ -285,7 +306,10 @@ const AdminPortal = ({ user, onLogout }) => {
     totalCustomers: customers.length,
     activeCustomers: customers.filter(c => c.status === 'active').length,
     totalRevenue: farmers.reduce((sum, f) => sum + f.revenue, 0),
-    totalProducts: products.length,
+    totalProducts: productStats.total_products,
+    activeProducts: productStats.active_products,
+    lowStockProducts: productStats.low_stock_products,
+    totalCategories: productStats.total_categories,
     totalOrders: orders.length,
     pendingOrders: orders.filter(o => o.status === 'pending').length,
     processingOrders: orders.filter(o => o.status === 'processing').length,
@@ -892,11 +916,31 @@ const AdminPortal = ({ user, onLogout }) => {
                   title="Product Management"
                   subtitle="Monitor and manage all products on the platform"
                   action={
-                    <button className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-xl flex items-center shadow-lg">
-                      <FaPlus className="mr-2" /> Add New Product
-                    </button>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={fetchProducts}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center"
+                        disabled={loading.products}
+                      >
+                        {loading.products ? <FaClock className="mr-2 animate-spin" /> : <FaDownload className="mr-2" />}
+                        Refresh
+                      </button>
+                      <button className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-xl flex items-center shadow-lg">
+                        <FaPlus className="mr-2" /> Add New Product
+                      </button>
+                    </div>
                   }
                 />
+                
+                {/* Show error message if any */}
+                {error && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="flex items-center">
+                      <FaExclamationTriangle className="text-red-600 mr-2" />
+                      <p className="text-red-700">{error}</p>
+                    </div>
+                  </div>
+                )}
                 
                 {/* Product Stats */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -904,7 +948,9 @@ const AdminPortal = ({ user, onLogout }) => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-gray-600 text-sm">Total Products</p>
-                        <p className="text-2xl font-bold text-gray-800">{products.length}</p>
+                        <p className="text-2xl font-bold text-gray-800">
+                          {loading.stats ? '...' : productStats.total_products}
+                        </p>
                       </div>
                       <FaBox className="text-3xl text-green-600" />
                     </div>
@@ -913,7 +959,9 @@ const AdminPortal = ({ user, onLogout }) => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-gray-600 text-sm">Active Products</p>
-                        <p className="text-2xl font-bold text-green-600">{products.filter(p => p.status === 'active').length}</p>
+                        <p className="text-2xl font-bold text-green-600">
+                          {loading.stats ? '...' : productStats.active_products}
+                        </p>
                       </div>
                       <FaCheckCircle className="text-3xl text-green-600" />
                     </div>
@@ -922,7 +970,9 @@ const AdminPortal = ({ user, onLogout }) => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-gray-600 text-sm">Low Stock</p>
-                        <p className="text-2xl font-bold text-orange-600">{products.filter(p => p.stock < 50).length}</p>
+                        <p className="text-2xl font-bold text-orange-600">
+                          {loading.stats ? '...' : productStats.low_stock_products}
+                        </p>
                       </div>
                       <FaExclamationTriangle className="text-3xl text-orange-600" />
                     </div>
@@ -931,7 +981,9 @@ const AdminPortal = ({ user, onLogout }) => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-gray-600 text-sm">Categories</p>
-                        <p className="text-2xl font-bold text-blue-600">{[...new Set(products.map(p => p.category))].length}</p>
+                        <p className="text-2xl font-bold text-blue-600">
+                          {loading.stats ? '...' : productStats.total_categories}
+                        </p>
                       </div>
                       <FaFilter className="text-3xl text-blue-600" />
                     </div>
@@ -954,9 +1006,9 @@ const AdminPortal = ({ user, onLogout }) => {
                     <div className="flex gap-2">
                       <select className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
                         <option value="all">All Categories</option>
-                        <option value="grains">Grains</option>
-                        <option value="vegetables">Vegetables</option>
-                        <option value="spices">Spices</option>
+                        {[...new Set(products.map(p => p.category))].map(category => (
+                          <option key={category} value={category}>{category}</option>
+                        ))}
                       </select>
                       <select className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
                         <option value="all">All Status</option>
@@ -967,60 +1019,100 @@ const AdminPortal = ({ user, onLogout }) => {
                   </div>
                 </CardWrapper>
 
-                {/* Products Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {products.map((product) => (
-                    <CardWrapper key={product.id} className="overflow-hidden hover:shadow-xl transition-all">
-                      <div className="p-6">
-                        <div className="relative mb-4">
-                          <img src={product.image} alt={product.name} className="w-full h-32 object-cover rounded-lg" />
-                          <span className={`absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-semibold ${
-                            product.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {product.status}
-                          </span>
-                        </div>
-                        
-                        <h3 className="font-bold text-gray-800 text-lg mb-1">{product.name}</h3>
-                        <p className="text-gray-600 text-sm mb-2">{product.category}</p>
-                        <p className="text-gray-600 text-sm mb-3">By {product.farmer}</p>
-                        
-                        <div className="space-y-2 mb-4">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Price:</span>
-                            <span className="font-semibold text-green-600">Rs.{product.price}</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Stock:</span>
-                            <span className={`font-semibold ${product.stock < 50 ? 'text-orange-600' : 'text-gray-800'}`}>
-                              {product.stock} units
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Sales:</span>
-                            <span className="font-semibold">{product.sales}</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Rating:</span>
-                            <span className="font-semibold flex items-center">
-                              <FaStar className="text-yellow-500 mr-1" />
-                              {product.rating}
-                            </span>
-                          </div>
-                        </div>
+                {/* Loading State */}
+                {loading.products && (
+                  <CardWrapper className="p-12">
+                    <div className="text-center">
+                      <FaClock className="text-4xl text-green-600 mx-auto mb-4 animate-spin" />
+                      <p className="text-gray-600">Loading products...</p>
+                    </div>
+                  </CardWrapper>
+                )}
 
-                        <div className="flex space-x-2">
-                          <button className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-3 rounded-lg text-sm flex items-center justify-center">
-                            <FaEye className="mr-1" /> View
-                          </button>
-                          <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded-lg text-sm flex items-center justify-center">
-                            <FaEdit className="mr-1" /> Edit
-                          </button>
+                {/* Products Grid */}
+                {!loading.products && products.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {products.map((product) => (
+                      <CardWrapper key={product.id} className="overflow-hidden hover:shadow-xl transition-all">
+                        <div className="p-6">
+                          <div className="relative mb-4">
+                            <img 
+                              src={product.image} 
+                              alt={product.name} 
+                              className="w-full h-32 object-cover rounded-lg"
+                              onError={(e) => {
+                                e.target.src = 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=300&fit=crop';
+                              }}
+                              onLoad={(e) => {
+                                // Optional: Add loading state management
+                                e.target.style.opacity = '1';
+                              }}
+                              style={{ opacity: '0.8', transition: 'opacity 0.3s ease' }}
+                            />
+                            <span className={`absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-semibold ${
+                              product.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {product.status}
+                            </span>
+                            {product.stock < 50 && (
+                              <span className="absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-800">
+                                Low Stock
+                              </span>
+                            )}
+                          </div>
+                          
+                          <h3 className="font-bold text-gray-800 text-lg mb-1">{product.name}</h3>
+                          <p className="text-gray-600 text-sm mb-2">{product.category}</p>
+                          <p className="text-gray-600 text-sm mb-3">By {product.farmer}</p>
+                          
+                          <div className="space-y-2 mb-4">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-600">Price:</span>
+                              <span className="font-semibold text-green-600">Rs.{product.price}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-600">Stock:</span>
+                              <span className={`font-semibold ${product.stock < 50 ? 'text-orange-600' : 'text-gray-800'}`}>
+                                {product.stock} units
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-600">Sales:</span>
+                              <span className="font-semibold">{product.sales}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-600">Rating:</span>
+                              <span className="font-semibold flex items-center">
+                                <FaStar className="text-yellow-500 mr-1" />
+                                {product.rating.toFixed(1)}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex space-x-2">
+                            <button className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-3 rounded-lg text-sm flex items-center justify-center">
+                              <FaEye className="mr-1" /> View
+                            </button>
+                            <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded-lg text-sm flex items-center justify-center">
+                              <FaEdit className="mr-1" /> Edit
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    </CardWrapper>
-                  ))}
-                </div>
+                      </CardWrapper>
+                    ))}
+                  </div>
+                )}
+
+                {/* No Products Found */}
+                {!loading.products && products.length === 0 && !error && (
+                  <CardWrapper className="p-12">
+                    <div className="text-center">
+                      <FaBox className="text-6xl text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-xl font-semibold text-gray-600 mb-2">No Products Found</h3>
+                      <p className="text-gray-500">No products have been added to the platform yet.</p>
+                    </div>
+                  </CardWrapper>
+                )}
               </div>
             )}
 
