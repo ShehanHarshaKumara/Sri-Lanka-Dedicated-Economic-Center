@@ -384,6 +384,68 @@ router.delete('/profile/:userId/image', async (req, res) => {
   }
 });
 
+// Get all customer profiles for admin
+router.get('/all', async (req, res) => {
+  try {
+    // Get all users with role 'customer'
+    const [users] = await db.promise().query(
+      "SELECT id, name, email, role FROM users WHERE role = 'customer'"
+    );
+
+    // Get all customer profiles
+    const [profiles] = await db.promise().query(
+      "SELECT * FROM customer_profiles"
+    );
+
+    // Map userId to profile
+    const profileMap = {};
+    profiles.forEach(profile => {
+      profileMap[profile.user_id] = profile;
+    });
+
+    // Merge user info with profile, fallback to user info if profile missing
+    const customers = users.map(user => {
+      const profile = profileMap[user.id];
+      if (profile) {
+        return {
+          ...profile,
+          name: user.name,
+          email: user.email,
+          status: 'active', // You can add logic for status if needed
+          verified: true // You can add logic for verification if needed
+        };
+      } else {
+        const names = user.name ? user.name.split(' ') : ['', ''];
+        return {
+          user_id: user.id,
+          first_name: names[0] || '',
+          last_name: names.slice(1).join(' ') || '',
+          email: user.email,
+          phone: '',
+          age: null,
+          nic_number: '',
+          address: '',
+          city: '',
+          country: 'Sri Lanka',
+          bio: '',
+          profile_image: null,
+          location_lat: null,
+          location_lng: null,
+          location_address: '',
+          name: user.name,
+          status: 'pending',
+          verified: false
+        };
+      }
+    });
+
+    res.json(customers);
+  } catch (error) {
+    console.error('Fetch all customers error:', error);
+    res.status(500).json({ error: 'Failed to fetch customers: ' + error.message });
+  }
+});
+
 // If running as standalone server
 if (require.main === module) {
   const app = express();

@@ -109,51 +109,10 @@ const AdminPortal = ({ user, onLogout }) => {
     }
   ]);
 
-  // Mock data for customers
-  const [customers, setCustomers] = useState([
-    {
-      id: 1,
-      name: 'Saman Silva',
-      email: 'saman@email.com',
-      phone: '+94 77 987 6543',
-      location: 'Colombo',
-      avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=100&h=100&fit=crop&crop=face',
-      status: 'active',
-      joinDate: '2023-05-10',
-      totalOrders: 28,
-      totalSpent: 125000,
-      lastOrder: '2024-01-28',
-      verified: true
-    },
-    {
-      id: 2,
-      name: 'Malini Jayawardena',
-      email: 'malini@email.com',
-      phone: '+94 71 876 5432',
-      location: 'Gampaha',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face',
-      status: 'active',
-      joinDate: '2023-08-22',
-      totalOrders: 15,
-      totalSpent: 68000,
-      lastOrder: '2024-01-25',
-      verified: true
-    },
-    {
-      id: 3,
-      name: 'Ranjan Kumar',
-      email: 'ranjan@email.com',
-      phone: '+94 75 765 4321',
-      location: 'Negombo',
-      avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop&crop=face',
-      status: 'suspended',
-      joinDate: '2023-12-01',
-      totalOrders: 5,
-      totalSpent: 22000,
-      lastOrder: '2024-01-10',
-      verified: false
-    }
-  ]);
+  // Customers state: now loaded from backend
+  const [customers, setCustomers] = useState([]);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const [errorCustomers, setErrorCustomers] = useState(null);
 
   // Replace mock products with real state
   const [products, setProducts] = useState([]);
@@ -292,10 +251,30 @@ const AdminPortal = ({ user, onLogout }) => {
     }
   };
 
+  // Fetch customers from backend
+  const fetchCustomers = async () => {
+    setLoadingCustomers(true);
+    setErrorCustomers(null);
+    try {
+      // Adjust API endpoint if needed
+      const response = await fetch('http://localhost:3000/api/customer/all');
+      if (!response.ok) {
+        throw new Error('Failed to fetch customers');
+      }
+      const data = await response.json();
+      setCustomers(data);
+    } catch (err) {
+      setErrorCustomers(err.message);
+    } finally {
+      setLoadingCustomers(false);
+    }
+  };
+
   // Add useEffect to fetch data on component mount
   useEffect(() => {
     fetchProducts();
     fetchProductStats();
+    fetchCustomers();
   }, []);
 
   // Calculate dashboard statistics
@@ -341,25 +320,23 @@ const AdminPortal = ({ user, onLogout }) => {
     setShowUserModal(true);
   };
 
-  // Filter and sort users
+  // Filter and sort users (add support for customers with more fields)
   const filterAndSortUsers = (users) => {
     let filtered = users.filter(user => {
-      const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          user.location.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = (user.name?.toLowerCase() || `${user.first_name} ${user.last_name}`.toLowerCase()).includes(searchQuery.toLowerCase()) ||
+        (user.email?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+        (user.location?.toLowerCase() || user.city?.toLowerCase() || '').includes(searchQuery.toLowerCase());
       const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
       return matchesSearch && matchesStatus;
     });
 
     return filtered.sort((a, b) => {
-      let aValue = a[sortBy];
-      let bValue = b[sortBy];
-      
+      let aValue = a[sortBy] || a.first_name || '';
+      let bValue = b[sortBy] || b.first_name || '';
       if (typeof aValue === 'string') {
         aValue = aValue.toLowerCase();
         bValue = bValue.toLowerCase();
       }
-      
       if (sortOrder === 'asc') {
         return aValue > bValue ? 1 : -1;
       } else {
@@ -846,66 +823,88 @@ const AdminPortal = ({ user, onLogout }) => {
                   </div>
                 </CardWrapper>
 
-                {/* Customers Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {filterAndSortUsers(customers).map((customer) => (
-                    <CardWrapper key={customer.id} className="overflow-hidden hover:shadow-xl transition-all">
-                      <div className="p-6">
-                        <div className="flex items-center justify-between mb-4">
-                          <img src={customer.avatar} alt={customer.name} className="w-16 h-16 rounded-full" />
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            customer.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                          }`}>
-                            {customer.status}
-                          </span>
-                        </div>
-                        <h3 className="font-bold text-gray-800 text-lg mb-1">{customer.name}</h3>
-                        <p className="text-gray-600 text-sm mb-3">{customer.email}</p>
-                        
-                        <div className="space-y-2 mb-4">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Location:</span>
-                            <span className="font-semibold">{customer.location}</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Orders:</span>
-                            <span className="font-semibold">{customer.totalOrders}</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Total Spent:</span>
-                            <span className="font-semibold text-green-600">Rs.{customer.totalSpent.toLocaleString()}</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Verified:</span>
-                            <span>{customer.verified ? 
-                              <FaCheckCircle className="text-green-600" /> : 
-                              <FaTimesCircle className="text-gray-400" />
-                            }</span>
-                          </div>
-                        </div>
+                {/* Loading/Error State */}
+                {loadingCustomers && (
+                  <CardWrapper className="p-12">
+                    <div className="text-center">
+                      <FaClock className="text-4xl text-green-600 mx-auto mb-4 animate-spin" />
+                      <p className="text-gray-600">Loading customers...</p>
+                    </div>
+                  </CardWrapper>
+                )}
+                {errorCustomers && (
+                  <CardWrapper className="p-6 bg-red-50 border border-red-200">
+                    <div className="flex items-center">
+                      <FaExclamationTriangle className="text-red-600 mr-2" />
+                      <p className="text-red-700">{errorCustomers}</p>
+                    </div>
+                  </CardWrapper>
+                )}
 
-                        <div className="flex space-x-2">
-                          <button 
-                            onClick={() => viewUserDetails(customer, 'customer')}
-                            className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-3 rounded-lg text-sm flex items-center justify-center"
-                          >
-                            <FaEye className="mr-1" /> View
-                          </button>
-                          <button 
-                            onClick={() => handleStatusChange(customer.id, customer.status === 'active' ? 'suspended' : 'active', 'customer')}
-                            className={`flex-1 py-2 px-3 rounded-lg text-sm ${
-                              customer.status === 'active'
-                                ? 'bg-orange-600 hover:bg-orange-700 text-white'
-                                : 'bg-green-600 hover:bg-green-700 text-white'
-                            }`}
-                          >
-                            {customer.status === 'active' ? 'Suspend' : 'Activate'}
-                          </button>
+                {/* Customers Grid */}
+                {!loadingCustomers && !errorCustomers && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {filterAndSortUsers(customers).map((customer) => (
+                      <CardWrapper key={customer.user_id || customer.id} className="overflow-hidden hover:shadow-xl transition-all">
+                        <div className="p-6">
+                          <div className="flex items-center justify-between mb-4">
+                            <img src={customer.profile_image || customer.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(customer.first_name + ' ' + customer.last_name)} alt={customer.first_name} className="w-16 h-16 rounded-full" />
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                              customer.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }`}>
+                              {customer.status || (customer.email ? 'active' : 'pending')}
+                            </span>
+                          </div>
+                          <h3 className="font-bold text-gray-800 text-lg mb-1">{customer.first_name} {customer.last_name}</h3>
+                          <p className="text-gray-600 text-sm mb-3">{customer.email}</p>
+                          <div className="space-y-2 mb-4">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-600">Phone:</span>
+                              <span className="font-semibold">{customer.phone || '-'}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-600">Location:</span>
+                              <span className="font-semibold">{customer.city || '-'}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-600">NIC:</span>
+                              <span className="font-semibold">{customer.nic_number || '-'}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-600">Age:</span>
+                              <span className="font-semibold">{customer.age ? customer.age + ' years' : '-'}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-600">Verified:</span>
+                              <span>{customer.verified ? 
+                                <FaCheckCircle className="text-green-600" /> : 
+                                <FaTimesCircle className="text-gray-400" />
+                              }</span>
+                            </div>
+                          </div>
+                          <div className="flex space-x-2">
+                            <button 
+                              onClick={() => viewUserDetails(customer, 'customer')}
+                              className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-3 rounded-lg text-sm flex items-center justify-center"
+                            >
+                              <FaEye className="mr-1" /> View
+                            </button>
+                            <button 
+                              onClick={() => handleStatusChange(customer.id, customer.status === 'active' ? 'suspended' : 'active', 'customer')}
+                              className={`flex-1 py-2 px-3 rounded-lg text-sm ${
+                                customer.status === 'active'
+                                  ? 'bg-orange-600 hover:bg-orange-700 text-white'
+                                  : 'bg-green-600 hover:bg-green-700 text-white'
+                              }`}
+                            >
+                              {customer.status === 'active' ? 'Suspend' : 'Activate'}
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    </CardWrapper>
-                  ))}
-                </div>
+                      </CardWrapper>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -1725,20 +1724,20 @@ const AdminPortal = ({ user, onLogout }) => {
                 ) : (
                   <>
                     <div className="bg-green-50 p-4 rounded-lg border border-green-100">
-                      <p className="text-gray-600 text-sm">Total Orders</p>
-                      <p className="text-xl font-bold text-gray-800">{selectedUser.totalOrders}</p>
+                      <p className="text-gray-600 text-sm">Phone</p>
+                      <p className="text-xl font-bold text-gray-800">{selectedUser.phone || '-'}</p>
                     </div>
                     <div className="bg-green-50 p-4 rounded-lg border border-green-100">
-                      <p className="text-gray-600 text-sm">Total Spent</p>
-                      <p className="text-xl font-bold text-gray-800">Rs.{selectedUser.totalSpent.toLocaleString()}</p>
+                      <p className="text-gray-600 text-sm">NIC</p>
+                      <p className="text-xl font-bold text-gray-800">{selectedUser.nic_number || '-'}</p>
                     </div>
                     <div className="bg-green-50 p-4 rounded-lg border border-green-100">
-                      <p className="text-gray-600 text-sm">Last Order</p>
-                      <p className="text-xl font-bold text-gray-800">{selectedUser.lastOrder}</p>
+                      <p className="text-gray-600 text-sm">Age</p>
+                      <p className="text-xl font-bold text-gray-800">{selectedUser.age ? selectedUser.age + ' years' : '-'}</p>
                     </div>
                     <div className="bg-green-50 p-4 rounded-lg border border-green-100">
-                      <p className="text-gray-600 text-sm">Status</p>
-                      <p className="text-xl font-bold text-gray-800">{selectedUser.status}</p>
+                      <p className="text-gray-600 text-sm">City</p>
+                      <p className="text-xl font-bold text-gray-800">{selectedUser.city || '-'}</p>
                     </div>
                   </>
                 )}
