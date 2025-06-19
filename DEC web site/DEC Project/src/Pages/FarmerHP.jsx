@@ -10,6 +10,7 @@ import {
   FaExclamationTriangle, FaInfoCircle, FaLightbulb, FaMedal, FaTrophy, FaAward, FaBug, FaTint,
   FaChartLine, FaHandHoldingUsd
 } from 'react-icons/fa';
+import FarmerProfile from './FarmerProfile';
 
 const ModernFarmerPortal = ({ user, onLogout }) => {
   // Full viewport setup
@@ -69,6 +70,9 @@ const ModernFarmerPortal = ({ user, onLogout }) => {
   const [formError, setFormError] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showProfile, setShowProfile] = useState(false);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const [farmerProfile, setFarmerProfile] = useState(null);
 
   // Data Arrays
   const categories = [
@@ -125,6 +129,7 @@ const ModernFarmerPortal = ({ user, onLogout }) => {
     window.addEventListener('scroll', handleScroll);
     document.addEventListener('click', handleClickOutside);
     fetchProducts();
+    fetchProfile();
     
     return () => {
       window.removeEventListener('scroll', handleScroll);
@@ -132,38 +137,30 @@ const ModernFarmerPortal = ({ user, onLogout }) => {
     };
   }, []);
 
+  // Fetch products from backend for this farmer
   const fetchProducts = async () => {
-    // Simulated products with Sri Lankan agricultural items
-    setProducts([
-      { 
-        id: 1, name: 'Fresh Tomatoes', price: 80, category: 'Vegetables', 
-        quantity: 50, unit: 'kg', status: 'active', sales: 120, views: 450, 
-        image_url: 'https://images.unsplash.com/photo-1546470427-e26264be0b11?w=400&h=300&fit=crop', 
-        description: 'Fresh organic tomatoes from Galle farms', rating: 4.5, 
-        featured: true, organic: true
-      },
-      { 
-        id: 2, name: 'Ceylon Cinnamon', price: 2500, category: 'Spices', 
-        quantity: 20, unit: 'kg', status: 'active', sales: 45, views: 230, 
-        image_url: 'https://images.unsplash.com/photo-1563743983221-8fa7caa49e8d?w=400&h=300&fit=crop', 
-        description: 'Premium quality Ceylon cinnamon sticks', rating: 4.9,
-        featured: true, organic: true
-      },
-      { 
-        id: 3, name: 'King Coconuts', price: 60, category: 'Coconut Products', 
-        quantity: 200, unit: 'pieces', status: 'active', sales: 350, views: 890, 
-        image_url: 'https://images.unsplash.com/photo-1560769680-ba2f3767c785?w=400&h=300&fit=crop', 
-        description: 'Fresh king coconuts, rich in electrolytes', rating: 4.7,
-        featured: false, organic: true
-      },
-      {
-        id: 4, name: 'Ceylon Tea', price: 800, category: 'Tea',
-        quantity: 30, unit: 'kg', status: 'active', sales: 200, views: 560,
-        image_url: 'https://images.unsplash.com/photo-1564890369478-c89ca6d9cde9?w=400&h=300&fit=crop',
-        description: 'Premium Ceylon black tea from Nuwara Eliya', rating: 4.8,
-        featured: true, organic: false
-      }
-    ]);
+    setIsLoadingProducts(true);
+    try {
+      const farmerId = user?.id || 1;
+      const res = await fetch(`http://localhost:5001/api/products?farmer_id=${farmerId}`);
+      const data = await res.json();
+      setProducts(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setProducts([]);
+    }
+    setIsLoadingProducts(false);
+  };
+
+  // Fetch farmer profile from backend
+  const fetchProfile = async () => {
+    try {
+      const userId = user?.id || 1;
+      const res = await fetch(`http://localhost:5002/api/farmer/profile/${userId}`);
+      const data = await res.json();
+      setFarmerProfile(data);
+    } catch (err) {
+      setFarmerProfile(null);
+    }
   };
 
   // Calculate dashboard statistics
@@ -207,31 +204,70 @@ const ModernFarmerPortal = ({ user, onLogout }) => {
     setTimeout(() => setShowSuccess(false), 3000);
   };
 
+  // Add/Edit product (send to backend)
   const handleSubmitProduct = async (e) => {
     e.preventDefault();
     setIsUploading(true);
-    
+
     // Validation
     if (!productForm.name || !productForm.price || !productForm.category || !productForm.stock || !productForm.unit || !productForm.description) {
       setFormError('Please fill in all required fields');
       setIsUploading(false);
       return;
     }
-    
-    // Simulate upload
-    setTimeout(() => {
+
+    try {
+      const farmerId = user?.id || 1;
+      const formData = new FormData();
+      formData.append('farmer_id', farmerId);
+      formData.append('name', productForm.name);
+      formData.append('price', productForm.price);
+      formData.append('quantity', productForm.stock);
+      formData.append('category', productForm.category);
+      formData.append('unit', productForm.unit);
+      formData.append('description', productForm.description);
+      formData.append('status', productForm.status);
+      // Optionally add organic/featured as custom fields if backend supports
+      // formData.append('organic', productForm.organic ? '1' : '0');
+      // formData.append('featured', productForm.featured ? '1' : '0');
+      for (const img of productForm.images) {
+        formData.append('images', img);
+      }
+
+      let url = 'http://localhost:5001/api/products/upload';
+      let method = 'POST';
+      if (editingProduct) {
+        url = `http://localhost:5001/api/products/${editingProduct.id}`;
+        method = 'PUT';
+      }
+
+      const res = await fetch(url, {
+        method,
+        body: formData
+      });
+
+      const result = await res.json();
+      if (!result.success && !result.productId) {
+        setFormError(result.error || 'Failed to save product');
+        setIsUploading(false);
+        return;
+      }
+
       setShowAddProduct(false);
       setEditingProduct(null);
-      setProductForm({ 
-        name: '', price: '', category: '', stock: '', unit: '', 
-        description: '', images: [], status: 'active', organic: false, featured: false 
+      setProductForm({
+        name: '', price: '', category: '', stock: '', unit: '',
+        description: '', images: [], status: 'active', organic: false, featured: false
       });
       setPreviewImages([]);
       setFormError('');
       showSuccessNotification(editingProduct ? 'Product updated successfully!' : 'Product uploaded successfully!');
       setIsUploading(false);
       fetchProducts();
-    }, 1500);
+    } catch (err) {
+      setFormError('Failed to save product');
+      setIsUploading(false);
+    }
   };
 
   const editProduct = (product) => {
@@ -252,24 +288,40 @@ const ModernFarmerPortal = ({ user, onLogout }) => {
     setShowAddProduct(true);
   };
 
+  // Delete product (call backend)
   const deleteProduct = async (id) => {
     const product = products.find(p => p.id === id);
     if (!product) return;
-    
+
     if (window.confirm(`Are you sure you want to delete "${product.name}"? This action cannot be undone.`)) {
-      setProducts(prev => prev.filter(p => p.id !== id));
-      showSuccessNotification(`Product "${product.name}" deleted successfully!`);
-      setShowDropdownId(null);
+      try {
+        await fetch(`http://localhost:5001/api/products/${id}`, { method: 'DELETE' });
+        showSuccessNotification(`Product "${product.name}" deleted successfully!`);
+        setShowDropdownId(null);
+        fetchProducts();
+      } catch (err) {
+        // Optionally show error
+      }
     }
   };
 
+  // Toggle product status (call backend)
   const toggleProductStatus = async (id) => {
     const product = products.find(p => p.id === id);
     if (!product) return;
-    
+
     const newStatus = product.status === 'active' ? 'inactive' : 'active';
-    setProducts(prev => prev.map(p => p.id === id ? { ...p, status: newStatus } : p));
-    showSuccessNotification(`Product ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully!`);
+    try {
+      await fetch(`http://localhost:5001/api/products/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      showSuccessNotification(`Product ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully!`);
+      fetchProducts();
+    } catch (err) {
+      // Optionally show error
+    }
   };
 
   const markNotificationAsRead = (id) => {
@@ -281,19 +333,28 @@ const ModernFarmerPortal = ({ user, onLogout }) => {
     setShowNotifications(false);
   };
 
-  // Filter and sort products
+  // Filter and sort products (use backend data)
   const filteredProducts = products
     .filter(p => filterCategory === 'all' || p.category === filterCategory)
-    .filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .filter(p => p.name?.toLowerCase().includes(searchQuery.toLowerCase()))
     .sort((a, b) => {
       switch (sortBy) {
-        case 'newest': return b.id - a.id;
-        case 'price-low': return a.price - b.price;
-        case 'price-high': return b.price - a.price;
-        case 'popular': return b.views - a.views;
+        case 'newest': return (b.id || 0) - (a.id || 0);
+        case 'price-low': return (a.price || 0) - (b.price || 0);
+        case 'price-high': return (b.price || 0) - (a.price || 0);
+        case 'popular': return (b.views || 0) - (a.views || 0);
         default: return 0;
       }
     });
+
+  if (showProfile) {
+    return (
+      <FarmerProfile
+        user={user}
+        goBack={() => setShowProfile(false)}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50" 
@@ -417,9 +478,15 @@ const ModernFarmerPortal = ({ user, onLogout }) => {
                   <p className="text-xs text-gray-600">{currentUser.location}</p>
                 </div>
                 <img 
-                  src={currentUser.avatar} 
+                  src={
+                    farmerProfile?.profile_image
+                      ? farmerProfile.profile_image
+                      : (user?.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face')
+                  }
                   alt="Profile" 
                   className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl ring-2 ring-emerald-500/30 hover:ring-emerald-500 transition-all cursor-pointer" 
+                  onClick={() => setShowProfile(true)}
+                  title="View Profile"
                 />
               </div>
             </div>
@@ -660,7 +727,7 @@ const ModernFarmerPortal = ({ user, onLogout }) => {
                   <div className="flex justify-between items-center mb-6">
                     <div>
                       <h2 className="text-xl lg:text-2xl font-bold text-gray-800">Featured Products</h2>
-                      <p className="text-gray-600 text-sm mt-1">Your top performing products</p>
+                      <p className="text-gray-600 text-sm mt-1">Your latest products</p>
                     </div>
                     <button 
                       onClick={() => setActiveTab('products')}
@@ -671,54 +738,71 @@ const ModernFarmerPortal = ({ user, onLogout }) => {
                   </div>
                   
                   <div className="relative overflow-hidden">
-                    <div className="flex space-x-4 animate-scroll-x hover:pause">
-                      {[...products.filter(p => p.featured), ...products.filter(p => p.featured)].map((product, index) => (
-                        <div
-                          key={`${product.id}-${index}`}
-                          className="flex-shrink-0 w-64 bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden group"
+                    {products.length === 0 ? (
+                      <div className="text-center py-12">
+                        <FaBox className="text-4xl text-gray-300 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-700">No products available</h3>
+                        <p className="text-gray-500 mt-2">Add your first product to get started</p>
+                        <button 
+                          onClick={() => setShowAddProduct(true)}
+                          className="mt-4 bg-gradient-to-r from-emerald-500 to-green-600 text-white px-4 py-2 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 flex items-center mx-auto"
                         >
-                          <div className="relative h-40 overflow-hidden">
-                            <img 
-                              src={product.image_url} 
-                              alt={product.name} 
-                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                            {product.organic && (
-                              <span className="absolute top-3 left-3 px-2 py-1 bg-green-500 text-white text-xs rounded-lg flex items-center">
-                                <FaLeaf className="mr-1 text-xs" /> Organic
+                          <FaPlus className="mr-2" /> Add Product
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex space-x-4 overflow-x-auto pb-4">
+                        {products.slice(0, 6).map((product) => (
+                          <div
+                            key={product.id}
+                            className="flex-shrink-0 w-64 bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden group"
+                          >
+                            <div className="relative h-40 overflow-hidden">
+                              <img 
+                                src={product.image_url || 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&h=300&fit=crop'} 
+                                alt={product.name} 
+                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                                onError={(e) => {
+                                  e.target.src = 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&h=300&fit=crop';
+                                }}
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                              {product.organic && (
+                                <span className="absolute top-3 left-3 px-2 py-1 bg-green-500 text-white text-xs rounded-lg flex items-center">
+                                  <FaLeaf className="mr-1 text-xs" /> Organic
+                                </span>
+                              )}
+                              <span className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-semibold ${
+                                product.status === 'active' 
+                                  ? 'bg-emerald-500 text-white' 
+                                  : 'bg-gray-400 text-white'
+                              }`}>
+                                {product.status || 'active'}
                               </span>
-                            )}
-                            <span className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-semibold ${
-                              product.status === 'active' 
-                                ? 'bg-emerald-500 text-white' 
-                                : 'bg-gray-400 text-white'
-                            }`}>
-                              {product.status}
-                            </span>
-                          </div>
-                          <div className="p-4">
-                            <div className="flex justify-between items-start">
-                              <h3 className="font-semibold text-gray-800 truncate">{product.name}</h3>
-                              <p className="text-emerald-600 font-bold flex items-center">
-                                <FaRupeeSign className="mr-1" /> {product.price}
-                                <span className="text-xs text-gray-500 ml-1">/{product.unit}</span>
-                              </p>
                             </div>
-                            <p className="text-xs text-gray-500 mt-1">{product.category}</p>
-                            <div className="flex justify-between items-center mt-3">
-                              <div className="flex items-center">
-                                <FaStar className="text-yellow-400 text-xs mr-1" />
-                                <span className="text-xs font-medium">{product.rating}</span>
+                            <div className="p-4">
+                              <div className="flex justify-between items-start mb-2">
+                                <h3 className="font-semibold text-gray-800 truncate flex-1 mr-2">{product.name}</h3>
+                                <p className="text-emerald-600 font-bold flex items-center whitespace-nowrap">
+                                  <FaRupeeSign className="mr-1" /> {product.price}
+                                  <span className="text-xs text-gray-500 ml-1">/{product.unit || 'kg'}</span>
+                                </p>
                               </div>
-                              <div className="text-xs text-gray-500">
-                                {product.sales} sold
+                              <p className="text-xs text-gray-500 mb-3">{product.category}</p>
+                              <div className="flex justify-between items-center">
+                                <div className="flex items-center">
+                                  <FaStar className="text-yellow-400 text-xs mr-1" />
+                                  <span className="text-xs font-medium">{product.rating || '4.5'}</span>
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  Stock: {product.quantity || 0}
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -788,7 +872,11 @@ const ModernFarmerPortal = ({ user, onLogout }) => {
                 </div>
 
                 {/* Products Grid */}
-                {filteredProducts.length === 0 ? (
+                {isLoadingProducts ? (
+                  <div className="flex justify-center items-center py-12">
+                    <span className="text-emerald-600 font-semibold">Loading products...</span>
+                  </div>
+                ) : filteredProducts.length === 0 ? (
                   <div className="bg-white rounded-2xl shadow-md p-8 text-center">
                     <div className="max-w-md mx-auto">
                       <FaBox className="text-4xl text-gray-300 mx-auto mb-4" />
@@ -879,7 +967,7 @@ const ModernFarmerPortal = ({ user, onLogout }) => {
                         <div className="p-4">
                           <div className="flex justify-between items-start">
                             <h3 className="font-semibold text-gray-800 truncate">{product.name}</h3>
-                            <p className="text-emerald-600 font-bold flex items-center whitespace-nowrap">
+                            <p className="text-emerald-600 font-bold flex items-center">
                               <FaRupeeSign className="mr-1" /> {product.price}
                               <span className="text-xs text-gray-500 ml-1">/{product.unit}</span>
                             </p>
@@ -1433,17 +1521,10 @@ const ModernFarmerPortal = ({ user, onLogout }) => {
                       className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-500 overflow-hidden group"
                     >
                       <div className={`absolute inset-0 bg-gradient-to-r ${stat.color} opacity-0 group-hover:opacity-10 transition-opacity duration-500`} />
-                      <div className="relative z-10">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className={`p-3 rounded-xl bg-gradient-to-r ${stat.color} shadow-lg`}>
-                            <stat.icon className="text-white text-xl" />
-                          </div>
-                          <span className="text-xs text-green-600 font-semibold bg-green-50 px-2 py-1 rounded-lg">
-                            {stat.change}
-                          </span>
-                        </div>
-                        <p className="text-gray-600 text-sm font-medium">{stat.title}</p>
-                        <p className="text-xl lg:text-2xl font-bold text-gray-800 mt-1">{stat.value}</p>
+                      <div className="relative z-10 group-hover:text-white transition-colors duration-500">
+                        <stat.icon className="text-3xl mb-3" />
+                        <h3 className="font-semibold text-lg">{stat.title}</h3>
+                        <p className="text-sm opacity-80">{stat.change}</p>
                       </div>
                     </div>
                   ))}

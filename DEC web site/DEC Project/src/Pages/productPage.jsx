@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, ShoppingCart, Heart, Star, Leaf, Truck, Shield, Plus, Minus, Menu, X, User, Search, Award, Clock, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ShoppingCart, Heart, Star, Leaf, Truck, Shield, Plus, Minus, Menu, X, User, Search, Award, Clock, Users, ArrowLeft } from 'lucide-react';
 
-const FarmingFoodsPage = () => {
+const FarmingFoodsPage = ({ onBack }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [cart, setCart] = useState([]);
   const [favorites, setFavorites] = useState([]);
@@ -9,6 +9,11 @@ const FarmingFoodsPage = () => {
   const [notification, setNotification] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
+
+  // NEW: Products state for fetched products
+  const [products, setProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
 
   // ===== VIEWPORT SETUP & EVENT LISTENERS =====
   useEffect(() => {
@@ -30,95 +35,26 @@ const FarmingFoodsPage = () => {
     };
   }, []);
 
-  // Hardcoded products with enhanced data
-  const products = React.useMemo(() => [
-    {
-      id: 1,
-      name: "Organic Tomatoes",
-      price: 4.99,
-      unit: "per kg",
-      image: "https://images.unsplash.com/photo-1546094096-0df4bcaaa337?w=800&q=80",
-      description: "Fresh, locally grown organic tomatoes bursting with flavor and packed with nutrients",
-      rating: 4.8,
-      reviews: 124,
-      badge: "Bestseller",
-      farm: "Green Valley Farms",
-      harvest: "Daily Fresh",
-      category: "vegetables"
-    },
-    {
-      id: 2,
-      name: "Farm Fresh Eggs",
-      price: 6.49,
-      unit: "per dozen",
-      image: "https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=800&q=80",
-      description: "Free-range eggs from happy chickens raised on natural pastures",
-      rating: 4.9,
-      reviews: 89,
-      badge: "Premium",
-      farm: "Sunny Side Ranch",
-      harvest: "Collected Daily",
-      category: "dairy"
-    },
-    {
-      id: 3,
-      name: "Organic Honey",
-      price: 12.99,
-      unit: "per jar",
-      image: "https://images.unsplash.com/photo-1587049352846-4a222e784ac4?w=800&q=80",
-      description: "Pure, raw honey from local beekeepers with no artificial additives",
-      rating: 5.0,
-      reviews: 156,
-      badge: "Limited",
-      farm: "Wildflower Apiary",
-      harvest: "Seasonal",
-      category: "pantry"
-    },
-    {
-      id: 4,
-      name: "Fresh Carrots",
-      price: 3.49,
-      unit: "per kg",
-      image: "https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=800&q=80",
-      description: "Crispy, sweet carrots perfect for snacking or cooking",
-      rating: 4.7,
-      reviews: 67,
-      badge: "New",
-      farm: "Orange Grove Farm",
-      harvest: "Weekly",
-      category: "vegetables"
-    },
-    {
-      id: 5,
-      name: "Artisan Bread",
-      price: 8.99,
-      unit: "per loaf",
-      image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&q=80",
-      description: "Handcrafted sourdough bread made with organic flour",
-      rating: 4.9,
-      reviews: 203,
-      badge: "Artisan",
-      farm: "Village Bakery",
-      harvest: "Daily",
-      category: "bakery"
-    },
-    {
-      id: 6,
-      name: "Organic Apples",
-      price: 5.99,
-      unit: "per kg",
-      image: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=800&q=80",
-      description: "Crisp, juicy apples grown without pesticides",
-      rating: 4.8,
-      reviews: 134,
-      badge: "Seasonal",
-      farm: "Mountain Orchards",
-      harvest: "Autumn Fresh",
-      category: "fruits"
-    }
-  ], []);
+  // Fetch products from backend API
+  useEffect(() => {
+    setLoadingProducts(true);
+    fetch('http://localhost:5001/api/products')
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch products');
+        return res.json();
+      })
+      .then(data => {
+        setProducts(data);
+        setLoadingProducts(false);
+        setFetchError(null);
+      })
+      .catch(err => {
+        setFetchError('Could not load products.');
+        setLoadingProducts(false);
+      });
+  }, []);
 
-  // Enhanced carousel cards for features
+  // Hardcoded products with enhanced data
   const featureCards = [
     {
       id: 1,
@@ -170,7 +106,7 @@ const FarmingFoodsPage = () => {
     return () => clearInterval(timer);
   }, [featureCards.length]);
 
-  // Initialize quantities
+  // Initialize quantities when products are loaded
   useEffect(() => {
     const initialQuantities = {};
     products.forEach(p => {
@@ -296,8 +232,17 @@ const FarmingFoodsPage = () => {
       <header className="bg-white shadow-sm sticky top-0 z-40">
         <div className="w-full px-3 sm:px-4 lg:px-6 xl:px-8">
           <div className="flex items-center justify-between h-14 sm:h-16">
-            {/* Logo */}
+            {/* Back Button and Logo */}
             <div className="flex items-center gap-2">
+              {onBack && (
+                <button
+                  onClick={onBack}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors mr-2"
+                  title="Back to Home"
+                >
+                  <ArrowLeft className="text-base sm:text-lg text-gray-700" />
+                </button>
+              )}
               <Leaf className="text-xl sm:text-2xl mr-2 text-green-600" />
               <div>
                 <span className="hidden sm:inline text-base sm:text-lg lg:text-xl font-bold text-gray-900">FarmFresh Market</span>
@@ -305,8 +250,8 @@ const FarmingFoodsPage = () => {
               </div>
             </div>
 
-
-            {/* Cart Button */}
+            <div className="flex items-center gap-2">
+              {/* Cart Button */}
               <button 
                 onClick={() => setCartOpen(!cartOpen)}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative"
@@ -332,6 +277,7 @@ const FarmingFoodsPage = () => {
               </button>
             </div>
           </div>
+        </div>
         
 
         
@@ -557,94 +503,100 @@ const FarmingFoodsPage = () => {
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-6 sm:mb-8 text-center">Featured Products</h2>
           
           {/* Products Grid - Responsive */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-            {products.map((product) => (
-              <div key={product.id} className="product-card bg-white rounded-2xl shadow-lg overflow-hidden group">
-                {/* Product Image */}
-                <div className="relative h-40 sm:h-44 lg:h-48 overflow-hidden">
-                  <img 
-                    src={product.image} 
-                    alt={product.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    onError={(e) => {
-                      e.target.src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=300&fit=crop';
-                    }}
-                  />
-                  <div className="absolute top-2 sm:top-4 left-2 sm:left-4">
-                    <span className="bg-green-600 text-white px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium">
-                      {product.badge}
-                    </span>
-                  </div>
-                  <button 
-                    onClick={() => toggleFavorite(product.id)}
-                    className="absolute top-2 sm:top-4 right-2 sm:right-4 bg-white/90 backdrop-blur-sm p-1.5 sm:p-2 rounded-full hover:bg-white transition-colors"
-                  >
-                    <Heart 
-                      className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors ${
-                        favorites.includes(product.id) ? 'text-red-500 fill-current' : 'text-gray-600'
-                      }`} 
+          {loadingProducts ? (
+            <div className="text-center py-8 text-gray-500">Loading products...</div>
+          ) : fetchError ? (
+            <div className="text-center py-8 text-red-500">{fetchError}</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+              {products.map((product) => (
+                <div key={product.id} className="product-card bg-white rounded-2xl shadow-lg overflow-hidden group">
+                  {/* Product Image */}
+                  <div className="relative h-40 sm:h-44 lg:h-48 overflow-hidden">
+                    <img 
+                      src={product.image_url || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=300&fit=crop'} 
+                      alt={product.name}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      onError={(e) => {
+                        e.target.src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=300&fit=crop';
+                      }}
                     />
-                  </button>
+                    <div className="absolute top-2 sm:top-4 left-2 sm:left-4">
+                      <span className="bg-green-600 text-white px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium">
+                        {product.category}
+                      </span>
+                    </div>
+                    <button 
+                      onClick={() => toggleFavorite(product.id)}
+                      className="absolute top-2 sm:top-4 right-2 sm:right-4 bg-white/90 backdrop-blur-sm p-1.5 sm:p-2 rounded-full hover:bg-white transition-colors"
+                    >
+                      <Heart 
+                        className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors ${
+                          favorites.includes(product.id) ? 'text-red-500 fill-current' : 'text-gray-600'
+                        }`} 
+                      />
+                    </button>
+                  </div>
+
+                  {/* Product Details */}
+                  <div className="p-3 sm:p-4 lg:p-6">
+                    <div className="mb-2">
+                      <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900">{product.name}</h3>
+                      <p className="text-xs sm:text-sm text-gray-500">{product.seller || 'Local Farmer'}</p>
+                    </div>
+                    
+                    <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 line-clamp-2">{product.description}</p>
+                    
+                    {/* Rating - placeholder since DB doesn't have rating */}
+                    <div className="flex items-center gap-2 mb-3 sm:mb-4 text-xs sm:text-sm">
+                      <div className="flex items-center">
+                        <Star className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-400 fill-current" />
+                        <span className="font-medium ml-1">4.8</span>
+                      </div>
+                      <span className="text-gray-400">(N/A)</span>
+                      <span className="text-gray-400">• {product.created_at ? new Date(product.created_at).toLocaleDateString() : ''}</span>
+                    </div>
+
+                    {/* Price */}
+                    <div className="flex items-center justify-between mb-3 sm:mb-4">
+                      <div>
+                        <span className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">${product.price}</span>
+                        <span className="text-gray-500 text-xs sm:text-sm ml-1">/unit</span>
+                      </div>
+                    </div>
+
+                    {/* Quantity Selector */}
+                    <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+                      <div className="flex items-center border border-gray-300 rounded-lg">
+                        <button 
+                          onClick={() => updateQuantity(product.id, -1)}
+                          className="p-1.5 sm:p-2 hover:bg-gray-100 transition-colors"
+                        >
+                          <Minus className="w-3 h-3 sm:w-4 sm:h-4" />
+                        </button>
+                        <span className="px-3 sm:px-4 font-medium text-sm sm:text-base">{quantities[product.id] || 1}</span>
+                        <button 
+                          onClick={() => updateQuantity(product.id, 1)}
+                          className="p-1.5 sm:p-2 hover:bg-gray-100 transition-colors"
+                        >
+                          <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Add to Cart Button */}
+                    <button 
+                      onClick={() => addToCart(product)}
+                      className="w-full btn-primary text-white font-medium py-2 sm:py-3 rounded-lg transition-colors flex items-center justify-center gap-2 group text-sm sm:text-base"
+                    >
+                      <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110 transition-transform" />
+                      Add to Cart
+                    </button>
+                  </div>
                 </div>
-
-                {/* Product Details */}
-                <div className="p-3 sm:p-4 lg:p-6">
-                  <div className="mb-2">
-                    <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900">{product.name}</h3>
-                    <p className="text-xs sm:text-sm text-gray-500">{product.farm}</p>
-                  </div>
-                  
-                  <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 line-clamp-2">{product.description}</p>
-                  
-                  {/* Rating */}
-                  <div className="flex items-center gap-2 mb-3 sm:mb-4 text-xs sm:text-sm">
-                    <div className="flex items-center">
-                      <Star className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-400 fill-current" />
-                      <span className="font-medium ml-1">{product.rating}</span>
-                    </div>
-                    <span className="text-gray-400">({product.reviews})</span>
-                    <span className="text-gray-400">• {product.harvest}</span>
-                  </div>
-
-                  {/* Price */}
-                  <div className="flex items-center justify-between mb-3 sm:mb-4">
-                    <div>
-                      <span className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">${product.price}</span>
-                      <span className="text-gray-500 text-xs sm:text-sm ml-1">{product.unit}</span>
-                    </div>
-                  </div>
-
-                  {/* Quantity Selector */}
-                  <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
-                    <div className="flex items-center border border-gray-300 rounded-lg">
-                      <button 
-                        onClick={() => updateQuantity(product.id, -1)}
-                        className="p-1.5 sm:p-2 hover:bg-gray-100 transition-colors"
-                      >
-                        <Minus className="w-3 h-3 sm:w-4 sm:h-4" />
-                      </button>
-                      <span className="px-3 sm:px-4 font-medium text-sm sm:text-base">{quantities[product.id] || 1}</span>
-                      <button 
-                        onClick={() => updateQuantity(product.id, 1)}
-                        className="p-1.5 sm:p-2 hover:bg-gray-100 transition-colors"
-                      >
-                        <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Add to Cart Button */}
-                  <button 
-                    onClick={() => addToCart(product)}
-                    className="w-full btn-primary text-white font-medium py-2 sm:py-3 rounded-lg transition-colors flex items-center justify-center gap-2 group text-sm sm:text-base"
-                  >
-                    <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110 transition-transform" />
-                    Add to Cart
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

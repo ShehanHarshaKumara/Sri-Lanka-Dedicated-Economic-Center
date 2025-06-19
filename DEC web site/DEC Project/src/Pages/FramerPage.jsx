@@ -113,7 +113,7 @@ const ModernFarmerMarketplace = () => {
               reviews: 50,
               nutrients: "Rich in vitamins",
               farmingMethod: "Organic"
-            })),
+            })), // <-- closing parenthesis for map
             stats: data.stats
           }));
         } catch (err) {
@@ -134,10 +134,14 @@ const ModernFarmerMarketplace = () => {
     )
     .sort((a, b) => {
       switch(sortBy) {
-        case 'rating': return b.rating - a.rating;
-        case 'followers': return b.followers - a.followers;
-        case 'experience': return parseInt(b.experience) - parseInt(a.experience);
-        default: return 0;
+        case 'rating':
+          return b.rating - a.rating;
+        case 'followers':
+          return b.followers - a.followers;
+        case 'experience':
+          return parseInt(b.experience) - parseInt(a.experience);
+        default:
+          return 0;
       }
     });
 
