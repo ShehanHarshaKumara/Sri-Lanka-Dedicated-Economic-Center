@@ -8,7 +8,7 @@ import {
   Send, Smile, Paperclip, Camera
 } from 'lucide-react';
 
-const ModernFarmerMarketplace = () => {
+const ModernFarmerMarketplace = ({ onBack }) => {
   const [selectedFarmer, setSelectedFarmer] = useState(null);
   const [likedProducts, setLikedProducts] = useState(new Set());
   const [cartItems, setCartItems] = useState(new Map());
@@ -87,7 +87,7 @@ const ModernFarmerMarketplace = () => {
 
   // Fetch single farmer details when selected
   useEffect(() => {
-    if (selectedFarmer) {
+    if (selectedFarmer && selectedFarmer.id) {
       const fetchFarmerDetails = async () => {
         try {
           const response = await fetch(`http://localhost:5003/api/farmers/${selectedFarmer.id}`);
@@ -99,7 +99,7 @@ const ModernFarmerMarketplace = () => {
           // Update the selected farmer with detailed data
           setSelectedFarmer(prev => ({
             ...prev,
-            products: data.products.map(product => ({
+            products: data.products ? data.products.map(product => ({
               id: product.id,
               name: product.name,
               price: product.price,
@@ -113,7 +113,7 @@ const ModernFarmerMarketplace = () => {
               reviews: 50,
               nutrients: "Rich in vitamins",
               farmingMethod: "Organic"
-            })) , // <-- closing parenthesis for map
+            })) : prev.products || [],
             stats: data.stats
           }));
         } catch (err) {
@@ -123,7 +123,7 @@ const ModernFarmerMarketplace = () => {
 
       fetchFarmerDetails();
     }
-  }, [selectedFarmer]);
+  }, [selectedFarmer?.id]);
 
   // Filter and sort farmers
   const filteredFarmers = farmers
@@ -147,6 +147,7 @@ const ModernFarmerMarketplace = () => {
 
   const handleCardClick = (farmer) => {
     setSelectedFarmer(farmer);
+    setShowMessaging(false);
   };
 
   const handleBackClick = () => {
@@ -372,8 +373,8 @@ const ModernFarmerMarketplace = () => {
   // Individual Farmer Profile View
   if (selectedFarmer) {
     const filteredProducts = selectedCategory === 'all' 
-      ? selectedFarmer.products 
-      : selectedFarmer.products.filter(p => p.category === selectedCategory);
+      ? (selectedFarmer.products || [])
+      : (selectedFarmer.products || []).filter(p => p.category === selectedCategory);
 
     return (
       <div className="fixed inset-0 flex flex-col" style={{ 
@@ -526,7 +527,7 @@ const ModernFarmerMarketplace = () => {
             </section>
 
             {/* Achievements with 3D Effect */}
-            {selectedFarmer.achievements.length > 0 && (
+            {selectedFarmer.achievements && selectedFarmer.achievements.length > 0 && (
               <section className="mb-8">
                 <h2 className="text-xl font-bold mb-4" style={{ color: theme.text }}>Achievements</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -786,12 +787,29 @@ const ModernFarmerMarketplace = () => {
       }}>
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold bg-gradient-to-r bg-clip-text text-transparent" 
-              style={{ 
-                backgroundImage: `linear-gradient(45deg, ${theme.primary}, ${theme.secondary})`
-              }}>
-              🌱 FarmConnect
-            </h1>
+            <div className="flex items-center gap-4">
+              {/* Back Button */}
+              {onBack && (
+                <button
+                  onClick={onBack}
+                  className="flex items-center gap-2 p-2 rounded-full transition-all hover:scale-110 transform"
+                  style={{ 
+                    backgroundColor: `${theme.primary}20`,
+                    color: theme.primary
+                  }}
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                  <span className="hidden sm:inline font-medium">Back</span>
+                </button>
+              )}
+              
+              <h1 className="text-2xl font-bold bg-gradient-to-r bg-clip-text text-transparent" 
+                style={{ 
+                  backgroundImage: `linear-gradient(45deg, ${theme.primary}, ${theme.secondary})`
+                }}>
+                🌱 FarmConnect
+              </h1>
+            </div>
             
             <div className="flex items-center gap-2">
               <button 
@@ -844,7 +862,7 @@ const ModernFarmerMarketplace = () => {
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto">
         <div className="container mx-auto px-4 py-6">
-          {/* Hero Banner with 3D Effect - Adjusted without button */}
+          {/* Hero Banner with 3D Effect */}
           <div className="relative rounded-2xl overflow-hidden mb-8 h-48 sm:h-56 transform transition-all duration-300 hover:scale-105" style={{
             boxShadow: `0 20px 50px ${theme.shadow}`
           }}>
@@ -928,7 +946,6 @@ const ModernFarmerMarketplace = () => {
                 {filteredFarmers.map((farmer) => (
                   <div
                     key={farmer.id}
-                    onClick={() => handleCardClick(farmer)}
                     className="rounded-2xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 cursor-pointer group"
                     style={{
                       backgroundColor: theme.card,
@@ -1024,7 +1041,9 @@ const ModernFarmerMarketplace = () => {
                           <MessageCircle className="w-4 h-4" />
                           <span className="hidden sm:inline">Message</span>
                         </button>
-                        <button className="font-medium flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 transform hover:scale-105"
+                        <button 
+                          onClick={() => handleCardClick(farmer)}
+                          className="font-medium flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 transform hover:scale-105"
                           style={{ 
                             color: theme.primary,
                             backgroundColor: `${theme.primary}15`
