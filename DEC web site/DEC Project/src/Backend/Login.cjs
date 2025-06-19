@@ -228,7 +228,7 @@ app.post('/api/auth/admin-login', async (req, res) => {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    // Check if admin exists
+    // Check if admin exists - get name and other details
     const getAdminQuery = 'SELECT * FROM admin WHERE email = ?';
     db.query(getAdminQuery, [email], async (err, results) => {
       if (err) {
@@ -242,7 +242,7 @@ app.post('/api/auth/admin-login', async (req, res) => {
       }
 
       const admin = results[0];
-      console.log('Found admin:', { id: admin.id, email: admin.email });
+      console.log('Found admin:', { id: admin.id, name: admin.name, email: admin.email });
 
       // Check if password is hashed
       const isPasswordHashed = admin.password.startsWith('$2a$') || 
@@ -287,7 +287,7 @@ app.post('/api/auth/admin-login', async (req, res) => {
         }
       });
 
-      console.log('Admin logged in successfully:', { id: admin.id, email: admin.email });
+      console.log('Admin logged in successfully:', { id: admin.id, name: admin.name, email: admin.email });
 
       // Create JWT token with admin role
       const token = jwt.sign(
@@ -295,7 +295,8 @@ app.post('/api/auth/admin-login', async (req, res) => {
           userId: admin.id, 
           email: admin.email, 
           role: 'admin',
-          isAdmin: true
+          isAdmin: true,
+          name: admin.name || 'Administrator'
         },
         JWT_SECRET,
         { expiresIn: '24h' }
@@ -303,7 +304,8 @@ app.post('/api/auth/admin-login', async (req, res) => {
 
       const adminData = {
         id: admin.id,
-        name: 'Administrator',
+        userId: admin.id,
+        name: admin.name || 'Administrator',
         email: admin.email,
         role: 'admin'
       };

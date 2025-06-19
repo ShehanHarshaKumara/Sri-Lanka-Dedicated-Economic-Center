@@ -27,7 +27,7 @@ app.get('/api/products', (req, res) => {
   const sql = `
     SELECT 
       p.id, p.name, p.description, p.price, p.quantity, p.category, p.image_url, 
-      p.address, p.created_at, u.name AS seller, u.id AS seller_id
+      p.address, p.lat, p.lng, p.created_at, u.name AS seller, u.id AS seller_id
     FROM products p
     JOIN users u ON p.farmer_id = u.id
     ORDER BY p.created_at DESC
@@ -37,7 +37,87 @@ app.get('/api/products', (req, res) => {
       console.error('Error fetching products:', err);
       return res.status(500).json({ error: 'Database error' });
     }
-    res.json(results);
+    
+    // Format results with proper image handling
+    const formattedResults = results.map(product => ({
+      ...product,
+      image_url: product.image_url || 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=300&fit=crop'
+    }));
+    
+    res.json(formattedResults);
+  });
+});
+
+// GET all products for admin dashboard
+app.get('/api/admin/products', (req, res) => {
+  const sql = `
+    SELECT 
+      p.id, 
+      p.name, 
+      p.description, 
+      p.price, 
+      p.quantity as stock, 
+      p.category, 
+      p.image_url, 
+      p.address, 
+      p.lat,
+      p.lng,
+      p.created_at,
+      u.name AS farmer,
+      u.id AS farmer_id,
+      'active' as status
+    FROM products p
+    JOIN users u ON p.farmer_id = u.id
+    ORDER BY p.created_at DESC
+  `;
+  
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error('Error fetching admin products:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    // Format the results to match frontend expectations
+    const formattedResults = results.map(product => ({
+      id: product.id,
+      name: product.name,
+      category: product.category,
+      farmer: product.farmer,
+      farmerId: product.farmer_id,
+      price: parseFloat(product.price),
+      stock: parseInt(product.stock) || 0,
+      image: product.image_url || 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=300&fit=crop',
+      status: product.status,
+      sales: 0, // Default to 0 since we don't have order tables yet
+      rating: 4.5, // Default rating
+      description: product.description,
+      address: product.address,
+      lat: product.lat,
+      lng: product.lng,
+      created_at: product.created_at
+    }));
+    
+    res.json(formattedResults);
+  });
+});
+
+// GET product statistics for admin dashboard
+app.get('/api/admin/product-stats', (req, res) => {
+  const statsQuery = `
+    SELECT 
+      COUNT(*) as total_products,
+      COUNT(*) as active_products,
+      COUNT(CASE WHEN p.quantity < 50 THEN 1 END) as low_stock_products,
+      COUNT(DISTINCT p.category) as total_categories
+    FROM products p
+  `;
+  
+  db.query(statsQuery, (err, results) => {
+    if (err) {
+      console.error('Error fetching product stats:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results[0]);
   });
 });
 
