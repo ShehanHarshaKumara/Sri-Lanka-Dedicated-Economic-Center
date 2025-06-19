@@ -446,6 +446,22 @@ router.get('/all', async (req, res) => {
   }
 });
 
+// Delete customer from all tables
+router.delete('/:userId', async (req, res) => {
+  const userId = req.params.userId;
+  try {
+    // Delete from customer_profiles
+    await db.promise().query('DELETE FROM customer_profiles WHERE user_id = ?', [userId]);
+    // Delete from users
+    await db.promise().query('DELETE FROM users WHERE id = ?', [userId]);
+    // TODO: Delete from other related tables if needed (e.g., orders, reviews)
+    res.json({ success: true, message: 'Customer deleted from all tables.' });
+  } catch (error) {
+    console.error('Delete customer error:', error);
+    res.status(500).json({ success: false, error: 'Failed to delete customer: ' + error.message });
+  }
+});
+
 // If running as standalone server
 if (require.main === module) {
   const app = express();
