@@ -379,6 +379,28 @@ const AdminPortal = ({ user, onLogout }) => {
     }
   };
 
+  // Delete customer handler
+  const handleDeleteCustomer = async (user) => {
+    if (!window.confirm('Are you sure you want to delete this customer? This action cannot be undone.')) return;
+    try {
+      const userId = user.user_id || user.id;
+      const response = await fetch(`http://localhost:3000/api/customer/${userId}`, {
+        method: 'DELETE'
+      });
+      const data = await response.json();
+      if (data.success) {
+        setCustomers(prev => prev.filter(c => (c.user_id || c.id) !== userId));
+        setShowUserModal(false);
+        setSelectedUser(null);
+        alert('Customer deleted successfully.');
+      } else {
+        alert(data.error || 'Failed to delete customer.');
+      }
+    } catch (err) {
+      alert('Failed to delete customer: ' + err.message);
+    }
+  };
+
   return (
     <div className="min-h-screen w-full bg-green-50">
       {/* Navigation Header */}
@@ -1769,9 +1791,14 @@ const AdminPortal = ({ user, onLogout }) => {
                 <button className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg flex items-center">
                   {selectedUser.status === 'active' ? 'Suspend Account' : 'Activate Account'}
                 </button>
-                <button className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg flex items-center">
-                  <FaTrash className="mr-2" /> Delete Account
-                </button>
+                {userType === 'customer' && (
+                  <button
+                    className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg flex items-center"
+                    onClick={() => handleDeleteCustomer(selectedUser)}
+                  >
+                    <FaTrash className="mr-2" /> Delete Account
+                  </button>
+                )}
               </div>
             </div>
           </div>
