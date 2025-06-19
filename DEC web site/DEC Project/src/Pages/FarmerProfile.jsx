@@ -1,23 +1,23 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Camera, MapPin, Edit3, Save, X, User, Mail, Phone, Hash, Globe, Sparkles, Award, Sprout } from 'lucide-react';
 
-const FarmerProfile = () => {
+const FarmerProfile = ({ user, goBack }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [loading] = useState(false);
+  const [loading, setLoading] = useState(true); // set loading true initially
   const [saving, setSaving] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [profileData, setProfileData] = useState({
-    firstName: 'John',
-    lastName: 'Farmer',
-    email: 'john.farmer@example.com',
-    phone: '+94771234567',
-    age: '35',
-    nicNumber: '123456789V',
-    experience: '10 years',
-    farmingType: 'Organic Vegetable Farming',
-    address: '123 Farm Road, Gampaha',
-    city: 'Gampaha',
-    bio: 'Passionate organic farmer with over 10 years of experience in sustainable agriculture. Specializing in vegetable cultivation and eco-friendly farming practices.',
+    firstName: user?.firstName || 'John',
+    lastName: user?.lastName || 'Farmer',
+    email: user?.email || 'john.farmer@example.com',
+    phone: user?.phone || '+94771234567',
+    age: user?.age || '35',
+    nicNumber: user?.nicNumber || '123456789V',
+    experience: user?.experience || '10 years',
+    farmingType: user?.farmingType || 'Organic Vegetable Farming',
+    address: user?.address || '123 Farm Road, Gampaha',
+    city: user?.city || 'Gampaha',
+    bio: user?.bio || 'Passionate organic farmer with over 10 years of experience in sustainable agriculture. Specializing in vegetable cultivation and eco-friendly farming practices.',
     profileImage: null,
     existingImage: null,
     imageFile: null
@@ -175,6 +175,45 @@ const FarmerProfile = () => {
     }
   }, [location.lat, location.lng, marker, map]);
 
+  // Fetch profile data from backend on mount
+  useEffect(() => {
+    async function fetchProfile() {
+      setLoading(true);
+      try {
+        const res = await fetch(`http://localhost:5002/api/farmer/profile/${user?.id}`);
+        if (!res.ok) throw new Error('Failed to fetch profile');
+        const data = await res.json();
+        setProfileData({
+          firstName: data.first_name || '',
+          lastName: data.last_name || '',
+          email: data.email || '',
+          phone: data.phone || '',
+          age: data.age || '',
+          nicNumber: data.nic_number || '',
+          experience: data.experience || '',
+          farmingType: data.farming_type || 'Mixed Farming',
+          address: data.address || '',
+          city: data.city || '',
+          bio: data.bio || '',
+          profileImage: data.profile_image || null,
+          existingImage: data.profile_image || null,
+          imageFile: null
+        });
+        setLocation({
+          lat: data.location_lat ? parseFloat(data.location_lat) : 6.9271,
+          lng: data.location_lng ? parseFloat(data.location_lng) : 79.8612,
+          address: data.location_address || 'Gampaha, Western Province, Sri Lanka'
+        });
+      } catch (err) {
+        // fallback to default
+      }
+      setLoading(false);
+    }
+    if (user?.id) fetchProfile();
+    else setLoading(false);
+    // eslint-disable-next-line
+  }, [user?.id]);
+
   const handleInputChange = (field, value) => {
     setProfileData(prev => ({
       ...prev,
@@ -190,7 +229,8 @@ const FarmerProfile = () => {
         setProfileData(prev => ({
           ...prev,
           profileImage: e.target.result,
-          imageFile: file
+          imageFile: file,
+          existingImage: null
         }));
       };
       reader.readAsDataURL(file);
@@ -257,12 +297,65 @@ const FarmerProfile = () => {
 
   const handleSave = async () => {
     setSaving(true);
-    // Simulate API call
-    setTimeout(() => {
-      alert('Profile updated successfully!');
-      setIsEditing(false);
-      setSaving(false);
-    }, 1500);
+    try {
+      const formData = new FormData();
+      formData.append('first_name', profileData.firstName);
+      formData.append('last_name', profileData.lastName);
+      formData.append('email', profileData.email);
+      formData.append('phone', profileData.phone);
+      formData.append('age', profileData.age);
+      formData.append('nic_number', profileData.nicNumber);
+      formData.append('experience', profileData.experience);
+      formData.append('farming_type', profileData.farmingType);
+      formData.append('address', profileData.address);
+      formData.append('city', profileData.city);
+      formData.append('bio', profileData.bio);
+      formData.append('location_lat', location.lat);
+      formData.append('location_lng', location.lng);
+      formData.append('location_address', location.address);
+      formData.append('existing_image', profileData.existingImage || '');
+      if (profileData.imageFile) {
+        formData.append('profile_image', profileData.imageFile);
+      }
+      const res = await fetch(`http://localhost:5002/api/farmer/profile/${user?.id}`, {
+        method: 'POST',
+        body: formData
+      });
+      const result = await res.json();
+      if (result.success) {
+        // Refetch profile to update state
+        const getRes = await fetch(`http://localhost:5002/api/farmer/profile/${user?.id}`);
+        const data = await getRes.json();
+        setProfileData({
+          firstName: data.first_name || '',
+          lastName: data.last_name || '',
+          email: data.email || '',
+          phone: data.phone || '',
+          age: data.age || '',
+          nicNumber: data.nic_number || '',
+          experience: data.experience || '',
+          farmingType: data.farming_type || 'Mixed Farming',
+          address: data.address || '',
+          city: data.city || '',
+          bio: data.bio || '',
+          profileImage: data.profile_image || null,
+          existingImage: data.profile_image || null,
+          imageFile: null
+        });
+        setLocation({
+          lat: data.location_lat ? parseFloat(data.location_lat) : 6.9271,
+          lng: data.location_lng ? parseFloat(data.location_lng) : 79.8612,
+          address: data.location_address || 'Gampaha, Western Province, Sri Lanka'
+        });
+        alert('Profile updated successfully!');
+        setIsEditing(false);
+      } else {
+        alert(result.error || 'Failed to save profile');
+      }
+    } catch (err) {
+      alert('Failed to save profile');
+    }
+    setSaving(false);
   };
 
   const handleCancel = () => {
@@ -285,6 +378,15 @@ const FarmerProfile = () => {
 
   return (
     <div className="fixed inset-0 flex flex-col md:flex-row bg-gray-100 text-gray-800 overflow-hidden font-sans">
+      {/* Back Button */}
+      {goBack && (
+        <button
+          onClick={goBack}
+          className="absolute top-4 left-4 z-50 bg-white border border-gray-200 rounded-xl px-4 py-2 shadow hover:bg-gray-50 transition"
+        >
+          ← Back
+        </button>
+      )}
       
       {/* Left Section - Hidden on Mobile, 50% on Desktop */}
       <div className="hidden md:flex md:w-1/2 relative overflow-hidden">

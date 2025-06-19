@@ -1,5 +1,5 @@
 import  "react";
-import CustomerHp from "./CustomerHp";
+import CustomerHp from "./CustomerHP";
 import Chatbot from "./Chatbot";
 
 function App() {

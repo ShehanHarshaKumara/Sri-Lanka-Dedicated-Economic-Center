@@ -20,7 +20,7 @@ import {
 } from 'react-icons/fa';
 import CustomerProfile from './CustomerProfile';
 
-const EconomicCenter = ({ user, onLogout }) => {
+const EconomicCenter = ({ user, onLogout, onNavigateToProducts, onNavigateToSellers }) => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -35,6 +35,8 @@ const EconomicCenter = ({ user, onLogout }) => {
   const [sortBy, setSortBy] = useState('name');
   const [filterCategory, setFilterCategory] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [userProfileImage, setUserProfileImage] = useState(null);
+  const [profileImageLoading, setProfileImageLoading] = useState(false);
 
   // Fetch products from database
   useEffect(() => {
@@ -189,8 +191,40 @@ const EconomicCenter = ({ user, onLogout }) => {
     name: user?.name || 'Guest User',
     email: user?.email || 'guest@example.com',
     role: user?.role || 'customer',
-    avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b05b?w=100&h=100&fit=crop&crop=face'
+    avatar: userProfileImage || 'https://images.unsplash.com/photo-1494790108755-2616b612b05b?w=100&h=100&fit=crop&crop=face'
   };
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!user?.id) return;
+      
+      try {
+        setProfileImageLoading(true);
+        const userId = user.id || localStorage.getItem('userId');
+        const token = localStorage.getItem('token');
+        
+        const response = await fetch(`http://localhost:3000/api/customer/profile/${userId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const profileData = await response.json();
+          if (profileData.profile_image) {
+            setUserProfileImage(profileData.profile_image);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      } finally {
+        setProfileImageLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, [user?.id]);
 
   const handleProfileClick = () => {
     console.log('Profile button clicked!');
@@ -296,13 +330,24 @@ const EconomicCenter = ({ user, onLogout }) => {
             {/* Desktop Navigation */}
             <div className="hidden lg:flex space-x-6 xl:space-x-8">
               {['Home', 'Products', 'Sellers', 'Services', 'About'].map((item) => (
-                <a 
+                <button
                   key={item}
-                  href={`#${item.toLowerCase()}`}
+                  onClick={() => {
+                    if (item === 'Products' && onNavigateToProducts) {
+                      onNavigateToProducts();
+                    } else if (item === 'Sellers' && onNavigateToSellers) {
+                      onNavigateToSellers();
+                    } else {
+                      const element = document.getElementById(item.toLowerCase());
+                      if (element) {
+                        element.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }
+                  }}
                   className="text-gray-700 hover:text-green-600 font-medium transition-all duration-300 hover:scale-105 text-base"
                 >
                   {item}
-                </a>
+                </button>
               ))}
             </div>
             
@@ -318,17 +363,56 @@ const EconomicCenter = ({ user, onLogout }) => {
                     console.log('Current user data:', user);
                     setProfileOpen(!profileOpen);
                   }}
-                  className="profile-btn p-2 rounded-full bg-green-500/20 hover:bg-green-500/30 transition-colors"
+                  className="profile-btn p-1 rounded-full bg-green-500/20 hover:bg-green-500/30 transition-colors relative"
                 >
-                  <FaUser className="text-green-600 text-base sm:text-lg" />
+                  {profileImageLoading ? (
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gray-200 animate-pulse flex items-center justify-center">
+                      <div className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  ) : userProfileImage ? (
+                    <img 
+                      src={userProfileImage} 
+                      alt="Profile" 
+                      className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border-2 border-green-500/30"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextElementSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div 
+                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-green-100 flex items-center justify-center ${userProfileImage ? 'hidden' : 'flex'}`}
+                  >
+                    <FaUser className="text-green-600 text-sm sm:text-base" />
+                  </div>
                 </button>
                 
                 {profileOpen && (
                   <div className="profile-dropdown absolute right-0 mt-2 w-44 bg-white/95 backdrop-blur-md rounded-lg border border-green-500/10 shadow-xl z-50">
-                    <div className="p-3 border-b border-green-500/10">
-                      <p className="text-gray-800 font-semibold text-sm truncate">{currentUser.name}</p>
-                      <p className="text-gray-600 text-xs truncate">{currentUser.email}</p>
-                      <p className="text-green-600 text-xs">ID: {user?.id || 'No ID'}</p>
+                    <div className="p-3 border-b border-green-500/10 flex items-center space-x-3">
+                      <div className="flex-shrink-0">
+                        {userProfileImage ? (
+                          <img 
+                            src={userProfileImage} 
+                            alt="Profile" 
+                            className="w-10 h-10 rounded-full object-cover border-2 border-green-500/30"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextElementSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div 
+                          className={`w-10 h-10 rounded-full bg-green-100 flex items-center justify-center ${userProfileImage ? 'hidden' : 'flex'}`}
+                        >
+                          <FaUser className="text-green-600 text-sm" />
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-gray-800 font-semibold text-sm truncate">{currentUser.name}</p>
+                        <p className="text-gray-600 text-xs truncate">{currentUser.email}</p>
+                        <p className="text-green-600 text-xs">ID: {user?.id || 'No ID'}</p>
+                      </div>
                     </div>
                     <div className="py-1">
                       <button
@@ -451,14 +535,25 @@ const EconomicCenter = ({ user, onLogout }) => {
           <div className="mobile-menu lg:hidden bg-white/95 backdrop-blur-md border-t border-green-500/10">
             <div className="px-3 py-3">
               {['Home', 'Products', 'Sellers', 'Services', 'About'].map((item) => (
-                <a
+                <button
                   key={item}
-                  href={`#${item.toLowerCase()}`}
-                  className="block py-2 text-gray-700 hover:text-green-600 font-medium transition-colors text-base"
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    if (item === 'Products' && onNavigateToProducts) {
+                      onNavigateToProducts();
+                    } else if (item === 'Sellers' && onNavigateToSellers) {
+                      onNavigateToSellers();
+                    } else {
+                      const element = document.getElementById(item.toLowerCase());
+                      if (element) {
+                        element.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }
+                  }}
+                  className="block w-full text-left py-2 text-gray-700 hover:text-green-600 font-medium transition-colors text-base"
                 >
                   {item}
-                </a>
+                </button>
               ))}
             </div>
           </div>
@@ -599,11 +694,19 @@ const EconomicCenter = ({ user, onLogout }) => {
       {/* Full Width Products Section - Reduced border thickness */}
       <section className="w-full py-12 sm:py-16 bg-white" id="products">
         <div className="w-full px-3 sm:px-4 lg:px-6 xl:px-8">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-center mb-8">
-            <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-              Featured Products
-            </span>
-          </h2>
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold">
+              <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                Featured Products
+              </span>
+            </h2>
+            <button
+              onClick={onNavigateToProducts}
+              className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-4 py-2 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105"
+            >
+              View All Products
+            </button>
+          </div>
 
           {/* Filter and Sort Controls - Reduced border thickness */}
           <div className="mb-6 flex flex-col sm:flex-row gap-3 items-center justify-between max-w-6xl mx-auto">
@@ -672,7 +775,7 @@ const EconomicCenter = ({ user, onLogout }) => {
           {/* Products Grid */}
           {!loading && !error && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 max-w-7xl mx-auto">
-              {filteredProducts.map((product) => (
+              {filteredProducts.slice(0, 8).map((product) => (
                 <div 
                   key={product.id} 
                   className={`bg-gradient-to-br from-green-50/90 to-white/90 backdrop-blur-sm rounded-lg overflow-hidden border border-green-500/15 hover:border-green-500/30 shadow-lg hover:shadow-green-500/10 transition-all duration-300 hover:scale-[1.02] group ${!product.inStock ? 'opacity-75' : ''}`}
@@ -785,6 +888,19 @@ const EconomicCenter = ({ user, onLogout }) => {
             </div>
           )}
 
+          {/* Show More Button */}
+          {!loading && !error && filteredProducts.length > 8 && (
+            <div className="text-center mt-8">
+              <button
+                onClick={onNavigateToProducts}
+                className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105"
+              >
+                View All {filteredProducts.length} Products
+              </button>
+            </div>
+          )}
+
+          {/* Error State for Products */}
           {!loading && !error && filteredProducts.length === 0 && (
             <div className="text-center py-8">
               <p className="text-gray-600 text-base">No products found matching your criteria.</p>

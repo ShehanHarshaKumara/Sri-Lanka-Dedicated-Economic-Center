@@ -96,7 +96,26 @@ router.get('/profile/:userId', async (req, res) => {
         location_address: ''
       });
     }
-    res.json(rows[0]);
+    // Ensure all fields are returned in camelCase for frontend compatibility
+    const row = rows[0];
+    res.json({
+      user_id: row.user_id,
+      first_name: row.first_name,
+      last_name: row.last_name,
+      email: row.email,
+      phone: row.phone,
+      age: row.age,
+      nic_number: row.nic_number,
+      experience: row.experience,
+      farming_type: row.farming_type,
+      address: row.address,
+      city: row.city,
+      bio: row.bio,
+      profile_image: row.profile_image,
+      location_lat: row.location_lat,
+      location_lng: row.location_lng,
+      location_address: row.location_address
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch profile: ' + error.message });
   }
@@ -177,7 +196,8 @@ router.post('/profile/:userId', upload.single('profile_image'), async (req, res)
           age, nic_number, experience, farming_type,
           address, city, bio, profile_image,
           location_lat, location_lng, location_address
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?)`,
         [
           userId, first_name, last_name, email, phone || null,
           age || null, nic_number || null, experience || null, farming_type || 'Mixed Farming',
