@@ -230,6 +230,15 @@ const ModernFarmerPortal = ({ user, onLogout }) => {
       // Optionally add organic/featured as custom fields if backend supports
       // formData.append('organic', productForm.organic ? '1' : '0');
       // formData.append('featured', productForm.featured ? '1' : '0');
+
+      // If editing and no new images, send the existing image_url
+      if (editingProduct && productForm.images.length === 0 && previewImages.length > 0) {
+        // Only add if the preview is a URL (not a blob)
+        if (typeof previewImages[0] === 'string' && !previewImages[0].startsWith('blob:')) {
+          formData.append('image_url', previewImages[0]);
+        }
+      }
+
       for (const img of productForm.images) {
         formData.append('images', img);
       }
@@ -284,6 +293,7 @@ const ModernFarmerPortal = ({ user, onLogout }) => {
       organic: product.organic || false,
       featured: product.featured || false
     });
+    // Only set previewImages to the image_url if it exists and is not empty
     setPreviewImages(product.image_url ? [product.image_url] : []);
     setShowAddProduct(true);
   };
