@@ -8,7 +8,7 @@ import {
   Send, Smile, Paperclip, Camera
 } from 'lucide-react';
 
-const ModernFarmerMarketplace = () => {
+const ModernFarmerMarketplace = ({ onBack }) => {
   const [selectedFarmer, setSelectedFarmer] = useState(null);
   const [likedProducts, setLikedProducts] = useState(new Set());
   const [cartItems, setCartItems] = useState(new Map());
@@ -113,7 +113,7 @@ const ModernFarmerMarketplace = () => {
               reviews: 50,
               nutrients: "Rich in vitamins",
               farmingMethod: "Organic"
-            })) , // <-- closing parenthesis for map
+            })),
             stats: data.stats
           }));
         } catch (err) {
@@ -786,12 +786,27 @@ const ModernFarmerMarketplace = () => {
       }}>
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold bg-gradient-to-r bg-clip-text text-transparent" 
-              style={{ 
-                backgroundImage: `linear-gradient(45deg, ${theme.primary}, ${theme.secondary})`
-              }}>
-              🌱 FarmConnect
-            </h1>
+            <div className="flex items-center gap-4">
+              {/* Back Button */}
+              <button
+                onClick={onBack}
+                className="flex items-center gap-2 p-2 rounded-full transition-all hover:scale-110 transform"
+                style={{ 
+                  backgroundColor: `${theme.primary}20`,
+                  color: theme.primary
+                }}
+              >
+                <ChevronLeft className="w-5 h-5" />
+                <span className="hidden sm:inline font-medium">Back</span>
+              </button>
+              
+              <h1 className="text-2xl font-bold bg-gradient-to-r bg-clip-text text-transparent" 
+                style={{ 
+                  backgroundImage: `linear-gradient(45deg, ${theme.primary}, ${theme.secondary})`
+                }}>
+                🌱 FarmConnect
+              </h1>
+            </div>
             
             <div className="flex items-center gap-2">
               <button 

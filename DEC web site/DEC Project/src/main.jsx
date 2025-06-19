@@ -6,19 +6,7 @@ import AdminHP from './Pages/AdminHP.jsx'
 import FarmerHP from './Pages/FarmerHP.jsx'
 import CustomerHP from './Pages/CustomerHP.jsx'
 import FarmingFoodsPage from './Pages/productPage.jsx'
-// Optionally import other pages for navigation or future use
-// import ProductCard from './Pages/ProductCard'
-// import CustomerProfile from './Pages/CustomerProfile.jsx'
-//import FarmerProfile from './Pages/FarmerProfile.jsx'
-// import Map from './Pages/Map.jsx'
-// import Chatbot from './Pages/Chatbot.jsx'
-//import ChatHp from './Pages/chatHp.jsx'
 import FramerPage from './Pages/FramerPage.jsx'
-// import Payemntpage from './Pages/Payemntpage.jsx'
-// import Message from './Pages/message.jsx'
-// import Review from './Pages/Review.jsx'
-// import RiveAndFeedback from './Pages/RiveAndFeedback.jsx'
-// import PaymentAndReting from './Pages/PaymentAndReting.jsx'
 
 function App() {
   const [user, setUser] = useState(null);
@@ -55,7 +43,6 @@ function App() {
     setCurrentPage('products');
   };
 
-  // Add handler for navigating to sellers (FramerPage)
   const handleNavigateToSellers = () => {
     setCurrentPage('sellers');
   };
@@ -86,15 +73,13 @@ function App() {
     return <FarmerHP user={user} onLogout={handleLogout} />;
   }
   if (user.role === 'customer') {
-    // Handle customer navigation
     if (currentPage === 'products') {
       return <FarmingFoodsPage onBack={handleBackToCustomerHP} />;
     }
-    // Render FramerPage when currentPage is 'sellers'
     if (currentPage === 'sellers') {
-      return <FramerPage />;
+      // Pass the onBack handler to FramerPage
+      return <FramerPage onBack={handleBackToCustomerHP} />;
     }
-    // Pass handleNavigateToSellers to CustomerHP
     return (
       <CustomerHP
         user={user}
