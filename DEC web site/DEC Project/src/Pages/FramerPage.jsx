@@ -113,7 +113,7 @@ const ModernFarmerMarketplace = () => {
               reviews: 50,
               nutrients: "Rich in vitamins",
               farmingMethod: "Organic"
-            })), // <-- closing parenthesis for map
+            })) , // <-- closing parenthesis for map
             stats: data.stats
           }));
         } catch (err) {
