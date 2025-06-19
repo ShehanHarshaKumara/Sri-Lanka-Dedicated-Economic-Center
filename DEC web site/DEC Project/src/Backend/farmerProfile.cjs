@@ -242,6 +242,52 @@ router.delete('/profile/:userId/image', async (req, res) => {
   }
 });
 
+// Get all farmer profiles (for admin)
+router.get('/all', async (req, res) => {
+  try {
+    const [rows] = await db.promise().query(
+      `SELECT 
+        fp.*, 
+        u.name as user_name, 
+        u.email as user_email, 
+        u.created_at as user_created_at
+      FROM farmer_profiles fp
+      LEFT JOIN users u ON fp.user_id = u.id`
+    );
+    // Map/format as needed for frontend
+    const farmers = rows.map(row => ({
+      user_id: row.user_id,
+      first_name: row.first_name,
+      last_name: row.last_name,
+      name: row.user_name || `${row.first_name || ''} ${row.last_name || ''}`,
+      email: row.email || row.user_email,
+      phone: row.phone,
+      age: row.age,
+      nic_number: row.nic_number,
+      experience: row.experience,
+      farming_type: row.farming_type,
+      address: row.address,
+      city: row.city,
+      bio: row.bio,
+      profile_image: row.profile_image,
+      location_lat: row.location_lat,
+      location_lng: row.location_lng,
+      location_address: row.location_address,
+      created_at: row.user_created_at,
+      // Add mock/placeholder fields for compatibility
+      status: 'active',
+      verified: true,
+      totalProducts: null,
+      totalSales: null,
+      revenue: null,
+      documents: []
+    }));
+    res.json(farmers);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch farmers: ' + error.message });
+  }
+});
+
 // If running as standalone server
 if (require.main === module) {
   const app = express();

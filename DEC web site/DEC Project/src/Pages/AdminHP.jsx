@@ -54,60 +54,10 @@ const AdminPortal = ({ user, onLogout }) => {
     avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'
   });
 
-  // Mock data for farmers
-  const [farmers, setFarmers] = useState([
-    {
-      id: 1,
-      name: 'Sunil Rathnayake',
-      email: 'sunil@farmer.lk',
-      phone: '+94 77 123 4567',
-      location: 'Galle District',
-      farmSize: '15 acres',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-      status: 'active',
-      joinDate: '2022-03-15',
-      totalProducts: 45,
-      totalSales: 1250,
-      revenue: 2500000,
-      rating: 4.8,
-      verified: true,
-      documents: ['NIC', 'Farm Registration']
-    },
-    {
-      id: 2,
-      name: 'Kamala Fernando',
-      email: 'kamala@farmer.lk',
-      phone: '+94 71 234 5678',
-      location: 'Kandy District',
-      farmSize: '8 acres',
-      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face',
-      status: 'pending',
-      joinDate: '2024-01-10',
-      totalProducts: 0,
-      totalSales: 0,
-      revenue: 0,
-      rating: 0,
-      verified: false,
-      documents: ['NIC']
-    },
-    {
-      id: 3,
-      name: 'Nimal Perera',
-      email: 'nimal@farmer.lk',
-      phone: '+94 75 345 6789',
-      location: 'Matara District',
-      farmSize: '20 acres',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face',
-      status: 'active',
-      joinDate: '2021-11-20',
-      totalProducts: 78,
-      totalSales: 3420,
-      revenue: 5800000,
-      rating: 4.9,
-      verified: true,
-      documents: ['NIC', 'Farm Registration', 'Organic Certification']
-    }
-  ]);
+  // Farmers state: now loaded from backend
+  const [farmers, setFarmers] = useState([]);
+  const [loadingFarmers, setLoadingFarmers] = useState(false);
+  const [errorFarmers, setErrorFarmers] = useState(null);
 
   // Customers state: now loaded from backend
   const [customers, setCustomers] = useState([]);
@@ -270,11 +220,31 @@ const AdminPortal = ({ user, onLogout }) => {
     }
   };
 
+  // Fetch farmers from backend
+  const fetchFarmers = async () => {
+    setLoadingFarmers(true);
+    setErrorFarmers(null);
+    try {
+      // Adjust API endpoint as needed
+      const response = await fetch('http://localhost:5002/api/farmer/all');
+      if (!response.ok) {
+        throw new Error('Failed to fetch farmers');
+      }
+      const data = await response.json();
+      setFarmers(data);
+    } catch (err) {
+      setErrorFarmers(err.message);
+    } finally {
+      setLoadingFarmers(false);
+    }
+  };
+
   // Add useEffect to fetch data on component mount
   useEffect(() => {
     fetchProducts();
     fetchProductStats();
     fetchCustomers();
+    fetchFarmers();
   }, []);
 
   // Calculate dashboard statistics
@@ -298,7 +268,7 @@ const AdminPortal = ({ user, onLogout }) => {
   // Handle user status change
   const handleStatusChange = (userId, newStatus, type) => {
     if (type === 'farmer') {
-      setFarmers(prev => prev.map(f => f.id === userId ? { ...f, status: newStatus } : f));
+      setFarmers(prev => prev.map(f => f.user_id === userId ? { ...f, status: newStatus } : f));
     } else {
       setCustomers(prev => prev.map(c => c.id === userId ? { ...c, status: newStatus } : c));
     }
@@ -307,7 +277,7 @@ const AdminPortal = ({ user, onLogout }) => {
   // Handle user verification
   const handleVerification = (userId, type) => {
     if (type === 'farmer') {
-      setFarmers(prev => prev.map(f => f.id === userId ? { ...f, verified: !f.verified } : f));
+      setFarmers(prev => prev.map(f => f.user_id === userId ? { ...f, verified: !f.verified } : f));
     } else {
       setCustomers(prev => prev.map(c => c.id === userId ? { ...c, verified: !c.verified } : c));
     }
@@ -323,7 +293,8 @@ const AdminPortal = ({ user, onLogout }) => {
   // Filter and sort users (add support for customers with more fields)
   const filterAndSortUsers = (users) => {
     let filtered = users.filter(user => {
-      const matchesSearch = (user.name?.toLowerCase() || `${user.first_name} ${user.last_name}`.toLowerCase()).includes(searchQuery.toLowerCase()) ||
+      const name = user.name || `${user.first_name || ''} ${user.last_name || ''}`;
+      const matchesSearch = (name.toLowerCase()).includes(searchQuery.toLowerCase()) ||
         (user.email?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
         (user.location?.toLowerCase() || user.city?.toLowerCase() || '').includes(searchQuery.toLowerCase());
       const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
@@ -582,13 +553,13 @@ const AdminPortal = ({ user, onLogout }) => {
                           </div>
                           <div className="flex space-x-2">
                             <button 
-                              onClick={() => handleStatusChange(farmer.id, 'active', 'farmer')}
+                              onClick={() => handleStatusChange(farmer.user_id || farmer.id, 'active', 'farmer')}
                               className="bg-green-600 text-white px-3 py-1 rounded-lg text-sm hover:bg-green-700"
                             >
                               Approve
                             </button>
                             <button 
-                              onClick={() => handleStatusChange(farmer.id, 'rejected', 'farmer')}
+                              onClick={() => handleStatusChange(farmer.user_id || farmer.id, 'rejected', 'farmer')}
                               className="bg-red-600 text-white px-3 py-1 rounded-lg text-sm hover:bg-red-700"
                             >
                               Reject
@@ -710,93 +681,113 @@ const AdminPortal = ({ user, onLogout }) => {
                   </div>
                 </CardWrapper>
 
+                {/* Loading/Error State */}
+                {loadingFarmers && (
+                  <CardWrapper className="p-12">
+                    <div className="text-center">
+                      <FaClock className="text-4xl text-green-600 mx-auto mb-4 animate-spin" />
+                      <p className="text-gray-600">Loading farmers...</p>
+                    </div>
+                  </CardWrapper>
+                )}
+                {errorFarmers && (
+                  <CardWrapper className="p-6 bg-red-50 border border-red-200">
+                    <div className="flex items-center">
+                      <FaExclamationTriangle className="text-red-600 mr-2" />
+                      <p className="text-red-700">{errorFarmers}</p>
+                    </div>
+                  </CardWrapper>
+                )}
+
                 {/* Farmers Table */}
-                <CardWrapper className="overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-green-50 border-b border-green-100">
-                        <tr>
-                          <th className="px-6 py-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Farmer</th>
-                          <th className="px-6 py-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Location</th>
-                          <th className="px-6 py-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Products</th>
-                          <th className="px-6 py-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Revenue</th>
-                          <th className="px-6 py-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Status</th>
-                          <th className="px-6 py-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Verified</th>
-                          <th className="px-6 py-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {filterAndSortUsers(farmers).map((farmer) => (
-                          <tr key={farmer.id} className="hover:bg-green-50">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <img src={farmer.avatar} alt={farmer.name} className="w-10 h-10 rounded-full mr-3" />
-                                <div>
-                                  <p className="font-semibold text-gray-900">{farmer.name}</p>
-                                  <p className="text-sm text-gray-500">{farmer.email}</p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div>
-                                <p className="text-gray-900">{farmer.location}</p>
-                                <p className="text-sm text-gray-500">{farmer.farmSize}</p>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div>
-                                <p className="text-gray-900">{farmer.totalProducts} products</p>
-                                <p className="text-sm text-gray-500">{farmer.totalSales} sales</p>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <p className="text-gray-900 font-semibold">Rs.{(farmer.revenue / 1000000).toFixed(2)}M</p>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <select
-                                value={farmer.status}
-                                onChange={(e) => handleStatusChange(farmer.id, e.target.value, 'farmer')}
-                                className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                                  farmer.status === 'active' ? 'bg-green-100 text-green-800' :
-                                  farmer.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                  'bg-red-100 text-red-800'
-                                }`}
-                              >
-                                <option value="active">Active</option>
-                                <option value="pending">Pending</option>
-                                <option value="suspended">Suspended</option>
-                              </select>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <button
-                                onClick={() => handleVerification(farmer.id, 'farmer')}
-                                className={`flex items-center ${farmer.verified ? 'text-green-600' : 'text-gray-400'} hover:text-green-700`}
-                              >
-                                {farmer.verified ? <FaCheckCircle className="text-xl" /> : <FaTimesCircle className="text-xl" />}
-                              </button>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex space-x-2">
-                                <button 
-                                  onClick={() => viewUserDetails(farmer, 'farmer')}
-                                  className="text-green-600 hover:text-green-700"
-                                >
-                                  <FaEye className="text-lg" />
-                                </button>
-                                <button className="text-gray-600 hover:text-gray-700">
-                                  <FaEdit className="text-lg" />
-                                </button>
-                                <button className="text-red-600 hover:text-red-700">
-                                  <FaTrash className="text-lg" />
-                                </button>
-                              </div>
-                            </td>
+                {!loadingFarmers && !errorFarmers && (
+                  <CardWrapper className="overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-green-50 border-b border-green-100">
+                          <tr>
+                            <th className="px-6 py-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Farmer</th>
+                            <th className="px-6 py-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Location</th>
+                            <th className="px-6 py-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Products</th>
+                            <th className="px-6 py-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Revenue</th>
+                            <th className="px-6 py-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Status</th>
+                            <th className="px-6 py-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Verified</th>
+                            <th className="px-6 py-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Actions</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardWrapper>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {filterAndSortUsers(farmers).map((farmer) => (
+                            <tr key={farmer.user_id || farmer.id} className="hover:bg-green-50">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  <img src={farmer.profile_image || farmer.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent((farmer.first_name || '') + ' ' + (farmer.last_name || ''))} alt={farmer.first_name || farmer.name} className="w-10 h-10 rounded-full mr-3" />
+                                  <div>
+                                    <p className="font-semibold text-gray-900">{farmer.name || `${farmer.first_name || ''} ${farmer.last_name || ''}`}</p>
+                                    <p className="text-sm text-gray-500">{farmer.email}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div>
+                                  <p className="text-gray-900">{farmer.location || farmer.city || '-'}</p>
+                                  <p className="text-sm text-gray-500">{farmer.address || '-'}</p>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div>
+                                  <p className="text-gray-900">{farmer.totalProducts || '-'}</p>
+                                  <p className="text-sm text-gray-500">{farmer.totalSales || '-'}</p>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <p className="text-gray-900 font-semibold">Rs.{farmer.revenue ? (farmer.revenue / 1000000).toFixed(2) + 'M' : '-'}</p>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <select
+                                  value={farmer.status || 'active'}
+                                  onChange={(e) => handleStatusChange(farmer.user_id || farmer.id, e.target.value, 'farmer')}
+                                  className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                                    (farmer.status || 'active') === 'active' ? 'bg-green-100 text-green-800' :
+                                    (farmer.status || 'active') === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-red-100 text-red-800'
+                                  }`}
+                                >
+                                  <option value="active">Active</option>
+                                  <option value="pending">Pending</option>
+                                  <option value="suspended">Suspended</option>
+                                </select>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <button
+                                  onClick={() => handleVerification(farmer.user_id || farmer.id, 'farmer')}
+                                  className={`flex items-center ${(farmer.verified ? 'text-green-600' : 'text-gray-400')} hover:text-green-700`}
+                                >
+                                  {farmer.verified ? <FaCheckCircle className="text-xl" /> : <FaTimesCircle className="text-xl" />}
+                                </button>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex space-x-2">
+                                  <button 
+                                    onClick={() => viewUserDetails(farmer, 'farmer')}
+                                    className="text-green-600 hover:text-green-700"
+                                  >
+                                    <FaEye className="text-lg" />
+                                  </button>
+                                  <button className="text-gray-600 hover:text-gray-700">
+                                    <FaEdit className="text-lg" />
+                                  </button>
+                                  <button className="text-red-600 hover:text-red-700">
+                                    <FaTrash className="text-lg" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardWrapper>
+                )}
               </div>
             )}
 
@@ -1675,12 +1666,12 @@ const AdminPortal = ({ user, onLogout }) => {
               {/* User Header */}
               <div className="flex items-start space-x-6 mb-8">
                 <img 
-                  src={selectedUser.avatar} 
-                  alt={selectedUser.name} 
+                  src={selectedUser.profile_image || selectedUser.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent((selectedUser.first_name || '') + ' ' + (selectedUser.last_name || ''))} 
+                  alt={selectedUser.first_name || selectedUser.name} 
                   className="w-24 h-24 rounded-full border-4 border-green-100"
                 />
                 <div className="flex-1">
-                  <h3 className="text-2xl font-bold text-gray-800 mb-2">{selectedUser.name}</h3>
+                  <h3 className="text-2xl font-bold text-gray-800 mb-2">{selectedUser.name || `${selectedUser.first_name || ''} ${selectedUser.last_name || ''}`}</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-gray-600 flex items-center">
@@ -1692,21 +1683,21 @@ const AdminPortal = ({ user, onLogout }) => {
                     </div>
                     <div>
                       <p className="text-gray-600 flex items-center">
-                        <FaMapMarkerAlt className="mr-2 text-green-600" /> {selectedUser.location}
+                        <FaMapMarkerAlt className="mr-2 text-green-600" /> {selectedUser.location || selectedUser.city}
                       </p>
                       <p className="text-gray-600 flex items-center mt-2">
-                        <FaCalendar className="mr-2 text-green-600" /> Joined {selectedUser.joinDate}
+                        <FaCalendar className="mr-2 text-green-600" /> Joined {selectedUser.joinDate || selectedUser.created_at || '-'}
                       </p>
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
                   <span className={`px-4 py-2 rounded-full text-sm font-semibold inline-block mb-2 ${
-                    selectedUser.status === 'active' ? 'bg-green-100 text-green-800' :
-                    selectedUser.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    (selectedUser.status || 'active') === 'active' ? 'bg-green-100 text-green-800' :
+                    (selectedUser.status || 'active') === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                     'bg-red-100 text-red-800'
                   }`}>
-                    {selectedUser.status}
+                    {selectedUser.status || 'active'}
                   </span>
                   <div className="flex items-center justify-end mt-2">
                     {selectedUser.verified ? (
@@ -1728,19 +1719,19 @@ const AdminPortal = ({ user, onLogout }) => {
                   <>
                     <div className="bg-green-50 p-4 rounded-lg border border-green-100">
                       <p className="text-gray-600 text-sm">Farm Size</p>
-                      <p className="text-xl font-bold text-gray-800">{selectedUser.farmSize}</p>
+                      <p className="text-xl font-bold text-gray-800">{selectedUser.farmSize || '-'}</p>
                     </div>
                     <div className="bg-green-50 p-4 rounded-lg border border-green-100">
                       <p className="text-gray-600 text-sm">Total Products</p>
-                      <p className="text-xl font-bold text-gray-800">{selectedUser.totalProducts}</p>
+                      <p className="text-xl font-bold text-gray-800">{selectedUser.totalProducts || '-'}</p>
                     </div>
                     <div className="bg-green-50 p-4 rounded-lg border border-green-100">
                       <p className="text-gray-600 text-sm">Total Sales</p>
-                      <p className="text-xl font-bold text-gray-800">{selectedUser.totalSales}</p>
+                      <p className="text-xl font-bold text-gray-800">{selectedUser.totalSales || '-'}</p>
                     </div>
                     <div className="bg-green-50 p-4 rounded-lg border border-green-100">
                       <p className="text-gray-600 text-sm">Revenue</p>
-                      <p className="text-xl font-bold text-gray-800">Rs.{(selectedUser.revenue / 1000000).toFixed(2)}M</p>
+                      <p className="text-xl font-bold text-gray-800">Rs.{selectedUser.revenue ? (selectedUser.revenue / 1000000).toFixed(2) + 'M' : '-'}</p>
                     </div>
                   </>
                 ) : (
@@ -1766,7 +1757,7 @@ const AdminPortal = ({ user, onLogout }) => {
               </div>
 
               {/* Additional Information */}
-              {userType === 'farmer' && (
+              {userType === 'farmer' && selectedUser.documents && (
                 <div className="mb-8">
                   <h4 className="text-lg font-semibold text-gray-800 mb-4">Documents</h4>
                   <div className="flex flex-wrap gap-2">
