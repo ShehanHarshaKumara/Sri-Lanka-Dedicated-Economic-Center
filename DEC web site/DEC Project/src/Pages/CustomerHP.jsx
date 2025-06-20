@@ -20,7 +20,7 @@ import {
 } from 'react-icons/fa';
 import CustomerProfile from './CustomerProfile';
 
-const EconomicCenter = ({ user, onLogout, onNavigateToProducts, onNavigateToSellers }) => {
+const EconomicCenter = ({ user, onLogout, onNavigateToProducts, onNavigateToSellers, onNavigateToMap }) => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -337,6 +337,8 @@ const EconomicCenter = ({ user, onLogout, onNavigateToProducts, onNavigateToSell
                       onNavigateToProducts();
                     } else if (item === 'Sellers' && onNavigateToSellers) {
                       onNavigateToSellers();
+                    } else if (item === 'Services' && onNavigateToMap) {
+                      onNavigateToMap();
                     } else {
                       const element = document.getElementById(item.toLowerCase());
                       if (element) {
@@ -543,6 +545,8 @@ const EconomicCenter = ({ user, onLogout, onNavigateToProducts, onNavigateToSell
                       onNavigateToProducts();
                     } else if (item === 'Sellers' && onNavigateToSellers) {
                       onNavigateToSellers();
+                    } else if (item === 'Services' && onNavigateToMap) {
+                      onNavigateToMap();
                     } else {
                       const element = document.getElementById(item.toLowerCase());
                       if (element) {

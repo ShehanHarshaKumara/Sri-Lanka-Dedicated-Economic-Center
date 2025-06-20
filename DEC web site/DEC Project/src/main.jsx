@@ -8,6 +8,7 @@ import CustomerHP from './Pages/CustomerHP.jsx'
 import FarmingFoodsPage from './Pages/productPage.jsx'
 import FramerPage from './Pages/FramerPage.jsx'
 import PaymentAndReting from './Pages/PaymentAndReting.jsx'
+import MapPage from './Pages/Map.jsx'
 
 function App() {
   const [user, setUser] = useState(null);
@@ -63,6 +64,10 @@ function App() {
     setSelectedProduct(null);
   };
 
+  const handleNavigateToMap = () => {
+    setCurrentPage('map');
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-green-50">
@@ -99,12 +104,26 @@ function App() {
     if (currentPage === 'sellers') {
       return <FramerPage onBack={handleBackToCustomerHP} />;
     }
+    if (currentPage === 'map') {
+      return (
+        <div>
+          <button
+            onClick={() => setCurrentPage('main')}
+            className="m-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+          >
+            Back
+          </button>
+          <MapPage />
+        </div>
+      );
+    }
     return (
       <CustomerHP
         user={user}
         onLogout={handleLogout}
         onNavigateToProducts={handleNavigateToProducts}
         onNavigateToSellers={handleNavigateToSellers}
+        onNavigateToMap={handleNavigateToMap}
       />
     );
   }

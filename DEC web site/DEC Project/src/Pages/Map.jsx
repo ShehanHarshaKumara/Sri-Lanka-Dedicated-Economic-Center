@@ -656,11 +656,44 @@ function App() {
     return colorMap[color] || 'bg-gray-500 text-white hover:bg-gray-600';
   };
 
+  // ===== 1. VIEWPORT SETUP & EVENT LISTENERS =====
+  React.useEffect(() => {
+    // Set full viewport height and remove default margins/padding
+    const setFullViewport = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+      document.body.style.margin = '0';
+      document.body.style.padding = '0';
+      document.body.style.overflow = 'auto';
+      document.documentElement.style.margin = '0';
+      document.documentElement.style.padding = '0';
+    };
+
+    setFullViewport();
+    window.addEventListener('resize', setFullViewport);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('resize', setFullViewport);
+    };
+  }, []);
+
+  // ===== 2. RESPONSIVE CONTAINER STYLES =====
+  const containerStyles = {
+    margin: 0,
+    padding: 0,
+    width: '100vw',
+    minHeight: '100vh',
+    overflowX: 'hidden'
+  };
+
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 text-gray-900 ${isFullscreen ? 'fixed inset-0 overflow-auto' : ''}`}>
+    <div
+      className={`min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 text-gray-900 ${isFullscreen ? 'fixed inset-0 overflow-auto' : ''}`}
+      style={containerStyles}
+    >
       {showFPS && <FPSCounter />}
-      
-      <div className="container mx-auto px-4 py-6">
+      <div className="container mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <div>
             <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent mb-2">
@@ -696,11 +729,14 @@ function App() {
                   <span className="text-sm text-gray-600">{filteredDistricts.length} Centers</span>
                 </div>
               </div>
-              <CropMap 
-                districtData={filteredDistricts} 
-                onDistrictSelect={handleDistrictSelect}
-                selectedCategories={selectedCategories}
-              />
+              {/* Add transform responsive classes to the map container */}
+              <div className="w-full" style={{ height: 'calc(var(--vh, 1vh) * 75)' }}>
+                <CropMap 
+                  districtData={filteredDistricts} 
+                  onDistrictSelect={handleDistrictSelect}
+                  selectedCategories={selectedCategories}
+                />
+              </div>
             </div>
           </div>
           
@@ -1081,7 +1117,6 @@ function App() {
             transform: translateY(0);
           }
         }
-        
         /* Responsive adjustments */
         @media (max-width: 640px) {
           .leaflet-popup-content {
@@ -1094,7 +1129,25 @@ function App() {
             display: none;
           }
         }
-          
+        /* ===== 15. CUSTOM CSS RESPONSIVE STYLES ===== */
+        * {
+          box-sizing: border-box;
+        }
+        html, body {
+          margin: 0;
+          padding: 0;
+          width: 100%;
+          overflow-x: hidden;
+        }
+        @media (max-width: 640px) {
+          /* Mobile specific styles */
+        }
+        @media (min-width: 641px) and (max-width: 1024px) {
+          /* Tablet specific styles */
+        }
+        @media (min-width: 1025px) {
+          /* Desktop specific styles */
+        }
       `}</style>
     </div>
   );
