@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { FaLeaf, FaUser, FaTractor, FaGoogle, FaFacebook, FaTwitter, FaApple, FaLock } from 'react-icons/fa';
+// Import video assets
+import loginVideo from '../assets/videos/login-video.mp4';
+import signupVideo from '../assets/videos/signup-video.mp4';
 
 const AuthPage = ({ onLogin }) => {
   const [isLogin, setIsLogin] = useState(true);
@@ -235,7 +238,7 @@ const AuthPage = ({ onLogin }) => {
             muted
             playsInline
           >
-            <source src="https://videocdn.cdnpk.net/videos/b80e2b7c-9eea-5514-9515-4d95359247c1/horizontal/previews/clear/small.mp4?token=exp=1749288655~hmac=97f5a1971ef2ad8067b5d270a92efdc5b41327d4aa8b606ca3c27fcb15567766" type="video/mp4" />
+            <source src={loginVideo} type="video/mp4" />
             <div className="w-full h-full bg-gradient-to-br from-green-600 to-green-800"></div>
           </video>
           
@@ -249,7 +252,7 @@ const AuthPage = ({ onLogin }) => {
             muted
             playsInline
           >
-            <source src="https://videocdn.cdnpk.net/videos/f97a63aa-c19f-50dc-be72-e1ed3bd218c7/horizontal/previews/clear/small.mp4?token=exp=1749288535~hmac=0a7b13746acd0ebc4af2e99bf7897e1ffbf032750fbab15ecc29d78ca73b121d" type="video/mp4" />
+            <source src={signupVideo} type="video/mp4" />
             <div className="w-full h-full bg-gradient-to-br from-blue-600 to-blue-800"></div>
           </video>
         </div>
