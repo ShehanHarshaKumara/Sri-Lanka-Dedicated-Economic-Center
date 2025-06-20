@@ -18,23 +18,32 @@ const DambullaChatbot = () => {
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [showThemeToggle, setShowThemeToggle] = useState(false);
   const messagesEndRef = useRef(null);
 
-  const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // Check system preference for dark mode and store preference in localStorage
+  useEffect(() => {
+    const savedMode = localStorage.getItem('chatbotDarkMode');
+    if (savedMode !== null) {
+      setDarkMode(savedMode === 'true');
+    } else {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      setDarkMode(mediaQuery.matches);
+    }
+  }, []);
+
+  // Save dark mode preference to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('chatbotDarkMode', darkMode.toString());
+  }, [darkMode]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-  // Check system preference for dark mode
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    setDarkMode(mediaQuery.matches);
-    
-    const handler = (e) => setDarkMode(e.matches);
-    mediaQuery.addEventListener('change', handler);
-    return () => mediaQuery.removeEventListener('change', handler);
-  }, []);
 
   const quickActions = [
     { icon: ShoppingCart, text: 'How to Buy', action: 'buy', color: 'text-emerald-500' },
@@ -111,7 +120,7 @@ const DambullaChatbot = () => {
         </div>
         <div>
           <h4 className={`font-medium text-sm ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>{faq.question}</h4>
-          <p className="mt-1 whitespace-pre-line text-xs">{faq.answer}</p>
+          <p className={`mt-1 whitespace-pre-line text-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{faq.answer}</p>
         </div>
       </div>
     </div>
@@ -218,9 +227,13 @@ const DambullaChatbot = () => {
     if (e.key === 'Enter') handleSendMessage();
   };
 
+  const toggleTheme = () => {
+    setDarkMode(!darkMode);
+  };
+
   return (
-    <div className="fixed inset-0 pointer-events-none">
-      {/* Floating Action Button with Centered Robot Icon */}
+    <div className={`fixed inset-0 pointer-events-none ${darkMode ? 'dark' : ''}`}>
+      {/* Floating Action Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={`fixed bottom-6 right-6 w-16 h-16 rounded-full shadow-lg z-50 pointer-events-auto flex items-center justify-center transition-all duration-300 ${
@@ -229,37 +242,54 @@ const DambullaChatbot = () => {
         style={{
           boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)'
         }}
+        onMouseEnter={() => setShowThemeToggle(true)}
+        onMouseLeave={() => setShowThemeToggle(false)}
       >
         {isOpen ? (
           <X className="w-6 h-6 text-white" />
         ) : (
           <div className="relative w-full h-full flex items-center justify-center">
-            {/* Robot icon with adjustable size (change w-8/h-8 to adjust) */}
             <Bot className="w-8 h-8 text-white" />
-            {/* Optional pulse effect */}
-            <div className="absolute inset-0 rounded-full bg-emerald-400 opacity-0 hover:opacity-20 transition-opacity duration-300" />
+            {/* Theme toggle that appears on hover */}
+            {showThemeToggle && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleTheme();
+                }}
+                className={`absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center ${
+                  darkMode ? 'bg-gray-800 border border-gray-600' : 'bg-white border border-gray-200'
+                }`}
+              >
+                {darkMode ? (
+                  <Sun className="w-3 h-3 text-yellow-300" />
+                ) : (
+                  <Moon className="w-3 h-3 text-gray-600" />
+                )}
+              </button>
+            )}
           </div>
         )}
       </button>
 
       {/* Chat Window */}
       {isOpen && (
-        <div className={`fixed bottom-24 right-6 w-96 h-[600px] rounded-lg shadow-xl flex flex-col z-40 pointer-events-auto animate-slideIn overflow-hidden ${
+        <div className={`fixed bottom-24 right-6 w-96 h-[600px] rounded-lg shadow-xl flex flex-col z-40 pointer-events-auto animate-slideIn overflow-hidden transition-colors duration-300 ${
           darkMode ? 'bg-gray-900 border border-gray-700' : 'bg-white border border-gray-200'
         }`}>
           {/* Header */}
-          <div className={`p-3 rounded-t-lg flex items-center justify-between ${
+          <div className={`p-3 rounded-t-lg flex items-center justify-between transition-colors duration-300 ${
             darkMode ? 'bg-gray-800' : 'bg-gray-50'
           }`}>
             <div className="flex items-center gap-3">
-              <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+              <div className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors duration-300 ${
                 darkMode ? 'bg-emerald-600' : 'bg-emerald-500'
               }`}>
                 <Bot className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h3 className="font-medium">Dambulla Assistant</h3>
-                <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                <h3 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Dambulla Assistant</h3>
+                <p className={`text-xs flex items-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                   <Leaf className="inline w-3 h-3 mr-1" />
                   Your Smart Agro Guide
                 </p>
@@ -267,25 +297,31 @@ const DambullaChatbot = () => {
             </div>
             <div className="flex gap-1">
               <button 
-                onClick={() => setDarkMode(!darkMode)}
-                className="p-1.5 rounded-md hover:bg-gray-700/30"
+                onClick={toggleTheme}
+                className={`p-1.5 rounded-md transition-colors duration-200 ${
+                  darkMode ? 'hover:bg-gray-700/30 text-gray-300' : 'hover:bg-gray-200/70 text-gray-600'
+                }`}
               >
                 {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
-              <button className="p-1.5 rounded-md hover:bg-gray-700/30">
+              <button className={`p-1.5 rounded-md transition-colors duration-200 ${
+                darkMode ? 'hover:bg-gray-700/30 text-gray-300' : 'hover:bg-gray-200/70 text-gray-600'
+              }`}>
                 <Settings className="w-4 h-4" />
               </button>
             </div>
           </div>
 
           {/* Quick Actions */}
-          <div className={`p-2 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+          <div className={`p-2 border-b transition-colors duration-300 ${
+            darkMode ? 'border-gray-700' : 'border-gray-200'
+          }`}>
             <div className="flex gap-1 overflow-x-auto scrollbar-hide">
               {quickActions.map(({ icon: Icon, text, action, color }, idx) => (
                 <button
                   key={idx}
                   onClick={() => handleQuickAction(action)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs whitespace-nowrap ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors duration-200 ${
                     darkMode 
                       ? 'bg-gray-800 hover:bg-gray-700 text-gray-200' 
                       : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
@@ -299,13 +335,13 @@ const DambullaChatbot = () => {
           </div>
 
           {/* Messages Area */}
-          <div className={`flex-1 overflow-y-auto p-3 space-y-3 ${
+          <div className={`flex-1 overflow-y-auto p-3 space-y-3 transition-colors duration-300 ${
             darkMode ? 'bg-gray-900' : 'bg-gray-50'
           }`}>
             {messages.map((msg) => (
               <div key={msg.id} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`flex items-start gap-2 max-w-[90%] ${msg.type === 'user' ? 'flex-row-reverse' : ''}`}>
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-colors duration-300 ${
                     msg.type === 'user' 
                       ? darkMode ? 'bg-blue-600' : 'bg-blue-500'
                       : darkMode ? 'bg-emerald-600' : 'bg-emerald-500'
@@ -319,12 +355,14 @@ const DambullaChatbot = () => {
                     {msg.custom ? (
                       msg.custom
                     ) : (
-                      <div className={`p-3 rounded-lg ${
+                      <div className={`p-3 rounded-lg transition-colors duration-300 ${
                         msg.type === 'user' 
                           ? darkMode ? 'bg-blue-600' : 'bg-blue-500 text-white'
                           : darkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'
                       }`}>
-                        <p className="whitespace-pre-line text-sm">{msg.text}</p>
+                        <p className={`whitespace-pre-line text-sm ${
+                          msg.type === 'user' ? 'text-white' : darkMode ? 'text-gray-100' : 'text-gray-800'
+                        }`}>{msg.text}</p>
                       </div>
                     )}
                     {msg.options && (
@@ -333,9 +371,9 @@ const DambullaChatbot = () => {
                           <button
                             key={idx}
                             onClick={() => handleOptionClick(option)}
-                            className={`px-2.5 py-1 rounded-md text-xs ${
+                            className={`px-2.5 py-1 rounded-md text-xs transition-colors duration-200 ${
                               darkMode
-                                ? 'bg-gray-800 hover:bg-gray-700 text-gray-200'
+                                ? 'bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700'
                                 : 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-200'
                             }`}
                           >
@@ -344,7 +382,7 @@ const DambullaChatbot = () => {
                         ))}
                       </div>
                     )}
-                    <p className={`text-xs mt-1 ${
+                    <p className={`text-xs mt-1 transition-colors duration-300 ${
                       msg.type === 'user' 
                         ? darkMode ? 'text-blue-300 text-right' : 'text-blue-100 text-right'
                         : darkMode ? 'text-gray-500' : 'text-gray-400'
@@ -360,22 +398,22 @@ const DambullaChatbot = () => {
             {isTyping && (
               <div className="flex justify-start">
                 <div className="flex items-center gap-2">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center ${
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors duration-300 ${
                     darkMode ? 'bg-emerald-600' : 'bg-emerald-500'
                   }`}>
                     <Bot className="w-3.5 h-3.5 text-white" />
                   </div>
-                  <div className={`p-2 rounded-lg ${
+                  <div className={`p-2 rounded-lg transition-colors duration-300 ${
                     darkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'
                   }`}>
                     <div className="flex gap-1">
-                      <div className={`w-1.5 h-1.5 rounded-full ${
+                      <div className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
                         darkMode ? 'bg-gray-500' : 'bg-gray-400'
                       } animate-bounce`}></div>
-                      <div className={`w-1.5 h-1.5 rounded-full ${
+                      <div className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
                         darkMode ? 'bg-gray-500' : 'bg-gray-400'
                       } animate-bounce`} style={{ animationDelay: '150ms' }}></div>
-                      <div className={`w-1.5 h-1.5 rounded-full ${
+                      <div className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
                         darkMode ? 'bg-gray-500' : 'bg-gray-400'
                       } animate-bounce`} style={{ animationDelay: '300ms' }}></div>
                     </div>
@@ -387,9 +425,11 @@ const DambullaChatbot = () => {
           </div>
 
           {/* Input Area */}
-          <div className={`p-3 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+          <div className={`p-3 border-t transition-colors duration-300 ${
+            darkMode ? 'border-gray-700' : 'border-gray-200'
+          }`}>
             <div className="flex items-center gap-2">
-              <button className={`p-1.5 rounded-md ${
+              <button className={`p-1.5 rounded-md transition-colors duration-200 ${
                 darkMode ? 'text-gray-400 hover:text-emerald-400' : 'text-gray-500 hover:text-emerald-600'
               }`}>
                 <Plus className="w-4 h-4" />
@@ -400,24 +440,27 @@ const DambullaChatbot = () => {
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyPress}
                 placeholder="Type your message..."
-                className={`flex-1 px-3 py-2 text-sm rounded-lg focus:outline-none ${
+                className={`flex-1 px-3 py-2 text-sm rounded-lg focus:outline-none transition-colors duration-300 ${
                   darkMode 
-                    ? 'bg-gray-800 focus:bg-gray-700 text-white' 
-                    : 'bg-gray-100 focus:bg-white text-gray-800 border border-gray-200'
+                    ? 'bg-gray-800 focus:bg-gray-700 text-white placeholder-gray-400' 
+                    : 'bg-gray-100 focus:bg-white text-gray-800 border border-gray-200 placeholder-gray-500'
                 }`}
               />
               <button
                 onClick={handleSendMessage}
-                className={`p-2 rounded-lg ${
-                  darkMode 
-                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white' 
-                    : 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                disabled={inputValue.trim() === ''}
+                className={`p-2 rounded-lg transition-colors duration-300 ${
+                  inputValue.trim() === ''
+                    ? darkMode ? 'bg-gray-700 text-gray-500' : 'bg-gray-300 text-gray-500'
+                    : darkMode 
+                      ? 'bg-emerald-600 hover:bg-emerald-500 text-white' 
+                      : 'bg-emerald-500 hover:bg-emerald-600 text-white'
                 }`}
               >
                 <Send className="w-4 h-4" />
               </button>
             </div>
-            <div className={`flex items-center justify-center mt-2 text-xs ${
+            <div className={`flex items-center justify-center mt-2 text-xs transition-colors duration-300 ${
               darkMode ? 'text-gray-500' : 'text-gray-400'
             }`}>
               <ShieldCheck className="w-3 h-3 mr-1" />
