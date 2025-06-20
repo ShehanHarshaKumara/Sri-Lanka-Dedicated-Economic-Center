@@ -94,7 +94,8 @@ const ModernFarmerPortal = ({ user, onLogout }) => {
     { id: 'dashboard', label: 'Dashboard', icon: FaHome },
     { id: 'products', label: 'My Products', icon: FaBox },
     { id: 'orders', label: 'Orders', icon: FaClipboardList },
-    { id: 'analytics', label: 'Analytics', icon: FaChartBar }
+    { id: 'analytics', label: 'Analytics', icon: FaChartBar },
+    { id: 'community', label: 'Community', icon: FaChartBar }
   ];
 
   const quickStats = [
