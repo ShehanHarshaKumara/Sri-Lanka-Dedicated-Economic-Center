@@ -7,7 +7,7 @@ import {
   Star as StarIcon
 } from 'lucide-react';
 
-const EnhancedEcommercePage = () => {
+const EnhancedEcommercePage = ({ product: propProduct, onBack }) => {
   // Viewport setup
   useEffect(() => {
     const setFullViewport = () => {
@@ -29,22 +29,37 @@ const EnhancedEcommercePage = () => {
   }, []);
 
   // Product State
-  const [product] = useState({
-    id: 1,
-    name: "Premium Organic Bell Pepper",
-    description: "Our organic bell peppers are grown without synthetic pesticides or fertilizers. Rich in vitamins A and C, antioxidants, and fiber, these crisp and colorful peppers are perfect for salads, stir-fries, or as a healthy snack.",
-    price: 350.00,
-    rating: 4.8,
-    reviews: 124,
-    inStock: true,
-    images: [
-      'https://images.unsplash.com/photo-1563565375-f3fdfdbefa83?w=600&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1572796799729-f988c73b36a4?w=600&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1542838132-92c53300491e?w=600&h=400&fit=crop'
-    ],
-    category: "Vegetables, Organic",
-    tags: ["Fresh", "Healthy", "Vitamin C", "Antioxidants"]
-  });
+  const [product] = useState(
+    propProduct
+      ? {
+          ...propProduct,
+          images: propProduct.images || [propProduct.image_url || propProduct.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=600&h=400&fit=crop'],
+          price: propProduct.price || 0,
+          name: propProduct.name || '',
+          description: propProduct.description || '',
+          rating: propProduct.rating || 4.8,
+          reviews: propProduct.reviews || 124,
+          inStock: propProduct.inStock !== undefined ? propProduct.inStock : true,
+          category: propProduct.category || '',
+          tags: propProduct.tags || [],
+        }
+      : {
+          id: 1,
+          name: "Premium Organic Bell Pepper",
+          description: "Our organic bell peppers are grown without synthetic pesticides or fertilizers. Rich in vitamins A and C, antioxidants, and fiber, these crisp and colorful peppers are perfect for salads, stir-fries, or as a healthy snack.",
+          price: 350.00,
+          rating: 4.8,
+          reviews: 124,
+          inStock: true,
+          images: [
+            'https://images.unsplash.com/photo-1563565375-f3fdfdbefa83?w=600&h=400&fit=crop',
+            'https://images.unsplash.com/photo-1572796799729-f988c73b36a4?w=600&h=400&fit=crop',
+            'https://images.unsplash.com/photo-1542838132-92c53300491e?w=600&h=400&fit=crop'
+          ],
+          category: "Vegetables, Organic",
+          tags: ["Fresh", "Healthy", "Vitamin C", "Antioxidants"]
+        }
+  );
 
   // UI State
   const [activeImage, setActiveImage] = useState(0);
@@ -171,15 +186,35 @@ const EnhancedEcommercePage = () => {
     }
   };
 
+  // Fetch reviews from backend when showReviews is true
+  useEffect(() => {
+    if (showReviews && product.id) {
+      fetch(`http://localhost:4001/api/reviews/${product.id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setReviews(data.map(r => ({
+              id: r.id,
+              name: r.name,
+              rating: r.rating,
+              review: r.review,
+              date: r.created_at ? r.created_at.split('T')[0] : ''
+            })));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [showReviews, product.id]);
+
   const handleSubmitOrder = async (e) => {
     e.preventDefault();
-    
+
     // Validate form
     const requiredFields = ['name', 'email', 'phone', 'address', 'city', 'zipCode'];
     if (paymentMethod === 'card') {
       requiredFields.push('cardNumber', 'cardName', 'cardExpiry', 'cardCVV');
     }
-    
+
     const missingFields = requiredFields.filter(field => !formData[field]);
     if (missingFields.length > 0) {
       alert('Please fill in all required fields');
@@ -187,31 +222,102 @@ const EnhancedEcommercePage = () => {
     }
 
     setIsProcessing(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const orderNum = 'ORD' + Date.now().toString().slice(-8);
-    setOrderNumber(orderNum);
-    setPaymentSuccess(true);
+
+    // Prepare order data for backend
+    const orderData = {
+      // userId: null, // If you have user auth, pass userId
+      customer: {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        city: formData.city,
+        zipCode: formData.zipCode
+      },
+      items: [
+        {
+          productId: product.id,
+          quantity,
+          price: product.price
+        }
+      ],
+      shippingMethod,
+      paymentMethod,
+      paymentDetails: paymentMethod === 'card'
+        ? {
+            cardNumber: formData.cardNumber,
+            cardName: formData.cardName,
+            cardExpiry: formData.cardExpiry,
+            cardCVV: formData.cardCVV
+          }
+        : undefined,
+      discountCode,
+      discount,
+      subtotal,
+      shippingCost,
+      tax,
+      total
+    };
+
+    try {
+      const res = await fetch('http://localhost:4001/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData)
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setOrderNumber('ORD' + data.orderId);
+        setPaymentSuccess(true);
+      } else {
+        alert(data.error || 'Order creation failed');
+      }
+    } catch (err) {
+      alert('Order creation failed');
+    }
     setIsProcessing(false);
   };
 
-  const handleSubmitReview = (e) => {
+  const handleSubmitReview = async (e) => {
     e.preventDefault();
     if (reviewRating === 0 || !reviewName || !reviewText) return;
 
-    const newReview = {
-      id: reviews.length + 1,
-      name: reviewName,
-      rating: reviewRating,
-      review: reviewText,
-      date: new Date().toISOString().split('T')[0]
-    };
-
-    setReviews([newReview, ...reviews]);
-    setReviewSubmitted(true);
-    resetReviewForm();
+    try {
+      const res = await fetch('http://localhost:4001/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: product.id,
+          name: reviewName,
+          email: reviewEmail,
+          rating: reviewRating,
+          review: reviewText
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        // Fetch updated reviews
+        fetch(`http://localhost:4001/api/reviews/${product.id}`)
+          .then(res => res.json())
+          .then(data => {
+            if (Array.isArray(data)) {
+              setReviews(data.map(r => ({
+                id: r.id,
+                name: r.name,
+                rating: r.rating,
+                review: r.review,
+                date: r.created_at ? r.created_at.split('T')[0] : ''
+              })));
+            }
+          });
+        setReviewSubmitted(true);
+        resetReviewForm();
+      } else {
+        alert(data.error || 'Review submission failed');
+      }
+    } catch (err) {
+      alert('Review submission failed');
+    }
   };
 
   const resetOrder = () => {
@@ -290,6 +396,15 @@ const EnhancedEcommercePage = () => {
                 Leave a Review
               </button>
             </div>
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="mt-4 flex items-center gap-2 text-white hover:text-green-400 transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5" />
+                Back to Products
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -437,6 +552,15 @@ const EnhancedEcommercePage = () => {
       style={containerStyles}
     >
       <div className="w-full px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 text-white mb-4 sm:mb-6 hover:text-green-400 transition-colors text-sm sm:text-base"
+          >
+            <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+            Back to Products
+          </button>
+        )}
         {!showCheckout ? (
           // Product View
           <div className="max-w-7xl mx-auto">

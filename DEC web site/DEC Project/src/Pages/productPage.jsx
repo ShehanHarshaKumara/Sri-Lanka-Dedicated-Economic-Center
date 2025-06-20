@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, ShoppingCart, Heart, Star, Leaf, Truck, Shield, Plus, Minus, Menu, X, User, Search, Award, Clock, Users, ArrowLeft } from 'lucide-react';
 
-const FarmingFoodsPage = ({ onBack }) => {
+const FarmingFoodsPage = ({ onBack, onBuyNow }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [cart, setCart] = useState([]);
   const [favorites, setFavorites] = useState([]);
@@ -584,13 +584,13 @@ const FarmingFoodsPage = ({ onBack }) => {
                       </div>
                     </div>
 
-                    {/* Add to Cart Button */}
+                    {/* Add to Cart and Buy Now Buttons */}
                     <button 
-                      onClick={() => addToCart(product)}
+                      onClick={() => onBuyNow ? onBuyNow(product) : addToCart(product)}
                       className="w-full btn-primary text-white font-medium py-2 sm:py-3 rounded-lg transition-colors flex items-center justify-center gap-2 group text-sm sm:text-base"
                     >
                       <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110 transition-transform" />
-                      Add to Cart
+                      Buy Now
                     </button>
                   </div>
                 </div>

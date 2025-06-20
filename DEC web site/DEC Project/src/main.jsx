@@ -7,11 +7,13 @@ import FarmerHP from './Pages/FarmerHP.jsx'
 import CustomerHP from './Pages/CustomerHP.jsx'
 import FarmingFoodsPage from './Pages/productPage.jsx'
 import FramerPage from './Pages/FramerPage.jsx'
+import PaymentAndReting from './Pages/PaymentAndReting.jsx'
 
 function App() {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState('main');
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -51,6 +53,16 @@ function App() {
     setCurrentPage('main');
   };
 
+  const handleBuyNow = (product) => {
+    setSelectedProduct(product);
+    setCurrentPage('payment');
+  };
+
+  const handleBackFromPayment = () => {
+    setCurrentPage('products');
+    setSelectedProduct(null);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-green-50">
@@ -73,11 +85,18 @@ function App() {
     return <FarmerHP user={user} onLogout={handleLogout} />;
   }
   if (user.role === 'customer') {
+    if (currentPage === 'payment') {
+      return (
+        <PaymentAndReting
+          product={selectedProduct}
+          onBack={handleBackFromPayment}
+        />
+      );
+    }
     if (currentPage === 'products') {
-      return <FarmingFoodsPage onBack={handleBackToCustomerHP} />;
+      return <FarmingFoodsPage onBack={handleBackToCustomerHP} onBuyNow={handleBuyNow} />;
     }
     if (currentPage === 'sellers') {
-      // Pass the onBack handler to FramerPage
       return <FramerPage onBack={handleBackToCustomerHP} />;
     }
     return (
