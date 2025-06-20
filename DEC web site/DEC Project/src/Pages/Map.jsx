@@ -247,12 +247,12 @@ const districts = [
   }
 ];
 
-// Custom icons for different categories
+// Custom icons for different categories with better fruit identification
 const createCustomIcon = (type, size = 'medium') => {
   const sizeMap = {
     small: 20,
-    medium: 30,
-    large: 40
+    medium: 32,
+    large: 45
   };
   const iconSize = sizeMap[size];
   
@@ -275,7 +275,7 @@ const createCustomIcon = (type, size = 'medium') => {
       case 'nut': return '🥜';
       case 'chili': return '🌶️';
       case 'other': return '📦';
-      case 'both': return '🌾';
+      case 'both': return '🌱';
       default: return '📍';
     }
   };
@@ -291,22 +291,18 @@ const createCustomIcon = (type, size = 'medium') => {
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: ${iconSize * 0.5}px;
+        font-size: ${iconSize * 0.6}px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        animation: pulse 2s infinite;
+        transform-origin: center;
+        transition: transform 0.2s ease;
+      ">
         ${getIconSymbol(type)}
       </div>
-      <style>
-        @keyframes pulse {
-          0% { transform: scale(1); }
-          50% { transform: scale(1.1); }
-          100% { transform: scale(1); }
-        }
-      </style>
     `,
     className: 'custom-div-icon',
     iconSize: [iconSize, iconSize],
-    iconAnchor: [iconSize/2, iconSize/2]
+    iconAnchor: [iconSize/2, iconSize/2],
+    popupAnchor: [0, -iconSize/2]
   });
 };
 
@@ -335,16 +331,29 @@ const FPSCounter = () => {
   }, []);
 
   return (
-    <div className="fixed top-4 right-4 z-50 bg-black bg-opacity-70 text-white px-3 py-1 rounded-full text-sm font-mono flex items-center gap-2">
+    <div className="fixed top-4 right-4 z-[1000] bg-black bg-opacity-70 text-white px-3 py-1 rounded-full text-sm font-mono flex items-center gap-2">
       <Activity size={16} />
       {fps} FPS
     </div>
   );
 };
 
-// Enhanced Map Component
+// Enhanced Map Component with better responsive behavior
 const CropMap = ({ districtData, onDistrictSelect, selectedCategories }) => {
   const mapRef = useRef();
+  const [mapHeight, setMapHeight] = useState('75vh');
+
+  useEffect(() => {
+    const updateMapHeight = () => {
+      // Adjust map height based on viewport
+      const height = window.innerHeight * 0.75;
+      setMapHeight(`${height}px`);
+    };
+
+    updateMapHeight();
+    window.addEventListener('resize', updateMapHeight);
+    return () => window.removeEventListener('resize', updateMapHeight);
+  }, []);
 
   const filteredDistricts = districtData.filter(district => {
     if (selectedCategories.length === 0) return true;
@@ -352,26 +361,28 @@ const CropMap = ({ districtData, onDistrictSelect, selectedCategories }) => {
   });
 
   return (
-    <div className="relative h-full">
+    <div className="relative w-full" style={{ height: mapHeight }}>
       <MapContainer
         center={[7.8731, 80.7718]}
         zoom={7}
-        style={{ height: '75vh', width: '100%' }}
+        style={{ height: '100%', width: '100%' }}
         className="rounded-xl shadow-2xl border border-gray-300"
         whenCreated={(map) => { mapRef.current = map; }}
       >
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
 
         {filteredDistricts.map((district, index) => (
           <Marker
             key={index}
             position={[district.latitude, district.longitude]}
-            icon={createCustomIcon(district.type)}
+            icon={createCustomIcon(district.type, district.fruits.length > 0 ? 'large' : 'medium')}
             eventHandlers={{
               click: () => onDistrictSelect(district),
+              mouseover: (e) => e.target.openPopup(),
+              mouseout: (e) => e.target.closePopup()
             }}
           >
             <Tooltip
@@ -384,16 +395,6 @@ const CropMap = ({ districtData, onDistrictSelect, selectedCategories }) => {
                 <div className="font-bold text-lg text-gray-800 mb-1">{district.name}</div>
                 <div className="text-sm text-gray-600 mb-2">{district.region} • {district.elevation}</div>
                 
-                {district.crops.length > 0 && (
-                  <div className="mb-2">
-                    <div className="flex items-center gap-1 mb-1">
-                      <Carrot size={14} className="text-green-600" />
-                      <span className="font-medium text-xs text-gray-700">Vegetables:</span>
-                    </div>
-                    <div className="text-xs text-gray-600">{district.crops.slice(0, 3).join(', ')}</div>
-                  </div>
-                )}
-                
                 {district.fruits.length > 0 && (
                   <div className="mb-2">
                     <div className="flex items-center gap-1 mb-1">
@@ -401,6 +402,16 @@ const CropMap = ({ districtData, onDistrictSelect, selectedCategories }) => {
                       <span className="font-medium text-xs text-gray-700">Fruits:</span>
                     </div>
                     <div className="text-xs text-gray-600">{district.fruits.slice(0, 3).join(', ')}</div>
+                  </div>
+                )}
+                
+                {district.crops.length > 0 && (
+                  <div className="mb-2">
+                    <div className="flex items-center gap-1 mb-1">
+                      <Carrot size={14} className="text-green-600" />
+                      <span className="font-medium text-xs text-gray-700">Vegetables:</span>
+                    </div>
+                    <div className="text-xs text-gray-600">{district.crops.slice(0, 3).join(', ')}</div>
                   </div>
                 )}
 
@@ -443,37 +454,35 @@ const CropMap = ({ districtData, onDistrictSelect, selectedCategories }) => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-2">
-                  {district.crops.length > 0 && (
-                    <div>
-                      <div className="flex items-center gap-1 mb-1">
-                        <Carrot size={16} className="text-green-600" />
-                        <span className="font-medium text-sm">Vegetables:</span>
-                      </div>
-                      <div className="text-sm text-gray-700">{district.crops.join(', ')}</div>
+                {district.fruits.length > 0 && (
+                  <div className="mb-3">
+                    <div className="flex items-center gap-1 mb-1">
+                      <Apple size={16} className="text-orange-500" />
+                      <span className="font-medium text-sm">Fruits:</span>
                     </div>
-                  )}
-                  
-                  {district.fruits.length > 0 && (
-                    <div>
-                      <div className="flex items-center gap-1 mb-1">
-                        <Apple size={16} className="text-orange-500" />
-                        <span className="font-medium text-sm">Fruits:</span>
-                      </div>
-                      <div className="text-sm text-gray-700">{district.fruits.join(', ')}</div>
-                    </div>
-                  )}
+                    <div className="text-sm text-gray-700">{district.fruits.join(', ')}</div>
+                  </div>
+                )}
 
-                  {district.other.length > 0 && (
-                    <div>
-                      <div className="flex items-center gap-1 mb-1">
-                        <Package size={16} className="text-purple-600" />
-                        <span className="font-medium text-sm">Other Products:</span>
-                      </div>
-                      <div className="text-sm text-gray-700">{district.other.join(', ')}</div>
+                {district.crops.length > 0 && (
+                  <div className="mb-3">
+                    <div className="flex items-center gap-1 mb-1">
+                      <Carrot size={16} className="text-green-600" />
+                      <span className="font-medium text-sm">Vegetables:</span>
                     </div>
-                  )}
-                </div>
+                    <div className="text-sm text-gray-700">{district.crops.join(', ')}</div>
+                  </div>
+                )}
+
+                {district.other.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-1 mb-1">
+                      <Package size={16} className="text-purple-600" />
+                      <span className="font-medium text-sm">Other Products:</span>
+                    </div>
+                    <div className="text-sm text-gray-700">{district.other.join(', ')}</div>
+                  </div>
+                )}
               </div>
             </Popup>
           </Marker>
@@ -552,13 +561,17 @@ const SearchControlComponent = ({ districts, onSelect }) => {
   );
 };
 
-// Main Application Component
+// Main Application Component with responsive improvements
 function App() {
   const [selectedRegion, setSelectedRegion] = useState('all');
   const [selectedDistrict, setSelectedDistrict] = useState(null);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showFPS, setShowFPS] = useState(false);
+  const [windowSize, setWindowSize] = useState({
+    width: window.innerWidth,
+    height: window.innerHeight
+  });
 
   const regions = ['all', ...new Set(districts.map(d => d.region))];
   const categories = [
@@ -569,6 +582,19 @@ function App() {
     { id: 'other', name: 'Other', icon: Layers, color: 'gray' },
     { id: 'both', name: 'Mixed', icon: Leaf, color: 'cyan' }
   ];
+
+  // Update window size on resize
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const filteredDistricts = selectedRegion === 'all' 
     ? districts 
@@ -584,6 +610,15 @@ function App() {
 
   const handleDistrictSelect = (district) => {
     setSelectedDistrict(district);
+    // Scroll to district details if on mobile
+    if (windowSize.width < 768) {
+      setTimeout(() => {
+        const element = document.getElementById('district-details');
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    }
   };
 
   const toggleFullscreen = () => {
@@ -626,24 +661,24 @@ function App() {
       {showFPS && <FPSCounter />}
       
       <div className="container mx-auto px-4 py-6">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent mb-2">
+            <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent mb-2">
               Sri Lanka Dedicated Economic Centers
             </h1>
-            <p className="text-lg text-gray-600">Advanced Agricultural Production & Distribution Network</p>
+            <p className="text-base sm:text-lg text-gray-600">Advanced Agricultural Production & Distribution Network</p>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowFPS(!showFPS)}
-              className="p-3 rounded-xl bg-blue-100 hover:bg-blue-200 text-blue-800 transition-colors"
+              className="p-2 sm:p-3 rounded-xl bg-blue-100 hover:bg-blue-200 text-blue-800 transition-colors"
               title="Toggle FPS Counter"
             >
               <Activity size={20} />
             </button>
             <button
               onClick={toggleFullscreen}
-              className="p-3 rounded-xl bg-green-100 hover:bg-green-200 text-green-800 transition-colors"
+              className="p-2 sm:p-3 rounded-xl bg-green-100 hover:bg-green-200 text-green-800 transition-colors"
               title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
             >
               {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
@@ -653,11 +688,11 @@ function App() {
         
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-3">
-            <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-200">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-gray-800">Interactive Economic Centers Map</h2>
+            <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 border border-gray-200">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Interactive Economic Centers Map</h2>
                 <div className="flex items-center gap-2">
-                  <MapPin className="text-blue-600" size={24} />
+                  <MapPin className="text-blue-600" size={20} />
                   <span className="text-sm text-gray-600">{filteredDistricts.length} Centers</span>
                 </div>
               </div>
@@ -669,26 +704,26 @@ function App() {
             </div>
           </div>
           
-          <div className="space-y-6">
-            <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
-              <div className="flex items-center gap-2 mb-4">
+          <div className="space-y-4 sm:space-y-6">
+            <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg border border-gray-200">
+              <div className="flex items-center gap-2 mb-3 sm:mb-4">
                 <Search className="text-blue-600" size={20} />
-                <h2 className="text-xl font-bold text-gray-800">Search Centers</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-gray-800">Search Centers</h2>
               </div>
               <SearchControlComponent districts={districts} onSelect={handleDistrictSelect} />
             </div>
             
-            <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
-              <div className="flex items-center gap-2 mb-4">
+            <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg border border-gray-200">
+              <div className="flex items-center gap-2 mb-3 sm:mb-4">
                 <Filter className="text-green-600" size={20} />
-                <h2 className="text-xl font-bold text-gray-800">Filter by Region</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-gray-800">Filter by Region</h2>
               </div>
               <div className="space-y-2">
                 {regions.map(region => (
                   <button
                     key={region}
                     onClick={() => setSelectedRegion(region)}
-                    className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all transform hover:scale-105 ${
+                    className={`w-full text-left px-3 sm:px-4 py-2 sm:py-3 rounded-xl text-sm font-medium transition-all ${
                       selectedRegion === region 
                         ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-lg' 
                         : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
@@ -700,26 +735,26 @@ function App() {
               </div>
             </div>
             
-            <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
-              <div className="flex items-center gap-2 mb-4">
+            <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg border border-gray-200">
+              <div className="flex items-center gap-2 mb-3 sm:mb-4">
                 <Layers className="text-purple-600" size={20} />
-                <h2 className="text-xl font-bold text-gray-800">Filter by Category</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-gray-800">Filter by Category</h2>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {categories.map(category => {
                   const IconComponent = category.icon;
                   return (
                     <button
                       key={category.id}
                       onClick={() => toggleCategory(category.id)}
-                      className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all transform hover:scale-105 flex items-center gap-3 ${
+                      className={`w-full text-left px-3 sm:px-4 py-2 sm:py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
                         selectedCategories.includes(category.id)
                           ? getColorClasses(category.color)
                           : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
                       }`}
                     >
                       <IconComponent size={18} />
-                      {category.name}
+                      <span className="truncate">{category.name}</span>
                       <div className="ml-auto text-xs opacity-75">
                         {districts.filter(d => d.type === category.id).length}
                       </div>
@@ -729,8 +764,8 @@ function App() {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-blue-50 to-green-50 p-6 rounded-2xl border border-blue-200">
-              <h3 className="font-bold text-blue-800 mb-3">Economic Statistics</h3>
+            <div className="bg-gradient-to-br from-blue-50 to-green-50 p-4 sm:p-6 rounded-2xl border border-blue-200">
+              <h3 className="font-bold text-blue-800 mb-2 sm:mb-3">Economic Statistics</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Total Centers:</span>
@@ -754,18 +789,21 @@ function App() {
         </div>
 
         {selectedDistrict && (
-          <div className="bg-white p-8 rounded-2xl shadow-2xl my-8 border border-gray-200 transform transition-all duration-300 animate-in slide-in-from-bottom">
-            <div className="flex justify-between items-start mb-6">
+          <div 
+            id="district-details"
+            className="bg-white p-4 sm:p-6 md:p-8 rounded-2xl shadow-2xl my-6 sm:my-8 border border-gray-200 transform transition-all duration-300 animate-in slide-in-from-bottom"
+          >
+            <div className="flex flex-col sm:flex-row justify-between items-start mb-4 sm:mb-6 gap-4">
               <div>
-                <h2 className="text-3xl font-bold text-gray-800 mb-2">{selectedDistrict.name}</h2>
-                <div className="flex items-center gap-4 text-sm">
-                  <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-medium">
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">{selectedDistrict.name}</h2>
+                <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+                  <span className="px-2 sm:px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-medium">
                     {selectedDistrict.region}
                   </span>
-                  <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full font-medium">
+                  <span className="px-2 sm:px-3 py-1 bg-green-100 text-green-800 rounded-full font-medium">
                     {selectedDistrict.climate}
                   </span>
-                  <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full font-medium">
+                  <span className="px-2 sm:px-3 py-1 bg-purple-100 text-purple-800 rounded-full font-medium">
                     {selectedDistrict.elevation}
                   </span>
                 </div>
@@ -778,10 +816,10 @@ function App() {
               </button>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200">
-                <h4 className="font-bold text-blue-800 mb-2">Economic Value</h4>
-                <div className={`text-2xl font-bold ${
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-3 sm:p-4 rounded-xl border border-blue-200">
+                <h4 className="font-bold text-blue-800 mb-1 sm:mb-2">Economic Value</h4>
+                <div className={`text-xl sm:text-2xl font-bold ${
                   selectedDistrict.economicValue === 'Very High' ? 'text-green-600' :
                   selectedDistrict.economicValue === 'High' ? 'text-blue-600' :
                   selectedDistrict.economicValue === 'Medium' ? 'text-yellow-600' :
@@ -791,9 +829,9 @@ function App() {
                 </div>
               </div>
               
-              <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl border border-green-200">
-                <h4 className="font-bold text-green-800 mb-2">Export Potential</h4>
-                <div className={`text-2xl font-bold ${
+              <div className="bg-gradient-to-br from-green-50 to-green-100 p-3 sm:p-4 rounded-xl border border-green-200">
+                <h4 className="font-bold text-green-800 mb-1 sm:mb-2">Export Potential</h4>
+                <div className={`text-xl sm:text-2xl font-bold ${
                   selectedDistrict.exportPotential === 'Premium' ? 'text-purple-600' :
                   selectedDistrict.exportPotential === 'Very High' ? 'text-green-600' :
                   selectedDistrict.exportPotential === 'High' ? 'text-blue-600' :
@@ -804,43 +842,43 @@ function App() {
                 </div>
               </div>
               
-              <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl border border-purple-200">
-                <h4 className="font-bold text-purple-800 mb-2">Total Products</h4>
-                <div className="text-2xl font-bold text-purple-600">
+              <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-3 sm:p-4 rounded-xl border border-purple-200">
+                <h4 className="font-bold text-purple-800 mb-1 sm:mb-2">Total Products</h4>
+                <div className="text-xl sm:text-2xl font-bold text-purple-600">
                   {selectedDistrict.crops.length + selectedDistrict.fruits.length + selectedDistrict.nuts.length + selectedDistrict.chili.length + selectedDistrict.other.length}
                 </div>
               </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              {selectedDistrict.crops.length > 0 && (
-                <div className="bg-green-50 p-4 rounded-xl border border-green-200">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Carrot className="text-green-600" size={20} />
-                    <h3 className="font-bold text-green-800">Vegetables</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+              {selectedDistrict.fruits.length > 0 && (
+                <div className="bg-orange-50 p-3 sm:p-4 rounded-xl border border-orange-200">
+                  <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                    <Apple className="text-orange-600" size={18} />
+                    <h3 className="font-bold text-orange-800">Fruits</h3>
                   </div>
-                  <ul className="space-y-2">
-                    {selectedDistrict.crops.map((crop, i) => (
+                  <ul className="space-y-1 sm:space-y-2">
+                    {selectedDistrict.fruits.map((fruit, i) => (
                       <li key={i} className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        <span className="text-gray-700 text-sm">{crop}</span>
+                        <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                        <span className="text-gray-700 text-xs sm:text-sm">{fruit}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
               )}
               
-              {selectedDistrict.fruits.length > 0 && (
-                <div className="bg-orange-50 p-4 rounded-xl border border-orange-200">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Apple className="text-orange-600" size={20} />
-                    <h3 className="font-bold text-orange-800">Fruits</h3>
+              {selectedDistrict.crops.length > 0 && (
+                <div className="bg-green-50 p-3 sm:p-4 rounded-xl border border-green-200">
+                  <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                    <Carrot className="text-green-600" size={18} />
+                    <h3 className="font-bold text-green-800">Vegetables</h3>
                   </div>
-                  <ul className="space-y-2">
-                    {selectedDistrict.fruits.map((fruit, i) => (
+                  <ul className="space-y-1 sm:space-y-2">
+                    {selectedDistrict.crops.map((crop, i) => (
                       <li key={i} className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                        <span className="text-gray-700 text-sm">{fruit}</span>
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-gray-700 text-xs sm:text-sm">{crop}</span>
                       </li>
                     ))}
                   </ul>
@@ -848,16 +886,16 @@ function App() {
               )}
 
               {selectedDistrict.nuts.length > 0 && (
-                <div className="bg-purple-50 p-4 rounded-xl border border-purple-200">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Package className="text-purple-600" size={20} />
+                <div className="bg-purple-50 p-3 sm:p-4 rounded-xl border border-purple-200">
+                  <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                    <Package className="text-purple-600" size={18} />
                     <h3 className="font-bold text-purple-800">Nuts</h3>
                   </div>
-                  <ul className="space-y-2">
+                  <ul className="space-y-1 sm:space-y-2">
                     {selectedDistrict.nuts.map((nut, i) => (
                       <li key={i} className="flex items-center gap-2">
                         <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                        <span className="text-gray-700 text-sm">{nut}</span>
+                        <span className="text-gray-700 text-xs sm:text-sm">{nut}</span>
                       </li>
                     ))}
                   </ul>
@@ -865,16 +903,16 @@ function App() {
               )}
 
               {selectedDistrict.chili.length > 0 && (
-                <div className="bg-red-50 p-4 rounded-xl border border-red-200">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Flame className="text-red-600" size={20} />
+                <div className="bg-red-50 p-3 sm:p-4 rounded-xl border border-red-200">
+                  <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                    <Flame className="text-red-600" size={18} />
                     <h3 className="font-bold text-red-800">Chili</h3>
                   </div>
-                  <ul className="space-y-2">
+                  <ul className="space-y-1 sm:space-y-2">
                     {selectedDistrict.chili.map((chili, i) => (
                       <li key={i} className="flex items-center gap-2">
                         <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                        <span className="text-gray-700 text-sm">{chili}</span>
+                        <span className="text-gray-700 text-xs sm:text-sm">{chili}</span>
                       </li>
                     ))}
                   </ul>
@@ -882,16 +920,16 @@ function App() {
               )}
 
               {selectedDistrict.other.length > 0 && (
-                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Layers className="text-gray-600" size={20} />
+                <div className="bg-gray-50 p-3 sm:p-4 rounded-xl border border-gray-200">
+                  <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                    <Layers className="text-gray-600" size={18} />
                     <h3 className="font-bold text-gray-800">Other Products</h3>
                   </div>
-                  <ul className="space-y-2">
+                  <ul className="space-y-1 sm:space-y-2">
                     {selectedDistrict.other.map((item, i) => (
                       <li key={i} className="flex items-center gap-2">
                         <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
-                        <span className="text-gray-700 text-sm">{item}</span>
+                        <span className="text-gray-700 text-xs sm:text-sm">{item}</span>
                       </li>
                     ))}
                   </ul>
@@ -901,104 +939,104 @@ function App() {
           </div>
         )}
 
-        <div className="mt-8 bg-white p-8 rounded-2xl shadow-xl border border-gray-200">
-          <h2 className="text-3xl font-bold mb-6 text-gray-800">Sri Lanka Dedicated Economic Centers Overview</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-gradient-to-br from-green-50 to-emerald-100 p-6 rounded-xl border border-green-200 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 bg-green-600 rounded-full">
-                  <Carrot className="text-white" size={24} />
+        <div className="mt-6 sm:mt-8 bg-white p-4 sm:p-6 md:p-8 rounded-2xl shadow-xl border border-gray-200">
+          <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-gray-800">Sri Lanka Dedicated Economic Centers Overview</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
+            <div className="bg-gradient-to-br from-green-50 to-emerald-100 p-4 sm:p-6 rounded-xl border border-green-200 hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-3 mb-3 sm:mb-4">
+                <div className="p-2 sm:p-3 bg-green-600 rounded-full">
+                  <Carrot className="text-white" size={20} />
                 </div>
-                <h3 className="font-bold text-green-800 text-xl">Highland Economic Zone</h3>
+                <h3 className="font-bold text-green-800 text-lg sm:text-xl">Highland Economic Zone</h3>
               </div>
-              <p className="text-gray-700 leading-relaxed">
+              <p className="text-gray-700 text-sm sm:text-base leading-relaxed">
                 Specialized in temperate vegetables (carrots, leeks, potatoes) and premium produce (strawberries, tea). 
                 Optimized for high-altitude cultivation with superior quality exports.
               </p>
-              <div className="mt-4 flex items-center gap-2">
-                <span className="px-3 py-1 bg-green-200 text-green-800 rounded-full text-sm font-medium">Premium Quality</span>
-                <span className="px-3 py-1 bg-blue-200 text-blue-800 rounded-full text-sm font-medium">Export Ready</span>
+              <div className="mt-3 sm:mt-4 flex flex-wrap items-center gap-2">
+                <span className="px-2 sm:px-3 py-1 bg-green-200 text-green-800 rounded-full text-xs sm:text-sm font-medium">Premium Quality</span>
+                <span className="px-2 sm:px-3 py-1 bg-blue-200 text-blue-800 rounded-full text-xs sm:text-sm font-medium">Export Ready</span>
               </div>
             </div>
             
-            <div className="bg-gradient-to-br from-orange-50 to-amber-100 p-6 rounded-xl border border-orange-200 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 bg-orange-600 rounded-full">
-                  <Apple className="text-white" size={24} />
+            <div className="bg-gradient-to-br from-orange-50 to-amber-100 p-4 sm:p-6 rounded-xl border border-orange-200 hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-3 mb-3 sm:mb-4">
+                <div className="p-2 sm:p-3 bg-orange-600 rounded-full">
+                  <Apple className="text-white" size={20} />
                 </div>
-                <h3 className="font-bold text-orange-800 text-xl">Dry Zone Agricultural Hub</h3>
+                <h3 className="font-bold text-orange-800 text-lg sm:text-xl">Dry Zone Agricultural Hub</h3>
               </div>
-              <p className="text-gray-700 leading-relaxed">
+              <p className="text-gray-700 text-sm sm:text-base leading-relaxed">
                 Major supplier of onions, chili, and tropical fruits (banana, mango, papaya). 
                 Strategic location for bulk production and distribution networks.
               </p>
-              <div className="mt-4 flex items-center gap-2">
-                <span className="px-3 py-1 bg-orange-200 text-orange-800 rounded-full text-sm font-medium">High Volume</span>
-                <span className="px-3 py-1 bg-red-200 text-red-800 rounded-full text-sm font-medium">Spice Center</span>
+              <div className="mt-3 sm:mt-4 flex flex-wrap items-center gap-2">
+                <span className="px-2 sm:px-3 py-1 bg-orange-200 text-orange-800 rounded-full text-xs sm:text-sm font-medium">High Volume</span>
+                <span className="px-2 sm:px-3 py-1 bg-red-200 text-red-800 rounded-full text-xs sm:text-sm font-medium">Spice Center</span>
               </div>
             </div>
             
-            <div className="bg-gradient-to-br from-blue-50 to-cyan-100 p-6 rounded-xl border border-blue-200 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 bg-blue-600 rounded-full">
-                  <Package className="text-white" size={24} />
+            <div className="bg-gradient-to-br from-blue-50 to-cyan-100 p-4 sm:p-6 rounded-xl border border-blue-200 hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-3 mb-3 sm:mb-4">
+                <div className="p-2 sm:p-3 bg-blue-600 rounded-full">
+                  <Package className="text-white" size={20} />
                 </div>
-                <h3 className="font-bold text-blue-800 text-xl">Coastal Trade Centers</h3>
+                <h3 className="font-bold text-blue-800 text-lg sm:text-xl">Coastal Trade Centers</h3>
               </div>
-              <p className="text-gray-700 leading-relaxed">
+              <p className="text-gray-700 text-sm sm:text-base leading-relaxed">
                 Export processing of fruits (pineapple, palmyrah), spices (cinnamon), and maritime agricultural trade. 
                 Gateway for international market access.
               </p>
-              <div className="mt-4 flex items-center gap-2">
-                <span className="px-3 py-1 bg-blue-200 text-blue-800 rounded-full text-sm font-medium">Export Hub</span>
-                <span className="px-3 py-1 bg-purple-200 text-purple-800 rounded-full text-sm font-medium">Value Added</span>
+              <div className="mt-3 sm:mt-4 flex flex-wrap items-center gap-2">
+                <span className="px-2 sm:px-3 py-1 bg-blue-200 text-blue-800 rounded-full text-xs sm:text-sm font-medium">Export Hub</span>
+                <span className="px-2 sm:px-3 py-1 bg-purple-200 text-purple-800 rounded-full text-xs sm:text-sm font-medium">Value Added</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="mt-8 bg-gradient-to-r from-blue-600 to-green-600 p-8 rounded-2xl shadow-xl text-white">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-center">
+        <div className="mt-6 sm:mt-8 bg-gradient-to-r from-blue-600 to-green-600 p-4 sm:p-6 md:p-8 rounded-2xl shadow-xl text-white">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 text-center">
             <div>
-              <div className="text-3xl font-bold mb-2">{districts.length}</div>
-              <div className="text-blue-100">Economic Centers</div>
+              <div className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">{districts.length}</div>
+              <div className="text-blue-100 text-sm sm:text-base">Economic Centers</div>
             </div>
             <div>
-              <div className="text-3xl font-bold mb-2">
+              <div className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">
                 {districts.filter(d => d.economicValue === 'High' || d.economicValue === 'Very High').length}
               </div>
-              <div className="text-blue-100">High Value Centers</div>
+              <div className="text-blue-100 text-sm sm:text-base">High Value Centers</div>
             </div>
             <div>
-              <div className="text-3xl font-bold mb-2">
+              <div className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">
                 {districts.filter(d => d.exportPotential === 'High' || d.exportPotential === 'Very High' || d.exportPotential === 'Premium').length}
               </div>
-              <div className="text-blue-100">Export Ready</div>
+              <div className="text-blue-100 text-sm sm:text-base">Export Ready</div>
             </div>
             <div>
-              <div className="text-3xl font-bold mb-2">
+              <div className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">
                 {new Set([...districts.flatMap(d => d.crops), ...districts.flatMap(d => d.fruits), ...districts.flatMap(d => d.other)]).size}
               </div>
-              <div className="text-blue-100">Unique Products</div>
+              <div className="text-blue-100 text-sm sm:text-base">Unique Products</div>
             </div>
           </div>
         </div>
 
-        <footer className="mt-12 py-6 border-t border-gray-200 text-center text-gray-600">
+        <footer className="mt-8 sm:mt-12 py-4 sm:py-6 border-t border-gray-200 text-center text-gray-600">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <MapPin className="text-blue-600" size={20} />
-            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
+            <MapPin className="text-blue-600" size={18} />
+            <span className="text-lg sm:text-xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
               Sri Lanka Dedicated Economic Centers
             </span>
           </div>
-          <p className="text-sm">© {new Date().getFullYear()} - Advanced Agricultural Production & Distribution Network</p>
+          <p className="text-xs sm:text-sm">© {new Date().getFullYear()} - Advanced Agricultural Production & Distribution Network</p>
           <p className="text-xs mt-1 text-gray-500">
             Data sourced from Sri Lanka Department of Agriculture • Enhanced with real-time analytics
           </p>
         </footer>
       </div>
 
-      <style jsx>{`
+      <style jsx global>{`
         .custom-tooltip {
           border-radius: 12px !important;
           box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
@@ -1043,6 +1081,20 @@ function App() {
             transform: translateY(0);
           }
         }
+        
+        /* Responsive adjustments */
+        @media (max-width: 640px) {
+          .leaflet-popup-content {
+            width: 280px !important;
+          }
+        }
+        
+        @media (max-width: 768px) {
+          .leaflet-control-container {
+            display: none;
+          }
+        }
+          
       `}</style>
     </div>
   );
