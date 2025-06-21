@@ -44,6 +44,99 @@ import {
   FaPercent
 } from 'react-icons/fa';
 
+// ===== CUSTOM RESPONSIVE CSS STYLES =====
+const customResponsiveCSS = `
+  * {
+    box-sizing: border-box;
+  }
+  
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    overflow-x: hidden;
+  }
+  
+  .admin-container {
+    width: 100vw;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+  
+  @media (max-width: 640px) {
+    .mobile-optimized {
+      padding: 0.75rem;
+    }
+    
+    .mobile-grid {
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+    }
+    
+    .mobile-text {
+      font-size: 0.875rem;
+    }
+  }
+  
+  @media (min-width: 641px) and (max-width: 1024px) {
+    .tablet-optimized {
+      padding: 1rem;
+    }
+    
+    .tablet-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+    }
+  }
+  
+  @media (min-width: 1025px) {
+    .desktop-optimized {
+      padding: 1.5rem;
+    }
+    
+    .desktop-grid {
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+    }
+  }
+  
+  /* Responsive breakpoints */
+  .responsive-container {
+    width: 100%;
+    max-width: 100vw;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+  
+  @media (min-width: 640px) {
+    .responsive-container {
+      padding: 0 1.5rem;
+    }
+  }
+  
+  @media (min-width: 1024px) {
+    .responsive-container {
+      padding: 0 2rem;
+    }
+  }
+  
+  @media (min-width: 1280px) {
+    .responsive-container {
+      padding: 0 2.5rem;
+    }
+  }
+`;
+
+// Inject CSS into document head
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement("style");
+  styleSheet.type = "text/css";
+  styleSheet.innerText = customResponsiveCSS;
+  document.head.appendChild(styleSheet);
+}
+
 const AdminPortal = ({ user, onLogout }) => {
   // Current admin user - use the actual logged-in user data
   const [currentAdmin] = useState({
@@ -133,8 +226,19 @@ const AdminPortal = ({ user, onLogout }) => {
     { id: 2, message: 'Customer complaint received', time: '2 hours ago', type: 'customer', priority: 'medium' },
     { id: 3, message: 'System backup completed', time: '1 day ago', type: 'system', priority: 'low' }
   ]);
-
+  // ===== VIEWPORT SETUP & EVENT LISTENERS =====
   useEffect(() => {
+    // Set full viewport height and remove default margins/padding
+    const setFullViewport = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+      document.body.style.margin = '0';
+      document.body.style.padding = '0';
+      document.body.style.overflow = 'auto';
+      document.documentElement.style.margin = '0';
+      document.documentElement.style.padding = '0';
+    };
+
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
     };
@@ -145,10 +249,13 @@ const AdminPortal = ({ user, onLogout }) => {
       }
     };
 
+    setFullViewport();
+    window.addEventListener('resize', setFullViewport);
     window.addEventListener('scroll', handleScroll);
     document.addEventListener('click', handleClickOutside);
     
     return () => {
+      window.removeEventListener('resize', setFullViewport);
       window.removeEventListener('scroll', handleScroll);
       document.removeEventListener('click', handleClickOutside);
     };
@@ -371,67 +478,70 @@ const AdminPortal = ({ user, onLogout }) => {
       alert('Failed to delete customer: ' + err.message);
     }
   };
-
   return (
-    <div className="min-h-screen w-full bg-green-50">
+    <div className="min-h-screen w-full bg-green-50 admin-container" style={{ 
+      margin: 0, 
+      padding: 0,
+      width: '100vw',
+      minHeight: '100vh',
+      overflowX: 'hidden'
+    }}>
       {/* Navigation Header */}
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-400 border-b ${
         isScrolled 
-          ? 'bg-white/95 backdrop-blur-md shadow-lg border-green-200 py-2' 
-          : 'bg-white shadow-lg py-3 border-green-100'
+          ? 'bg-white/95 backdrop-blur-md shadow-lg border-green-200 py-1 sm:py-2' 
+          : 'bg-white shadow-lg py-2 sm:py-3 border-green-100'
       }`}>
-        <div className="px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-14">
+        <div className="px-3 sm:px-4 lg:px-6 xl:px-8">
+          <div className="flex justify-between items-center h-12 sm:h-14">
             {/* Logo and Mobile Menu */}
             <div className="flex items-center min-w-0">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="sidebar-toggle lg:hidden mr-2 p-2 rounded-lg bg-green-100 hover:bg-green-200 transition-colors flex-shrink-0"
+                className="sidebar-toggle lg:hidden mr-2 p-1 sm:p-2 rounded-lg bg-green-100 hover:bg-green-200 transition-colors flex-shrink-0"
               >
-                <FaBars className="text-green-700 text-lg" />
+                <FaBars className="text-green-700 text-base sm:text-lg" />
               </button>
-              <FaUserTie className="text-green-700 text-2xl mr-2 flex-shrink-0" />
-              <span className="text-lg sm:text-xl font-bold text-gray-800 truncate">
+              <FaUserTie className="text-green-700 text-xl sm:text-2xl mr-2 flex-shrink-0" />
+              <span className="text-base sm:text-lg lg:text-xl font-bold text-gray-800 truncate">
                 <span className="hidden sm:inline">Administrator Portal</span>
                 <span className="sm:hidden">Admin Portal</span>
               </span>
             </div>
 
             {/* Right Side Actions */}
-            <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
+            <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-4 flex-shrink-0">
               {/* Notifications */}
               <div className="relative">
-                <button className="p-2 rounded-full bg-green-100 hover:bg-green-200 transition-colors relative">
-                  <FaBell className="text-green-700 text-lg" />
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                <button className="p-1 sm:p-2 rounded-full bg-green-100 hover:bg-green-200 transition-colors relative">
+                  <FaBell className="text-green-700 text-base sm:text-lg" />
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center">
                     {notifications.length}
                   </span>
                 </button>
               </div>
 
               {/* Profile */}
-              <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-3">
                 <div className="hidden md:block text-right">
-                  <p className="text-sm font-semibold text-gray-800 truncate max-w-32">{currentAdmin.name}</p>
-                  <p className="text-xs text-gray-600 truncate max-w-32">{currentAdmin.role}</p>
+                  <p className="text-xs sm:text-sm font-semibold text-gray-800 truncate max-w-20 sm:max-w-32">{currentAdmin.name}</p>
+                  <p className="text-[10px] sm:text-xs text-gray-600 truncate max-w-20 sm:max-w-32">{currentAdmin.role}</p>
                 </div>
                 <img 
                   src={currentAdmin.avatar} 
                   alt="Profile" 
-                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-green-200 flex-shrink-0" 
+                  className="w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 rounded-full border-2 border-green-200 flex-shrink-0" 
                 />
               </div>
             </div>
           </div>
         </div>
-      </nav>
-
-      <div className="flex pt-20 w-full min-h-screen">
+      </nav>      <div className="flex pt-16 sm:pt-20 w-full min-h-screen">
         {/* Sidebar */}
-        <aside className={`sidebar fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white border-r border-green-100 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+        <aside className={`sidebar fixed lg:static inset-y-0 left-0 z-40 w-60 sm:w-64 bg-white border-r border-green-100 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}>
-          <div className="p-6 pt-0 h-full overflow-y-auto">
+          <div className="p-4 sm:p-6 pt-0 h-full overflow-y-auto">
             <nav className="space-y-2">
               {sidebarItems.map((item) => (
                 <button
@@ -440,25 +550,25 @@ const AdminPortal = ({ user, onLogout }) => {
                     setActiveTab(item.id);
                     setSidebarOpen(false);
                   }}
-                  className={`w-full flex items-center px-4 py-3 text-left rounded-xl transition-all duration-200 ${
+                  className={`w-full flex items-center px-3 sm:px-4 py-2 sm:py-3 text-left rounded-xl transition-all duration-200 text-sm sm:text-base ${
                     activeTab === item.id
                       ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-lg'
                       : 'text-gray-700 hover:bg-green-50 hover:text-green-700'
                   }`}
                 >
-                  <item.icon className="mr-3 text-xl" />
+                  <item.icon className="mr-2 sm:mr-3 text-lg sm:text-xl" />
                   {item.label}
                 </button>
               ))}
             </nav>
 
             {/* Logout Button */}
-            <div className="absolute bottom-6 left-6 right-6">
+            <div className="absolute bottom-4 sm:bottom-6 left-4 sm:left-6 right-4 sm:right-6">
               <button 
                 onClick={handleLogout}
-                className="w-full flex items-center px-4 py-3 text-left rounded-xl text-red-600 hover:bg-red-50 transition-colors"
+                className="w-full flex items-center px-3 sm:px-4 py-2 sm:py-3 text-left rounded-xl text-red-600 hover:bg-red-50 transition-colors text-sm sm:text-base"
               >
-                <FaSignOutAlt className="mr-3 text-xl" />
+                <FaSignOutAlt className="mr-2 sm:mr-3 text-lg sm:text-xl" />
                 Logout
               </button>
             </div>
@@ -471,96 +581,91 @@ const AdminPortal = ({ user, onLogout }) => {
             
             {/* Dashboard Tab */}
             {activeTab === 'dashboard' && (
-              <div className="w-full space-y-8">
-                <PageHeader 
+              <div className="w-full space-y-8">                <PageHeader 
                   title="System Administration Dashboard"
                   subtitle="Manage users, monitor platform activity, and ensure system integrity"
-                />
-
-                {/* Stats Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <CardWrapper className="p-6 hover:shadow-xl transition-all">
+                />{/* Stats Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+                  <CardWrapper className="p-4 sm:p-6 hover:shadow-xl transition-all">
                     <div className="flex items-center justify-between">
                       <div className="min-w-0 flex-1">
-                        <p className="text-gray-600 text-sm font-medium">Total Farmers</p>
-                        <p className="text-2xl font-bold text-gray-800 mt-1">{dashboardStats.totalFarmers}</p>
-                        <p className="text-sm text-green-600 mt-1">{dashboardStats.activeFarmers} active</p>
+                        <p className="text-gray-600 text-xs sm:text-sm font-medium">Total Farmers</p>
+                        <p className="text-xl sm:text-2xl font-bold text-gray-800 mt-1">{dashboardStats.totalFarmers}</p>
+                        <p className="text-xs sm:text-sm text-green-600 mt-1">{dashboardStats.activeFarmers} active</p>
                       </div>
-                      <div className="p-4 rounded-xl bg-green-100 flex-shrink-0">
-                        <FaTractor className="text-green-700 text-2xl" />
+                      <div className="p-3 sm:p-4 rounded-xl bg-green-100 flex-shrink-0">
+                        <FaTractor className="text-green-700 text-xl sm:text-2xl" />
                       </div>
                     </div>
                   </CardWrapper>
 
-                  <CardWrapper className="p-6 hover:shadow-xl transition-all">
+                  <CardWrapper className="p-4 sm:p-6 hover:shadow-xl transition-all">
                     <div className="flex items-center justify-between">
                       <div className="min-w-0 flex-1">
-                        <p className="text-gray-600 text-sm font-medium">Total Customers</p>
-                        <p className="text-2xl font-bold text-gray-800 mt-1">{dashboardStats.totalCustomers}</p>
-                        <p className="text-sm text-green-600 mt-1">{dashboardStats.activeCustomers} active</p>
+                        <p className="text-gray-600 text-xs sm:text-sm font-medium">Total Customers</p>
+                        <p className="text-xl sm:text-2xl font-bold text-gray-800 mt-1">{dashboardStats.totalCustomers}</p>
+                        <p className="text-xs sm:text-sm text-green-600 mt-1">{dashboardStats.activeCustomers} active</p>
                       </div>
-                      <div className="p-4 rounded-xl bg-green-100 flex-shrink-0">
-                        <FaUsers className="text-green-700 text-2xl" />
+                      <div className="p-3 sm:p-4 rounded-xl bg-green-100 flex-shrink-0">
+                        <FaUsers className="text-green-700 text-xl sm:text-2xl" />
                       </div>
                     </div>
                   </CardWrapper>
 
-                  <CardWrapper className="p-6 hover:shadow-xl transition-all">
+                  <CardWrapper className="p-4 sm:p-6 hover:shadow-xl transition-all">
                     <div className="flex items-center justify-between">
                       <div className="min-w-0 flex-1">
-                        <p className="text-gray-600 text-sm font-medium">Total Products</p>
-                        <p className="text-2xl font-bold text-gray-800 mt-1">{dashboardStats.totalProducts}</p>
-                        <p className="text-sm text-green-600 mt-1">Across all farmers</p>
+                        <p className="text-gray-600 text-xs sm:text-sm font-medium">Total Products</p>
+                        <p className="text-xl sm:text-2xl font-bold text-gray-800 mt-1">{dashboardStats.totalProducts}</p>
+                        <p className="text-xs sm:text-sm text-green-600 mt-1">Across all farmers</p>
                       </div>
-                      <div className="p-4 rounded-xl bg-green-100 flex-shrink-0">
-                        <FaBox className="text-green-700 text-2xl" />
+                      <div className="p-3 sm:p-4 rounded-xl bg-green-100 flex-shrink-0">
+                        <FaBox className="text-green-700 text-xl sm:text-2xl" />
                       </div>
                     </div>
                   </CardWrapper>
 
-                  <CardWrapper className="p-6 hover:shadow-xl transition-all">
+                  <CardWrapper className="p-4 sm:p-6 hover:shadow-xl transition-all">
                     <div className="flex items-center justify-between">
                       <div className="min-w-0 flex-1">
-                        <p className="text-gray-600 text-sm font-medium">Platform Revenue</p>
-                        <p className="text-2xl font-bold text-gray-800 mt-1">Rs.{(dashboardStats.totalRevenue / 1000000).toFixed(1)}M</p>
-                        <p className="text-sm text-green-600 mt-1">Total transactions</p>
+                        <p className="text-gray-600 text-xs sm:text-sm font-medium">Platform Revenue</p>
+                        <p className="text-xl sm:text-2xl font-bold text-gray-800 mt-1">Rs.{(dashboardStats.totalRevenue / 1000000).toFixed(1)}M</p>
+                        <p className="text-xs sm:text-sm text-green-600 mt-1">Total transactions</p>
                       </div>
-                      <div className="p-4 rounded-xl bg-green-100 flex-shrink-0">
-                        <FaMoneyBillWave className="text-green-700 text-2xl" />
+                      <div className="p-3 sm:p-4 rounded-xl bg-green-100 flex-shrink-0">
+                        <FaMoneyBillWave className="text-green-700 text-xl sm:text-2xl" />
                       </div>
                     </div>
                   </CardWrapper>
-                </div>
-
-                {/* Recent Activity */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <CardWrapper className="p-6">
-                    <div className="flex justify-between items-center mb-6">
-                      <h2 className="text-xl font-bold text-gray-800">Pending Approvals</h2>
-                      <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">
+                </div>                {/* Recent Activity */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+                  <CardWrapper className="p-4 sm:p-6">
+                    <div className="flex justify-between items-center mb-4 sm:mb-6">
+                      <h2 className="text-lg sm:text-xl font-bold text-gray-800">Pending Approvals</h2>
+                      <span className="bg-yellow-100 text-yellow-800 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm">
                         {farmers.filter(f => f.status === 'pending').length} pending
                       </span>
                     </div>
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:space-y-4">
                       {farmers.filter(f => f.status === 'pending').map((farmer) => (
-                        <div key={farmer.id} className="flex items-center justify-between p-4 border border-green-100 rounded-lg hover:bg-green-50">
+                        <div key={farmer.id} className="flex items-center justify-between p-3 sm:p-4 border border-green-100 rounded-lg hover:bg-green-50">
                           <div className="flex items-center">
-                            <img src={farmer.avatar} alt={farmer.name} className="w-10 h-10 rounded-full mr-3" />
+                            <img src={farmer.avatar} alt={farmer.name} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full mr-2 sm:mr-3" />
                             <div>
-                              <p className="font-semibold text-gray-800">{farmer.name}</p>
-                              <p className="text-sm text-gray-600">{farmer.location} • {farmer.farmSize}</p>
+                              <p className="font-semibold text-gray-800 text-sm sm:text-base">{farmer.name}</p>
+                              <p className="text-xs sm:text-sm text-gray-600">{farmer.location} • {farmer.farmSize}</p>
                             </div>
                           </div>
-                          <div className="flex space-x-2">
+                          <div className="flex space-x-1 sm:space-x-2">
                             <button 
                               onClick={() => handleStatusChange(farmer.user_id || farmer.id, 'active', 'farmer')}
-                              className="bg-green-600 text-white px-3 py-1 rounded-lg text-sm hover:bg-green-700"
+                              className="bg-green-600 text-white px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm hover:bg-green-700"
                             >
                               Approve
                             </button>
                             <button 
                               onClick={() => handleStatusChange(farmer.user_id || farmer.id, 'rejected', 'farmer')}
-                              className="bg-red-600 text-white px-3 py-1 rounded-lg text-sm hover:bg-red-700"
+                              className="bg-red-600 text-white px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm hover:bg-red-700"
                             >
                               Reject
                             </button>
@@ -570,54 +675,52 @@ const AdminPortal = ({ user, onLogout }) => {
                     </div>
                   </CardWrapper>
 
-                  <CardWrapper className="p-6">
-                    <h2 className="text-xl font-bold text-gray-800 mb-6">Recent Notifications</h2>
-                    <div className="space-y-4">
+                  <CardWrapper className="p-4 sm:p-6">
+                    <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-4 sm:mb-6">Recent Notifications</h2>
+                    <div className="space-y-3 sm:space-y-4">
                       {notifications.map((notification) => (
-                        <div key={notification.id} className="flex items-start p-4 border border-green-100 rounded-lg hover:bg-green-50">
-                          <div className={`p-2 rounded-full mr-3 ${
+                        <div key={notification.id} className="flex items-start p-3 sm:p-4 border border-green-100 rounded-lg hover:bg-green-50">
+                          <div className={`p-2 rounded-full mr-2 sm:mr-3 ${
                             notification.priority === 'high' ? 'bg-red-100' :
                             notification.priority === 'medium' ? 'bg-yellow-100' : 'bg-green-100'
                           }`}>
-                            {notification.type === 'farmer' && <FaTractor className={`text-${notification.priority === 'high' ? 'red' : notification.priority === 'medium' ? 'yellow' : 'green'}-600`} />}
-                            {notification.type === 'customer' && <FaUsers className={`text-${notification.priority === 'high' ? 'red' : notification.priority === 'medium' ? 'yellow' : 'green'}-600`} />}
-                            {notification.type === 'system' && <FaCog className={`text-${notification.priority === 'high' ? 'red' : notification.priority === 'medium' ? 'yellow' : 'green'}-600`} />}
+                            {notification.type === 'farmer' && <FaTractor className={`text-${notification.priority === 'high' ? 'red' : notification.priority === 'medium' ? 'yellow' : 'green'}-600 text-sm sm:text-base`} />}
+                            {notification.type === 'customer' && <FaUsers className={`text-${notification.priority === 'high' ? 'red' : notification.priority === 'medium' ? 'yellow' : 'green'}-600 text-sm sm:text-base`} />}
+                            {notification.type === 'system' && <FaCog className={`text-${notification.priority === 'high' ? 'red' : notification.priority === 'medium' ? 'yellow' : 'green'}-600 text-sm sm:text-base`} />}
                           </div>
                           <div className="flex-1">
-                            <p className="text-gray-800">{notification.message}</p>
-                            <p className="text-sm text-gray-500 mt-1">{notification.time}</p>
+                            <p className="text-gray-800 text-sm sm:text-base">{notification.message}</p>
+                            <p className="text-xs sm:text-sm text-gray-500 mt-1">{notification.time}</p>
                           </div>
                         </div>
                       ))}
                     </div>
                   </CardWrapper>
-                </div>
-
-                {/* Quick Actions */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                </div>                {/* Quick Actions */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                   <button 
                     onClick={() => setActiveTab('farmers')}
-                    className="bg-gradient-to-r from-green-600 to-green-700 text-white p-8 rounded-xl hover:shadow-xl transition-all text-center group"
+                    className="bg-gradient-to-r from-green-600 to-green-700 text-white p-6 sm:p-8 rounded-xl hover:shadow-xl transition-all text-center group"
                   >
-                    <FaTractor className="text-4xl mx-auto mb-4 group-hover:scale-110 transition-transform" />
-                    <h3 className="font-semibold text-xl">Manage Farmers</h3>
-                    <p className="text-green-100">Review and approve farmers</p>
+                    <FaTractor className="text-3xl sm:text-4xl mx-auto mb-3 sm:mb-4 group-hover:scale-110 transition-transform" />
+                    <h3 className="font-semibold text-lg sm:text-xl">Manage Farmers</h3>
+                    <p className="text-green-100 text-sm sm:text-base">Review and approve farmers</p>
                   </button>
                   <button 
                     onClick={() => setActiveTab('customers')}
-                    className="bg-gradient-to-r from-green-600 to-green-700 text-white p-8 rounded-xl hover:shadow-xl transition-all text-center group"
+                    className="bg-gradient-to-r from-green-600 to-green-700 text-white p-6 sm:p-8 rounded-xl hover:shadow-xl transition-all text-center group"
                   >
-                    <FaUsers className="text-4xl mx-auto mb-4 group-hover:scale-110 transition-transform" />
-                    <h3 className="font-semibold text-xl">Manage Customers</h3>
-                    <p className="text-green-100">Monitor customer activity</p>
+                    <FaUsers className="text-3xl sm:text-4xl mx-auto mb-3 sm:mb-4 group-hover:scale-110 transition-transform" />
+                    <h3 className="font-semibold text-lg sm:text-xl">Manage Customers</h3>
+                    <p className="text-green-100 text-sm sm:text-base">Monitor customer activity</p>
                   </button>
                   <button 
                     onClick={() => setActiveTab('analytics')}
-                    className="bg-gradient-to-r from-green-600 to-green-700 text-white p-8 rounded-xl hover:shadow-xl transition-all text-center group"
+                    className="bg-gradient-to-r from-green-600 to-green-700 text-white p-6 sm:p-8 rounded-xl hover:shadow-xl transition-all text-center group"
                   >
-                    <FaChartBar className="text-4xl mx-auto mb-4 group-hover:scale-110 transition-transform" />
-                    <h3 className="font-semibold text-xl">View Analytics</h3>
-                    <p className="text-green-100">Platform insights & reports</p>
+                    <FaChartBar className="text-3xl sm:text-4xl mx-auto mb-3 sm:mb-4 group-hover:scale-110 transition-transform" />
+                    <h3 className="font-semibold text-lg sm:text-xl">View Analytics</h3>
+                    <p className="text-green-100 text-sm sm:text-base">Platform insights & reports</p>
                   </button>
                 </div>
               </div>

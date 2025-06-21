@@ -226,10 +226,8 @@ app.post('/api/auth/admin-login', async (req, res) => {
     // Validation
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required' });
-    }
-
-    // Check if admin exists - get name and other details
-    const getAdminQuery = 'SELECT * FROM admin WHERE email = ?';
+    }    // Check if admin exists - get name and other details
+    const getAdminQuery = 'SELECT * FROM admins WHERE email = ?';
     db.query(getAdminQuery, [email], async (err, results) => {
       if (err) {
         console.error('Database error:', err);
@@ -255,12 +253,11 @@ app.post('/api/auth/admin-login', async (req, res) => {
         isPasswordValid = await bcrypt.compare(password, admin.password);
       } else {
         isPasswordValid = (password === admin.password);
-        
-        // Hash the password for future use
+          // Hash the password for future use
         if (isPasswordValid) {
           try {
             const hashedPassword = await bcrypt.hash(password, 10);
-            const updatePasswordQuery = 'UPDATE admin SET password = ? WHERE id = ?';
+            const updatePasswordQuery = 'UPDATE admins SET password = ? WHERE id = ?';
             db.query(updatePasswordQuery, [hashedPassword, admin.id], (err) => {
               if (err) {
                 console.error('Error updating admin password hash:', err);
@@ -277,10 +274,8 @@ app.post('/api/auth/admin-login', async (req, res) => {
       if (!isPasswordValid) {
         console.log('Invalid password for admin:', email);
         return res.status(400).json({ message: 'Invalid admin credentials' });
-      }
-
-      // Update last login
-      const updateLoginQuery = 'UPDATE admin SET updated_at = NOW() WHERE id = ?';
+      }      // Update last login
+      const updateLoginQuery = 'UPDATE admins SET updated_at = NOW() WHERE id = ?';
       db.query(updateLoginQuery, [admin.id], (err) => {
         if (err) {
           console.error('Error updating admin last login:', err);
