@@ -577,26 +577,42 @@ const AdminPortal = ({ user, onLogout }) => {
     if (onLogout) {
       onLogout();
     }
-  };
-
-  // Delete customer handler
+  };  // Delete customer handler
   const handleDeleteCustomer = async (user) => {
-    if (!window.confirm('Are you sure you want to delete this customer? This action cannot be undone.')) return;
+    if (!window.confirm(`Are you sure you want to delete ${user.first_name} ${user.last_name}? This action cannot be undone and will remove all customer data including profile, orders, and reviews.`)) return;
+    
     try {
       const userId = user.user_id || user.id;
+      console.log('Deleting customer with ID:', userId);
+      
       const response = await fetch(`http://localhost:3000/api/customer/${userId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
+      
       const data = await response.json();
+      console.log('Delete response:', data);
+      
       if (data.success) {
+        // Remove customer from the state
         setCustomers(prev => prev.filter(c => (c.user_id || c.id) !== userId));
+        
+        // Close modal if open
         setShowUserModal(false);
         setSelectedUser(null);
-        alert('Customer deleted successfully.');
+        
+        // Show success message
+        alert(`Customer ${user.first_name} ${user.last_name} has been deleted successfully.`);
+        
+        // Refresh the customers list to ensure consistency
+        fetchCustomers();
       } else {
-        alert(data.error || 'Failed to delete customer.');
+        alert(data.error || 'Failed to delete customer. Please try again.');
       }
     } catch (err) {
+      console.error('Error deleting customer:', err);
       alert('Failed to delete customer: ' + err.message);
     }
   };
@@ -1127,8 +1143,7 @@ const AdminPortal = ({ user, onLogout }) => {
                                 <FaTimesCircle className="text-gray-400" />
                               }</span>
                             </div>
-                          </div>
-                          <div className="flex space-x-2">
+                          </div>                          <div className="flex space-x-2">
                             <button 
                               onClick={() => viewUserDetails(customer, 'customer')}
                               className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-3 rounded-lg text-sm flex items-center justify-center"
@@ -1136,7 +1151,7 @@ const AdminPortal = ({ user, onLogout }) => {
                               <FaEye className="mr-1" /> View
                             </button>
                             <button 
-                              onClick={() => handleStatusChange(customer.id, customer.status === 'active' ? 'suspended' : 'active', 'customer')}
+                              onClick={() => handleStatusChange(customer.user_id || customer.id, customer.status === 'active' ? 'suspended' : 'active', 'customer')}
                               className={`flex-1 py-2 px-3 rounded-lg text-sm ${
                                 customer.status === 'active'
                                   ? 'bg-orange-600 hover:bg-orange-700 text-white'
@@ -1144,6 +1159,13 @@ const AdminPortal = ({ user, onLogout }) => {
                               }`}
                             >
                               {customer.status === 'active' ? 'Suspend' : 'Activate'}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCustomer(customer)}
+                              className="bg-red-600 hover:bg-red-700 text-white py-2 px-3 rounded-lg text-sm flex items-center justify-center"
+                              title="Delete Customer"
+                            >
+                              <FaTrash />
                             </button>
                           </div>
                         </div>

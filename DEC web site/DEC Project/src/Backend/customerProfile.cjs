@@ -449,16 +449,77 @@ router.get('/all', async (req, res) => {
 // Delete customer from all tables
 router.delete('/:userId', async (req, res) => {
   const userId = req.params.userId;
+  console.log('Attempting to delete customer with user_id:', userId);
+  
   try {
-    // Delete from customer_profiles
-    await db.promise().query('DELETE FROM customer_profiles WHERE user_id = ?', [userId]);
-    // Delete from users
-    await db.promise().query('DELETE FROM users WHERE id = ?', [userId]);
-    // TODO: Delete from other related tables if needed (e.g., orders, reviews)
-    res.json({ success: true, message: 'Customer deleted from all tables.' });
+    // Start transaction to ensure data integrity
+    await db.promise().beginTransaction();
+    
+    try {
+      // Get customer profile to check if profile image exists
+      const [profileRows] = await db.promise().query(
+        'SELECT profile_image FROM customer_profiles WHERE user_id = ?', 
+        [userId]
+      );
+      
+      // Delete profile image file if it exists
+      if (profileRows.length > 0 && profileRows[0].profile_image) {
+        const imageUrl = profileRows[0].profile_image;
+        if (imageUrl.startsWith(`http://localhost:${PROFILE_PORT}/uploads/customer-profiles/`)) {
+          const imagePath = path.join(__dirname, 'uploads', 'customer-profiles', path.basename(imageUrl));
+          if (fs.existsSync(imagePath)) {
+            fs.unlinkSync(imagePath);
+            console.log('Profile image deleted:', imagePath);
+          }
+        }
+      }
+      
+      // Delete from customer_profiles first (due to foreign key constraints)
+      const [deleteProfileResult] = await db.promise().query(
+        'DELETE FROM customer_profiles WHERE user_id = ?', 
+        [userId]
+      );
+      console.log('Deleted from customer_profiles:', deleteProfileResult.affectedRows);
+      
+      // Delete from users table
+      const [deleteUserResult] = await db.promise().query(
+        'DELETE FROM users WHERE id = ? AND role = "customer"', 
+        [userId]
+      );
+      console.log('Deleted from users:', deleteUserResult.affectedRows);
+      
+      // TODO: Add deletion from other related tables when implemented
+      // Example: orders, reviews, cart_items, etc.
+      // await db.promise().query('DELETE FROM orders WHERE customer_id = ?', [userId]);
+      // await db.promise().query('DELETE FROM reviews WHERE customer_id = ?', [userId]);
+      
+      // Commit transaction
+      await db.promise().commit();
+      
+      if (deleteUserResult.affectedRows > 0 || deleteProfileResult.affectedRows > 0) {
+        res.json({ 
+          success: true, 
+          message: `Customer with ID ${userId} has been deleted successfully.`,
+          deletedProfile: deleteProfileResult.affectedRows > 0,
+          deletedUser: deleteUserResult.affectedRows > 0
+        });
+      } else {
+        res.status(404).json({ 
+          success: false, 
+          error: 'Customer not found or already deleted.' 
+        });
+      }
+    } catch (error) {
+      // Rollback transaction on error
+      await db.promise().rollback();
+      throw error;
+    }
   } catch (error) {
     console.error('Delete customer error:', error);
-    res.status(500).json({ success: false, error: 'Failed to delete customer: ' + error.message });
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to delete customer: ' + error.message 
+    });
   }
 });
 
