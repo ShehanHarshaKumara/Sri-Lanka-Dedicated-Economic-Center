@@ -207,7 +207,6 @@ const AdminPortal = ({ user, onLogout }) => {
       farmer: 'Sunil Rathnayake'
     }
   ]);
-
   // UI states
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -218,7 +217,11 @@ const AdminPortal = ({ user, onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [sortBy, setSortBy] = useState('name');
-  const [sortOrder, setSortOrder] = useState('asc');
+  const [sortOrder, setSortOrder] = useState('asc');  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingFarmer, setEditingFarmer] = useState(null);
+  const [editFormData, setEditFormData] = useState({});
+  const [profileImageFile, setProfileImageFile] = useState(null);
+  const [profileImagePreview, setProfileImagePreview] = useState(null);
 
   // Notifications
   const [notifications] = useState([
@@ -389,12 +392,131 @@ const AdminPortal = ({ user, onLogout }) => {
       setCustomers(prev => prev.map(c => c.id === userId ? { ...c, verified: !c.verified } : c));
     }
   };
-
   // View user details
   const viewUserDetails = (user, type) => {
     setSelectedUser(user);
     setUserType(type);
     setShowUserModal(true);
+  };
+
+  // Edit farmer details
+  const editFarmerDetails = (farmer) => {
+    setEditingFarmer(farmer);
+    setEditFormData({
+      first_name: farmer.first_name || '',
+      last_name: farmer.last_name || '',
+      email: farmer.email || '',
+      phone: farmer.phone || '',
+      age: farmer.age || '',
+      nic_number: farmer.nic_number || '',
+      experience: farmer.experience || '',
+      farming_type: farmer.farming_type || 'Mixed Farming',
+      address: farmer.address || '',
+      city: farmer.city || '',
+      bio: farmer.bio || '',
+      location_lat: farmer.location_lat || '',
+      location_lng: farmer.location_lng || '',
+      location_address: farmer.location_address || ''
+    });
+    setProfileImagePreview(farmer.profile_image);
+    setShowEditModal(true);
+  };
+
+  // Delete farmer
+  const deleteFarmer = async (farmer) => {
+    if (!window.confirm(`Are you sure you want to delete ${farmer.name || farmer.first_name + ' ' + farmer.last_name}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:5002/api/farmer/profile/${farmer.user_id}`, {
+        method: 'DELETE'
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Remove farmer from the state
+        setFarmers(prev => prev.filter(f => f.user_id !== farmer.user_id));
+        alert('Farmer deleted successfully');
+      } else {
+        alert(data.error || 'Failed to delete farmer');
+      }
+    } catch (error) {
+      console.error('Error deleting farmer:', error);
+      alert('Failed to delete farmer: ' + error.message);
+    }
+  };
+
+  // Save farmer edits
+  const saveEditedFarmer = async () => {
+    try {
+      const formData = new FormData();
+      
+      // Add all form fields
+      Object.keys(editFormData).forEach(key => {
+        if (editFormData[key]) {
+          formData.append(key, editFormData[key]);
+        }
+      });
+
+      // Add existing image if no new image
+      if (!profileImageFile && profileImagePreview) {
+        formData.append('existing_image', profileImagePreview);
+      }
+
+      // Add new image if selected
+      if (profileImageFile) {
+        formData.append('profile_image', profileImageFile);
+      }
+
+      const response = await fetch(`http://localhost:5002/api/farmer/profile/${editingFarmer.user_id}`, {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update farmer in the state
+        setFarmers(prev => prev.map(f => 
+          f.user_id === editingFarmer.user_id 
+            ? { 
+                ...f, 
+                ...editFormData,
+                profile_image: profileImageFile ? URL.createObjectURL(profileImageFile) : profileImagePreview,
+                name: `${editFormData.first_name} ${editFormData.last_name}`
+              }
+            : f
+        ));
+        
+        setShowEditModal(false);
+        setEditingFarmer(null);
+        setEditFormData({});
+        setProfileImageFile(null);
+        setProfileImagePreview(null);
+        alert('Farmer details updated successfully');
+      } else {
+        alert(data.error || 'Failed to update farmer details');
+      }
+    } catch (error) {
+      console.error('Error updating farmer:', error);
+      alert('Failed to update farmer: ' + error.message);
+    }
+  };
+
+  // Handle form input changes
+  const handleEditFormChange = (field, value) => {
+    setEditFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Handle profile image change
+  const handleProfileImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setProfileImageFile(file);
+      setProfileImagePreview(URL.createObjectURL(file));
+    }
   };
 
   // Filter and sort users (add support for customers with more fields)
@@ -867,19 +989,27 @@ const AdminPortal = ({ user, onLogout }) => {
                                 >
                                   {farmer.verified ? <FaCheckCircle className="text-xl" /> : <FaTimesCircle className="text-xl" />}
                                 </button>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
+                              </td>                              <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="flex space-x-2">
                                   <button 
                                     onClick={() => viewUserDetails(farmer, 'farmer')}
                                     className="text-green-600 hover:text-green-700"
+                                    title="View Details"
                                   >
                                     <FaEye className="text-lg" />
                                   </button>
-                                  <button className="text-gray-600 hover:text-gray-700">
+                                  <button 
+                                    onClick={() => editFarmerDetails(farmer)}
+                                    className="text-gray-600 hover:text-gray-700"
+                                    title="Edit Farmer"
+                                  >
                                     <FaEdit className="text-lg" />
                                   </button>
-                                  <button className="text-red-600 hover:text-red-700">
+                                  <button 
+                                    onClick={() => deleteFarmer(farmer)}
+                                    className="text-red-600 hover:text-red-700"
+                                    title="Delete Farmer"
+                                  >
                                     <FaTrash className="text-lg" />
                                   </button>
                                 </div>
@@ -1742,9 +1872,7 @@ const AdminPortal = ({ user, onLogout }) => {
             )}
           </div>
         </main>
-      </div>
-
-      {/* User Details Modal */}
+      </div>      {/* User Details Modal */}
       {showUserModal && selectedUser && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -1893,6 +2021,199 @@ const AdminPortal = ({ user, onLogout }) => {
                     <FaTrash className="mr-2" /> Delete Account
                   </button>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Farmer Modal */}
+      {showEditModal && editingFarmer && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-green-100 p-6 rounded-t-2xl">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-gray-800">Edit Farmer Details</h2>
+                <button 
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingFarmer(null);
+                    setEditFormData({});
+                    setProfileImageFile(null);
+                    setProfileImagePreview(null);
+                  }}
+                  className="p-2 hover:bg-green-50 rounded-lg transition-colors"
+                >
+                  <FaTimes className="text-gray-600 text-xl" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {/* Profile Image Section */}
+              <div className="mb-8 text-center">
+                <div className="relative inline-block">
+                  <img 
+                    src={profileImagePreview || editingFarmer.profile_image || 'https://ui-avatars.com/api/?name=' + encodeURIComponent((editFormData.first_name || '') + ' ' + (editFormData.last_name || ''))} 
+                    alt="Profile Preview" 
+                    className="w-32 h-32 rounded-full border-4 border-green-100 object-cover"
+                  />
+                  <label className="absolute bottom-0 right-0 bg-green-600 hover:bg-green-700 text-white p-2 rounded-full cursor-pointer">
+                    <FaImage className="text-lg" />
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={handleProfileImageChange}
+                      className="hidden" 
+                    />
+                  </label>
+                </div>
+                <p className="text-sm text-gray-600 mt-2">Click the camera icon to change profile picture</p>
+              </div>
+
+              {/* Form Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">First Name *</label>
+                  <input
+                    type="text"
+                    value={editFormData.first_name}
+                    onChange={(e) => handleEditFormChange('first_name', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Last Name *</label>
+                  <input
+                    type="text"
+                    value={editFormData.last_name}
+                    onChange={(e) => handleEditFormChange('last_name', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                  <input
+                    type="email"
+                    value={editFormData.email}
+                    onChange={(e) => handleEditFormChange('email', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                  <input
+                    type="tel"
+                    value={editFormData.phone}
+                    onChange={(e) => handleEditFormChange('phone', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Age</label>
+                  <input
+                    type="number"
+                    value={editFormData.age}
+                    onChange={(e) => handleEditFormChange('age', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">NIC Number</label>
+                  <input
+                    type="text"
+                    value={editFormData.nic_number}
+                    onChange={(e) => handleEditFormChange('nic_number', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Experience (Years)</label>
+                  <input
+                    type="number"
+                    value={editFormData.experience}
+                    onChange={(e) => handleEditFormChange('experience', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Farming Type</label>
+                  <select
+                    value={editFormData.farming_type}
+                    onChange={(e) => handleEditFormChange('farming_type', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  >
+                    <option value="Mixed Farming">Mixed Farming</option>
+                    <option value="Organic Farming">Organic Farming</option>
+                    <option value="Crop Farming">Crop Farming</option>
+                    <option value="Livestock Farming">Livestock Farming</option>
+                    <option value="Dairy Farming">Dairy Farming</option>
+                    <option value="Poultry Farming">Poultry Farming</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+                  <input
+                    type="text"
+                    value={editFormData.city}
+                    onChange={(e) => handleEditFormChange('city', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                  <input
+                    type="text"
+                    value={editFormData.address}
+                    onChange={(e) => handleEditFormChange('address', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
+                  <textarea
+                    value={editFormData.bio}
+                    onChange={(e) => handleEditFormChange('bio', e.target.value)}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    placeholder="Tell us about your farming experience..."
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end space-x-4 pt-6 border-t border-green-100 mt-8">
+                <button 
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingFarmer(null);
+                    setEditFormData({});
+                    setProfileImageFile(null);
+                    setProfileImagePreview(null);
+                  }}
+                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={saveEditedFarmer}
+                  className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center"
+                >
+                  <FaSave className="mr-2" /> Save Changes
+                </button>
               </div>
             </div>
           </div>

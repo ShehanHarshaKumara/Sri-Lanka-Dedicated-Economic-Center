@@ -288,6 +288,82 @@ router.get('/all', async (req, res) => {
   }
 });
 
+// Delete farmer profile (for admin)
+router.delete('/profile/:userId', async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    
+    // Get profile image path for deletion
+    const [rows] = await db.promise().query(
+      'SELECT profile_image FROM farmer_profiles WHERE user_id = ?',
+      [userId]
+    );
+    
+    // Delete profile image file if exists
+    if (rows.length > 0 && rows[0].profile_image) {
+      const imagePath = path.join(__dirname, 'uploads', 'profiles', path.basename(rows[0].profile_image));
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+      }
+    }
+    
+    // Delete from farmer_profiles table
+    const [deleteResult] = await db.promise().query(
+      'DELETE FROM farmer_profiles WHERE user_id = ?',
+      [userId]
+    );
+    
+    // Also delete from users table if needed
+    await db.promise().query(
+      'DELETE FROM users WHERE id = ?',
+      [userId]
+    );
+    
+    if (deleteResult.affectedRows > 0) {
+      res.json({ success: true, message: 'Farmer deleted successfully' });
+    } else {
+      res.status(404).json({ success: false, error: 'Farmer not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to delete farmer: ' + error.message 
+    });
+  }
+});
+
+// Update farmer status (for admin)
+router.patch('/profile/:userId/status', async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const { status } = req.body;
+    
+    if (!['active', 'pending', 'suspended'].includes(status)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invalid status value' 
+      });
+    }
+    
+    // Update status in users table or create a status field in farmer_profiles
+    const [result] = await db.promise().query(
+      'UPDATE farmer_profiles SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?',
+      [status, userId]
+    );
+    
+    if (result.affectedRows > 0) {
+      res.json({ success: true, message: 'Status updated successfully' });
+    } else {
+      res.status(404).json({ success: false, error: 'Farmer not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to update status: ' + error.message 
+    });
+  }
+});
+
 // If running as standalone server
 if (require.main === module) {
   const app = express();
