@@ -9,6 +9,7 @@ import FarmingFoodsPage from './Pages/productPage.jsx'
 import FramerPage from './Pages/FramerPage.jsx'
 import PaymentAndReting from './Pages/PaymentAndReting.jsx'
 import MapPage from './Pages/Map.jsx'
+import CustomerSupportApp from './Pages/CustomerMSg.jsx'
 
 function App() {
   const [user, setUser] = useState(null);
@@ -68,6 +69,14 @@ function App() {
     setCurrentPage('map');
   };
 
+  const handleNavigateToMessages = () => {
+    setCurrentPage('messages');
+  };
+
+  const handleBackToFarmerHP = () => {
+    setCurrentPage('main');
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-green-50">
@@ -87,7 +96,10 @@ function App() {
     return <AdminHP user={user} onLogout={handleLogout} />;
   }
   if (user.role === 'farmer') {
-    return <FarmerHP user={user} onLogout={handleLogout} />;
+    if (currentPage === 'messages') {
+      return <CustomerSupportApp onBack={handleBackToFarmerHP} />;
+    }
+    return <FarmerHP user={user} onLogout={handleLogout} onNavigateToMessages={handleNavigateToMessages} />;
   }
   if (user.role === 'customer') {
     if (currentPage === 'payment') {

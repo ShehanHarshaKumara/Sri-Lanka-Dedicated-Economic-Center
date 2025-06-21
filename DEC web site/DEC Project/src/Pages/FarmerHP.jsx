@@ -12,7 +12,7 @@ import {
 } from 'react-icons/fa';
 import FarmerProfile from './FarmerProfile';
 
-const ModernFarmerPortal = ({ user, onLogout }) => {
+const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
   // Full viewport setup
   useEffect(() => {
     const setFullViewport = () => {
@@ -94,7 +94,8 @@ const ModernFarmerPortal = ({ user, onLogout }) => {
     { id: 'dashboard', label: 'Dashboard', icon: FaHome },
     { id: 'products', label: 'My Products', icon: FaBox },
     { id: 'orders', label: 'Orders', icon: FaClipboardList },
-    { id: 'analytics', label: 'Analytics', icon: FaChartBar }
+    { id: 'analytics', label: 'Analytics', icon: FaChartBar },
+    { id: 'community', label: 'Community', icon: FaUsers }
   ];
 
   const quickStats = [
@@ -366,6 +367,15 @@ const ModernFarmerPortal = ({ user, onLogout }) => {
     );
   }
 
+  const handleTabChange = (tabId) => {
+    if (tabId === 'community') {
+      onNavigateToMessages();
+    } else {
+      setActiveTab(tabId);
+      if (window.innerWidth < 1024) setSidebarOpen(false);
+    }
+  };
+
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50" 
          style={{ margin: 0, padding: 0, width: '100vw', minHeight: '100vh', overflowX: 'hidden' }}>
@@ -502,7 +512,7 @@ const ModernFarmerPortal = ({ user, onLogout }) => {
             </div>
           </div>
         </div>
-      </nav>
+        </nav>
 
       <div className="flex pt-16 sm:pt-20 w-full min-h-screen">
         {/* Modern Sidebar */}
@@ -514,10 +524,7 @@ const ModernFarmerPortal = ({ user, onLogout }) => {
               {sidebarItems.map((item) => (
                 <button
                   key={item.id}
-                  onClick={() => {
-                    setActiveTab(item.id);
-                    if (window.innerWidth < 1024) setSidebarOpen(false);
-                  }}
+                  onClick={() => handleTabChange(item.id)}
                   className={`w-full flex items-center mb-2 px-4 py-3 rounded-xl transition-all duration-300 group ${
                     activeTab === item.id
                       ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-lg transform scale-105'

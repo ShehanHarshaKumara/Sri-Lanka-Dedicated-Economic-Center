@@ -6,7 +6,7 @@ import {
   AlertCircle, CheckCircle, XCircle, Filter, BarChart,
   MessageSquare, TrendingUp, Activity, Users, Archive,
   Flag, Tag, FileText, Calendar, Bot, Zap, Shield,
-  Settings, Download, Upload, Copy, ExternalLink
+  Settings, Download, Upload, Copy, ExternalLink, ArrowLeft
 } from 'lucide-react';
 
 // Enhanced customer data with more details
@@ -183,7 +183,7 @@ const performanceMetrics = {
   avgHandleTime: "7.2 min"
 };
 
-const CustomerSupportApp = () => {
+const CustomerSupportApp = ({ onBack }) => {
   const [darkMode, setDarkMode] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(customers[0]);
   const [messageInput, setMessageInput] = useState('');
@@ -658,14 +658,24 @@ const CustomerSupportApp = () => {
             <div className={`w-full h-16 flex items-center justify-between px-4 border-b fixed top-0 left-0 z-50 transition-all duration-300 ${
               darkMode ? 'bg-gray-800/95 border-gray-700' : 'bg-white/95 border-gray-200'
             } backdrop-blur-md`}>
-              <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className={`p-2 rounded-full transition-all duration-300 ${
-                  darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-800'
-                }`}
-              >
-                <Headphones size={20} />
-              </button>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={onBack}
+                  className={`p-2 rounded-full transition-all duration-300 ${
+                    darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                  }`}
+                >
+                  <ArrowLeft size={20} />
+                </button>
+                <button
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className={`p-2 rounded-full transition-all duration-300 ${
+                    darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-800'
+                  }`}
+                >
+                  <Headphones size={20} />
+                </button>
+              </div>
               <h1 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
                 Customer Support
               </h1>
@@ -709,6 +719,14 @@ const CustomerSupportApp = () => {
             <div className={`p-6 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-2">
+                  <button
+                    onClick={onBack}
+                    className={`p-2 rounded-full transition-all duration-300 hover:scale-110 ${
+                      darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+                    }`}
+                  >
+                    <ArrowLeft size={18} />
+                  </button>
                   <Headphones className={`w-6 h-6 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
                   <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
                     Support Hub
