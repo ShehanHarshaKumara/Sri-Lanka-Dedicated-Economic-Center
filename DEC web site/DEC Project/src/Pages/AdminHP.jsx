@@ -270,7 +270,7 @@ const AdminPortal = ({ user, onLogout }) => {
     setError(null);
     try {
       console.log('Fetching products from API...');
-      const response = await fetch('http://localhost:5001/api/admin/products');
+      const response = await fetch('http://localhost:5050/api/admin/products');
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -293,7 +293,7 @@ const AdminPortal = ({ user, onLogout }) => {
     setLoading(prev => ({ ...prev, stats: true }));
     try {
       console.log('Fetching product stats from API...');
-      const response = await fetch('http://localhost:5001/api/admin/product-stats');
+      const response = await fetch('http://localhost:5050/api/admin/product-stats');
       
       if (!response.ok) {
         const errorText = await response.text();

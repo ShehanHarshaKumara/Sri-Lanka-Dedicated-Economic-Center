@@ -11,6 +11,7 @@ import PaymentAndReting from './Pages/PaymentAndReting.jsx'
 import MapPage from './Pages/Map.jsx'
 import CustomerSupportApp from './Pages/CustomerMSg.jsx'
 
+// eslint-disable-next-line react-refresh/only-export-components
 function App() {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,7 +25,7 @@ function App() {
       try {
         const userData = JSON.parse(savedUser);
         setUser(userData);
-      } catch (error) {
+      } catch (error) { /* eslint-disable-line no-unused-vars */
         localStorage.removeItem('token');
         localStorage.removeItem('user');
       }

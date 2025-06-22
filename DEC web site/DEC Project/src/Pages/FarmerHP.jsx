@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useEffect } from 'react';
 import { 
   FaTractor, FaPlus, FaEdit, FaTrash, FaEye, FaBell, FaChartBar, FaShoppingCart, 
@@ -71,6 +72,7 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [showProfile, setShowProfile] = useState(false);
+
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [farmerProfile, setFarmerProfile] = useState(null);
 
@@ -143,11 +145,31 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
     setIsLoadingProducts(true);
     try {
       const farmerId = user?.id || 1;
-      const res = await fetch(`http://localhost:5001/api/products?farmer_id=${farmerId}`);
-      const data = await res.json();
+      console.log('Fetching products for farmer:', farmerId);
+      
+      const response = await fetch(`http://localhost:5001/api/products?farmer_id=${farmerId}`);
+      
+      console.log('Fetch products response status:', response.status);
+
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Server returned non-JSON response. Please check if the backend server is running.');
+      }
+
+      const data = await response.json();
+      console.log('Fetch products response data:', data);
+
+      if (!response.ok) {
+        throw new Error(data.error || `Server error: ${response.status}`);
+      }
+
       setProducts(Array.isArray(data) ? data : []);
-    } catch (err) {
+    } catch (error) {
+      console.error('Fetch products error:', error);
       setProducts([]);
+      // Optionally show error to user
+      setFormError(error.message || 'Failed to load products. Please check your internet connection and try again.');
     }
     setIsLoadingProducts(false);
   };
@@ -159,7 +181,7 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
       const res = await fetch(`http://localhost:5002/api/farmer/profile/${userId}`);
       const data = await res.json();
       setFarmerProfile(data);
-    } catch (err) {
+    } catch {
       setFarmerProfile(null);
     }
   };
@@ -209,10 +231,48 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
   const handleSubmitProduct = async (e) => {
     e.preventDefault();
     setIsUploading(true);
+    setFormError('');
 
     // Validation
-    if (!productForm.name || !productForm.price || !productForm.category || !productForm.stock || !productForm.unit || !productForm.description) {
-      setFormError('Please fill in all required fields');
+    if (!productForm.name?.trim()) {
+      setFormError('Product name is required');
+      setIsUploading(false);
+      return;
+    }
+
+    if (!productForm.price || isNaN(parseFloat(productForm.price)) || parseFloat(productForm.price) <= 0) {
+      setFormError('Please enter a valid price greater than 0');
+      setIsUploading(false);
+      return;
+    }
+
+    if (!productForm.category) {
+      setFormError('Please select a category');
+      setIsUploading(false);
+      return;
+    }
+
+    if (!productForm.stock || isNaN(parseInt(productForm.stock)) || parseInt(productForm.stock) <= 0) {
+      setFormError('Please enter a valid stock quantity greater than 0');
+      setIsUploading(false);
+      return;
+    }
+
+    if (!productForm.unit) {
+      setFormError('Please select a unit');
+      setIsUploading(false);
+      return;
+    }
+
+    if (!productForm.description?.trim()) {
+      setFormError('Product description is required');
+      setIsUploading(false);
+      return;
+    }
+
+    // Check if image is provided for new products
+    if (!editingProduct && productForm.images.length === 0) {
+      setFormError('Please upload at least one product image');
       setIsUploading(false);
       return;
     }
@@ -220,29 +280,34 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
     try {
       const farmerId = user?.id || 1;
       const formData = new FormData();
-      formData.append('farmer_id', farmerId);
-      formData.append('name', productForm.name);
-      formData.append('price', productForm.price);
-      formData.append('quantity', productForm.stock);
+      
+      // Add all required fields
+      formData.append('farmer_id', farmerId.toString());
+      formData.append('name', productForm.name.trim());
+      formData.append('price', parseFloat(productForm.price).toString());
+      formData.append('quantity', parseInt(productForm.stock).toString());
       formData.append('category', productForm.category);
       formData.append('unit', productForm.unit);
-      formData.append('description', productForm.description);
+      formData.append('description', productForm.description.trim());
       formData.append('status', productForm.status);
-      // Optionally add organic/featured as custom fields if backend supports
-      // formData.append('organic', productForm.organic ? '1' : '0');
-      // formData.append('featured', productForm.featured ? '1' : '0');
 
-      // If editing and no new images, send the existing image_url
+      // Add optional fields
+      if (productForm.lat) formData.append('lat', productForm.lat);
+      if (productForm.lng) formData.append('lng', productForm.lng);
+      if (productForm.address) formData.append('address', productForm.address);
+
+      // Handle existing image for edit mode
       if (editingProduct && productForm.images.length === 0 && previewImages.length > 0) {
-        // Only add if the preview is a URL (not a blob)
-        if (typeof previewImages[0] === 'string' && !previewImages[0].startsWith('blob:')) {
-          formData.append('image_url', previewImages[0]);
+        const existingImageUrl = previewImages[0];
+        if (typeof existingImageUrl === 'string' && !existingImageUrl.startsWith('blob:')) {
+          formData.append('image_url', existingImageUrl);
         }
       }
 
-      for (const img of productForm.images) {
+      // Add new images
+      productForm.images.forEach((img) => {
         formData.append('images', img);
-      }
+      });
 
       let url = 'http://localhost:5001/api/products/upload';
       let method = 'POST';
@@ -251,18 +316,35 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
         method = 'PUT';
       }
 
-      const res = await fetch(url, {
+      console.log('Sending request to:', url);
+      console.log('Method:', method);
+
+      const response = await fetch(url, {
         method,
         body: formData
       });
 
-      const result = await res.json();
-      if (!result.success && !result.productId) {
-        setFormError(result.error || 'Failed to save product');
-        setIsUploading(false);
-        return;
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Server returned non-JSON response. Please check if the backend server is running.');
       }
 
+      const result = await response.json();
+      console.log('Response result:', result);
+
+      if (!response.ok) {
+        throw new Error(result.error || `Server error: ${response.status}`);
+      }
+
+      if (!result.success && !result.productId) {
+        throw new Error(result.error || 'Failed to save product');
+      }
+
+      // Success
       setShowAddProduct(false);
       setEditingProduct(null);
       setProductForm({
@@ -273,9 +355,11 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
       setFormError('');
       showSuccessNotification(editingProduct ? 'Product updated successfully!' : 'Product uploaded successfully!');
       setIsUploading(false);
-      fetchProducts();
-    } catch (err) {
-      setFormError('Failed to save product');
+      await fetchProducts(); // Refresh products list
+
+    } catch (error) {
+      console.error('Submit error:', error);
+      setFormError(error.message || 'Failed to save product. Please check your internet connection and try again.');
       setIsUploading(false);
     }
   };
@@ -306,12 +390,38 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
 
     if (window.confirm(`Are you sure you want to delete "${product.name}"? This action cannot be undone.`)) {
       try {
-        await fetch(`http://localhost:5001/api/products/${id}`, { method: 'DELETE' });
+        console.log('Deleting product:', id);
+        
+        const response = await fetch(`http://localhost:5001/api/products/${id}`, { 
+          method: 'DELETE' 
+        });
+
+        console.log('Delete response status:', response.status);
+
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error('Server returned non-JSON response. Please check if the backend server is running.');
+        }
+
+        const result = await response.json();
+        console.log('Delete response result:', result);
+
+        if (!response.ok) {
+          throw new Error(result.error || `Server error: ${response.status}`);
+        }
+
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to delete product');
+        }
+
         showSuccessNotification(`Product "${product.name}" deleted successfully!`);
         setShowDropdownId(null);
-        fetchProducts();
-      } catch (err) {
-        // Optionally show error
+        await fetchProducts(); // Refresh products list
+
+      } catch (error) {
+        console.error('Delete error:', error);
+        setFormError(error.message || 'Failed to delete product. Please check your internet connection and try again.');
       }
     }
   };
@@ -323,15 +433,39 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
 
     const newStatus = product.status === 'active' ? 'inactive' : 'active';
     try {
-      await fetch(`http://localhost:5001/api/products/${id}/status`, {
+      console.log('Toggling product status:', id, 'to', newStatus);
+      
+      const response = await fetch(`http://localhost:5001/api/products/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus })
       });
+
+      console.log('Status toggle response status:', response.status);
+
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Server returned non-JSON response. Please check if the backend server is running.');
+      }
+
+      const result = await response.json();
+      console.log('Status toggle response result:', result);
+
+      if (!response.ok) {
+        throw new Error(result.error || `Server error: ${response.status}`);
+      }
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update product status');
+      }
+
       showSuccessNotification(`Product ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully!`);
-      fetchProducts();
-    } catch (err) {
-      // Optionally show error
+      await fetchProducts(); // Refresh products list
+
+    } catch (error) {
+      console.error('Status toggle error:', error);
+      setFormError(error.message || 'Failed to update product status. Please check your internet connection and try again.');
     }
   };
 
@@ -545,43 +679,55 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
             </nav>
             
             {/* Sidebar Footer */}
-            <div className="absolute bottom-4 left-0 right-0 px-3">
-              <button 
-                onClick={onLogout}
-                className={`w-full flex items-center px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-all duration-300 ${
-                  sidebarOpen ? '' : 'justify-center'
-                }`}
-              >
-                <FaSignOutAlt className={`text-lg ${sidebarOpen ? 'mr-3' : ''}`} />
-                {sidebarOpen && <span className="font-medium">Logout</span>}
-              </button>
-            </div>
-          </div>
-        </aside>
+                  <div className="absolute bottom-4 left-0 right-0 px-3">
+                    <button 
+                    onClick={onLogout}
+                    className={`w-full flex items-center px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-all duration-300 ${
+                      sidebarOpen ? '' : 'justify-center'
+                    }`}
+                    >
+                    <FaSignOutAlt className={`text-lg ${sidebarOpen ? 'mr-3' : ''}`} />
+                    {sidebarOpen && <span className="font-medium">Logout</span>}
+                    </button>
+                  </div>
+                  </div>
+                </aside>
 
-        {/* Main Content Area */}
-        <main className="flex-1 w-full min-w-0 overflow-x-hidden">
-          <div className="px-3 sm:px-4 lg:px-6 xl:px-8 py-4 lg:py-6 xl:py-8">
-            
-            {/* Dashboard Tab */}
-            {activeTab === 'dashboard' && (
-              <div className="space-y-6">
-                {/* Welcome Hero Section */}
-                <div className="bg-gradient-to-r from-emerald-500 to-green-600 rounded-3xl p-6 lg:p-8 text-white shadow-2xl overflow-hidden relative">
-                  <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -translate-y-48 translate-x-48"></div>
-                  <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/10 rounded-full translate-y-32 -translate-x-32"></div>
-                  
-                  <div className="relative z-10">
+                 { /* Main Content Area */}
+                  <main className="flex-1 w-full min-w-0 overflow-x-hidden">
+                  <div className="px-3 sm:px-4 lg:px-6 xl:px-8 py-4 lg:py-6 xl:py-8">
+                    
+                    {/* Dashboard Tab */}
+                    {activeTab === 'dashboard' && (
+                    <div className="space-y-6">
+                  {/* Welcome Hero Section with Video Background */}
+                  <div className="rounded-3xl p-6 lg:p-8 text-white shadow-2xl overflow-hidden relative">
+                    {/* Video Background */}
+                    <video 
+                    autoPlay 
+                    loop 
+                    muted 
+                    playsInline
+                    className="absolute inset-0 w-full h-full object-cover"
+                    >
+                    <source src="https://cdn.pixabay.com/video/2015/10/18/1080-142790249_medium.mp4" type="video/mp4" />
+                    </video>
+                    
+                    {/* Decorative elements */}
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -translate-y-48 translate-x-48"></div>
+                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/10 rounded-full translate-y-32 -translate-x-32"></div>
+                    
+                    <div className="relative z-10">
                     <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center">
                       <div>
-                        <h1 className="text-2xl lg:text-3xl xl:text-4xl font-bold mb-2">
-                          Welcome back, {currentUser.name}! 👋
-                        </h1>
-                        <p className="text-emerald-100 text-sm lg:text-base mb-4">
-                          Your farm is thriving! Let's check today's progress.
-                        </p>
-                        
-                        {/* Quick Stats */}
+                    <h1 className="text-2xl lg:text-3xl xl:text-4xl font-bold mb-2">
+                    Welcome back, {currentUser.name}! 👋
+                    </h1>
+                    <p className="text-white/80 text-sm lg:text-base mb-4">
+                    Your farm is thriving! Let's check today's progress.
+                    </p>
+                    
+                    {/* Quick Stats */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
                           {quickStats.map((stat, index) => (
                             <div key={index} className="bg-white/20 backdrop-blur-sm rounded-xl p-3">
@@ -1429,6 +1575,7 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               <div className="flex items-center">
                                 <FaRupeeSign className="mr-1 text-xs" /> 3,000
+
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">

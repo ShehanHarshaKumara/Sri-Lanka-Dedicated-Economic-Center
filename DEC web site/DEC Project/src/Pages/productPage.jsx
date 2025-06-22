@@ -48,7 +48,7 @@ const FarmingFoodsPage = ({ onBack, onBuyNow }) => {
         setLoadingProducts(false);
         setFetchError(null);
       })
-      .catch(err => {
+      .catch(() => {
         setFetchError('Could not load products.');
         setLoadingProducts(false);
       });
@@ -278,90 +278,104 @@ const FarmingFoodsPage = ({ onBack, onBuyNow }) => {
             </div>
           </div>
         </div>
-        
-
-        
-
         {/* Cart Dropdown */}
-        {cartOpen && (
-          <div className="absolute right-0 top-full w-72 sm:w-80 bg-white shadow-lg rounded-b-lg border-t z-50">
-            <div className="p-4">
-              <h3 className="font-semibold mb-3">Shopping Cart ({getTotalCartItems()} items)</h3>
-              {cart.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">Your cart is empty</p>
-              ) : (
-                <>
-                  <div className="space-y-3 max-h-64 overflow-y-auto cart-scroll">
-                    {cart.map((item) => (
-                      <div key={item.id} className="flex items-center gap-3 border-b pb-3">
-                        <img src={item.image} alt={item.name} className="w-12 h-12 object-cover rounded" />
-                        <div className="flex-1">
-                          <h4 className="font-medium text-sm">{item.name}</h4>
-                          <p className="text-gray-500 text-xs">${item.price} × {item.quantity}</p>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <button 
-                            onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
-                            className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
-                          >
-                            <Minus className="w-3 h-3" />
-                          </button>
-                          <span className="w-8 text-center text-sm">{item.quantity}</span>
-                          <button 
-                            onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
-                            className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
-                          >
-                            <Plus className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+          {cartOpen && (
+            <div className="absolute right-0 top-full w-72 sm:w-80 bg-white shadow-lg rounded-b-lg border-t z-50">
+              <div className="p-4">
+                <h3 className="font-semibold mb-3">Shopping Cart ({getTotalCartItems()} items)</h3>
+                {cart.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">Your cart is empty</p>
+                ) : (
+            <>
+              <div className="space-y-3 max-h-64 overflow-y-auto cart-scroll">
+                {cart.map((item) => (
+                  <div key={item.id} className="flex items-center gap-3 border-b pb-3">
+              <img src={item.image} alt={item.name} className="w-12 h-12 object-cover rounded" />
+              <div className="flex-1">
+                <h4 className="font-medium text-sm">{item.name}</h4>
+                <p className="text-gray-500 text-xs">${item.price} × {item.quantity}</p>
+              </div>
+              <div className="flex items-center gap-1">
+                <button 
+                  onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
+                  className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
+                >
+                  <Minus className="w-3 h-3" />
+                </button>
+                <span className="w-8 text-center text-sm">{item.quantity}</span>
+                <button 
+                  onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
+                  className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
+                >
+                  <Plus className="w-3 h-3" />
+                </button>
+              </div>
                   </div>
-                  <div className="mt-4 pt-3 border-t">
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="font-semibold">Total: ${getTotalCartValue().toFixed(2)}</span>
-                    </div>
-                    <button className="w-full btn-primary text-white py-2 rounded-lg transition-colors">
-                      Checkout
-                    </button>
-                  </div>
-                </>
-              )}
+                ))}
+              </div>
+              <div className="mt-4 pt-3 border-t">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="font-semibold">Total: ${getTotalCartValue().toFixed(2)}</span>
+                </div>
+                <button className="w-full btn-primary text-white py-2 rounded-lg transition-colors">
+                  Checkout
+                </button>
+              </div>
+            </>
+                )}
+              </div>
+            </div>
+          )}
+              </header>
+
+              {/* Hero Section with Background Video */}
+              <div className="relative text-white py-16 sm:py-20 lg:py-24 xl:py-28 overflow-hidden">
+          {/* Background Video */}
+          <div className="absolute inset-0 w-full h-full">
+            <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="w-full h-full object-cover"
+          >
+          <source src="https://cdn.pixabay.com/video/2018/01/06/13704-250154065_large.mp4" type="video/mp4" />
+          {/* Fallback for unsupported browsers */}
+          Your browser does not support the video tag.
+            </video>
+            {/* Video Overlay */}
+            <div className="absolute inset-0 bg-black/40"></div>
+          </div>
+
+          {/* Content over video */}
+          <div className="relative z-10 max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
+            <div className="text-center">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-4 sm:mb-6 drop-shadow-lg">
+            Fresh from Farm to Your Table
+          </h1>
+          <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-white mb-6 sm:mb-8 max-w-3xl mx-auto drop-shadow-md">
+            Discover the finest organic produce from local farmers, delivered fresh to your doorstep
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button className="bg-white text-green-700 px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold hover:bg-gray-100 transition-colors text-base sm:text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1">
+              Shop Now
+            </button>
+            <button className="border-2 border-white text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold hover:bg-white hover:text-green-700 transition-colors text-base sm:text-lg backdrop-blur-sm bg-white/10 hover:bg-white">
+              Learn More
+            </button>
+          </div>
             </div>
           </div>
-        )}
-      </header>
+              </div>
 
-      {/* Hero Section with Static Background */}
-      <div className="bg-gradient-to-br from-green-600 via-green-700 to-green-800 text-white py-12 sm:py-16 lg:py-20">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
-          <div className="text-center">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-4 sm:mb-6">
-              Fresh from Farm to Your Table
-            </h1>
-            <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-green-100 mb-6 sm:mb-8 max-w-3xl mx-auto">
-              Discover the finest organic produce from local farmers, delivered fresh to your doorstep
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button className="bg-white text-green-700 px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold hover:bg-gray-100 transition-colors text-base sm:text-lg">
-                Shop Now
-              </button>
-              <button className="border-2 border-white text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold hover:bg-white hover:text-green-700 transition-colors text-base sm:text-lg">
-                Learn More
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Features Carousel with Cards */}
+              {/* Features Carousel with Cards */}
       <div className="py-8 sm:py-12 lg:py-16 bg-white">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
           <div className="text-center mb-8 sm:mb-12">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-4">Why Choose FarmFresh?</h2>
-            <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
-              Discover what makes us the preferred choice for fresh, organic produce
-            </p>
+        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-4">Why Choose FarmFresh?</h2>
+        <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
+          Discover what makes us the preferred choice for fresh, organic produce
+        </p>
           </div>
 
           {/* Carousel Container */}

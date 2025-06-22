@@ -125,7 +125,7 @@ app.get('/api/admin/product-stats', (req, res) => {
 const path = require('path');
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-const PORT = 5001; // Or any port you use
+const PORT = 5050; // Or any port you use
 app.listen(PORT, () => {
   console.log(`Products API server running on port ${PORT}`);
 });
