@@ -762,8 +762,8 @@ const EconomicCenter = ({ user, onLogout, onNavigateToProducts, onNavigateToSell
           <div className="relative z-10 h-full flex items-center justify-center px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-5xl mx-auto fade-in">
               <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-6 leading-tight">
-                <span className="block">Welcome to the Future of</span>
-                <span className="block text-green-400 mt-2">Sri Lankan Agriculture</span>
+                <span className="block">Welcome to the Dedicated Economic Center</span>
+                <span className="block text-green-400 mt-2">In Sri Lanka </span>
               </h1>
               
               <p className="text-lg sm:text-xl lg:text-2xl text-white/90 mb-8 max-w-3xl mx-auto">

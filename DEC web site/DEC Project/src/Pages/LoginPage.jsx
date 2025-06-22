@@ -298,10 +298,10 @@ const AuthPage = ({ onLogin }) => {
             </div>
             <div>
               <h1 className="text-6xl font-black text-white mb-3 leading-tight tracking-tight">
-                Sri Lanka
+                Dedicated 
               </h1>
               <h2 className="text-4xl font-bold text-white/90 tracking-wide">
-                Agricultural Hub
+                Economic Center
               </h2>
             </div>
           </div>
