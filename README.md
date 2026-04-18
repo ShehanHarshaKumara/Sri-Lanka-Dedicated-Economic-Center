@@ -1,4 +1,8 @@
+
 # Dedicated Economic Center
+
+https://github.com/user-attachments/assets/9e48c29d-24e1-4f12-a7dc-f3a380689317
+
 
 A multi-platform e-commerce project developed as part of the **GAHDSE241F** academic work. This repository contains both a **web application** and a **mobile application** for an online shopping and economic center management experience.
 
