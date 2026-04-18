@@ -17,13 +17,7 @@
 
 ## 🎥 Project Demo
 
-> Click the button below to watch the demo video
-
-<p align="center">
-  <a href="https://github.com/user-attachments/assets/9e48c29d-24e1-4f12-a7dc-f3a380689317">
-    <img src="https://img.shields.io/badge/▶%20Watch%20Demo%20Video-181717?style=for-the-badge&logo=github" alt="Watch Demo Video"/>
-  </a>
-</p>
+<video src="https://github.com/user-attachments/assets/9e48c29d-24e1-4f12-a7dc-f3a380689317" controls muted loop width="800"></video>
 
 ---
 
