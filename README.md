@@ -1,21 +1,49 @@
+# 🌐 Dedicated Economic Center
 
-# Dedicated Economic Center
+<p align="center">
+  <a href="https://github.com/user-attachments/assets/9e48c29d-24e1-4f12-a7dc-f3a380689317">
+    <img src="https://img.shields.io/badge/Project-Demo-blue?style=for-the-badge" alt="Project Demo"/>
+  </a>
+  <img src="https://img.shields.io/badge/Web-React%20%2B%20Vite-61DAFB?style=for-the-badge" alt="React Vite"/>
+  <img src="https://img.shields.io/badge/Mobile-Flutter-02569B?style=for-the-badge" alt="Flutter"/>
+  <img src="https://img.shields.io/badge/Status-Academic%20Project-success?style=for-the-badge" alt="Academic Project"/>
+</p>
 
-https://github.com/user-attachments/assets/9e48c29d-24e1-4f12-a7dc-f3a380689317
+<p align="center">
+  A multi-platform e-commerce project developed for <b>GAHDSE241F</b>, featuring both a web application and a mobile application for a dedicated economic center shopping experience.
+</p>
 
+---
 
-A multi-platform e-commerce project developed as part of the **GAHDSE241F** academic work. This repository contains both a **web application** and a **mobile application** for an online shopping and economic center management experience.
+## 🎥 Project Demo
 
-## Project Overview
+> Click the button below to watch the demo video
 
-The Dedicated Economic Center project is designed to provide users with a convenient platform to browse products, manage shopping activities, and interact with an online marketplace through both web and mobile platforms.
+<p align="center">
+  <a href="https://github.com/user-attachments/assets/9e48c29d-24e1-4f12-a7dc-f3a380689317">
+    <img src="https://img.shields.io/badge/▶%20Watch%20Demo%20Video-181717?style=for-the-badge&logo=github" alt="Watch Demo Video"/>
+  </a>
+</p>
+
+---
+
+## 📖 Project Overview
+
+The **Dedicated Economic Center** project is designed to provide users with a convenient digital platform to:
+
+- Browse available products
+- Explore shopping-related features
+- Access the system from both **web** and **mobile**
+- Experience a modern e-commerce interface for an economic center environment
 
 This repository includes:
 
-- **Web Application** – built using React and Vite
-- **Mobile Application** – built using Flutter
+- **Web Application** — built using **React + Vite**
+- **Mobile Application** — built using **Flutter**
 
-## Repository Structure
+---
+
+## 🗂 Repository Structure
 
 ```bash
 GAHDSE241F-dedicated-economic-center/
@@ -23,7 +51,7 @@ GAHDSE241F-dedicated-economic-center/
 ├── final-project-website/        # React + Vite web application
 ├── economic_center_mobileapp/    # Flutter mobile application
 └── README.md
-Technologies Used
+🛠 Technologies Used
 Web Application
 React
 Vite
@@ -33,15 +61,16 @@ ESLint
 Mobile Application
 Flutter
 Dart
-Features
+✨ Key Features
 Product browsing interface
-Shopping cart-related functionality
-Cross-platform access through web and mobile
-Modern frontend structure for scalable development
-Separate web and mobile codebases in one repository
-Web Application Setup
+Shopping cart related functionality
+Multi-platform support for web and mobile
+Clean and scalable frontend structure
+Separate codebases for independent development
+Academic project structure suitable for future expansion
+🚀 Web Application Setup
 
-Navigate to the web project folder:
+Go to the web folder:
 
 cd final-project-website
 
@@ -52,39 +81,43 @@ npm install
 Run the development server:
 
 npm run dev
-Mobile Application Setup
+📱 Mobile Application Setup
 
-Navigate to the mobile project folder:
+Go to the mobile folder:
 
 cd economic_center_mobileapp
 
-Get Flutter packages:
+Install Flutter packages:
 
 flutter pub get
 
-Run the application:
+Run the mobile application:
 
 flutter run
-Prerequisites
+✅ Prerequisites
 
-Before running this project, make sure you have installed:
+Before running the project, make sure you have:
 
 For Web
 Node.js
+npm
 For Mobile
 Flutter SDK
-Development Notes
-The web application is managed separately inside the final-project-website folder.
-The mobile application is managed separately inside the economic_center_mobileapp folder.
-Each platform can be developed and tested independently.
-Git Workflow
+Dart SDK
+Android Studio / VS Code with Flutter extension
+🧩 Development Notes
+The web application is maintained inside the final-project-website folder.
+The mobile application is maintained inside the economic_center_mobileapp folder.
+Both projects can be developed and tested independently.
+This structure supports future backend integration and feature expansion.
+🔄 Git Workflow
 
-Basic Git commands for contributors:
+Clone the repository:
 
 git clone https://github.com/ShehanHarshaKumara/GAHDSE241F-dedicated-economic-center.git
 cd GAHDSE241F-dedicated-economic-center
 
-Create a new branch:
+Create a branch:
 
 git checkout -b your-name-1.0
 
@@ -96,30 +129,40 @@ git commit -m "Your update message"
 Push changes:
 
 git push origin your-name-1.0
-Future Improvements
+🔮 Future Improvements
 User authentication
 Product categories and filters
 Order management
 Payment integration
 Admin dashboard
 Backend API integration
-Improved UI/UX across web and mobile platforms
-Author
+Improved UI/UX for both platforms
+Wishlist and order tracking
+Search and product filtering enhancements
+👨‍💻 Author
 
 Shehan Harsha Kumara
 
 GitHub: ShehanHarshaKumara
+📄 License
 
-License
-
-This project is created for educational and development purposes.
+This project is created for educational and academic purposes.
 
 
-### My suggestion
-Your repo would look even better if you also add:
-- a short **project screenshot section**
-- a **features list based on your real app pages**
-- a **backend section** if this project has one
+### Important
+If you want the README to feel more like **auto playing video**, GitHub README cannot do that properly. The best-looking workaround is one of these: clickable demo button, clickable thumbnail image, or a short GIF preview at the top. :contentReference[oaicite:2]{index=2}
 
-I can also make you a **more professional GitHub README with badges, screenshots, and a modern style**.
-::contentReference[oaicite:1]{index=1}
+Here is the **best GitHub-style video section** if you also have a screenshot thumbnail:
+
+```md
+## 🎥 Demo Preview
+
+<p align="center">
+  <a href="https://github.com/user-attachments/assets/9e48c29d-24e1-4f12-a7dc-f3a380689317">
+    <img src="./assets/demo-thumbnail.png" alt="Dedicated Economic Center Demo" width="800"/>
+  </a>
+</p>
+
+<p align="center">
+  Click the image above to watch the project demo
+</p>
