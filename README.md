@@ -1,3 +1,4 @@
+<img width="1906" height="943" alt="Screenshot 2026-04-24 154234" src="https://github.com/user-attachments/assets/15b073a8-7e93-4246-ad36-e1d3e2c2a7a4" />
 # 🌐 Dedicated Economic Center
 
 <p align="center">
