@@ -13,6 +13,7 @@ import {
   FaTrash,
   FaTruck
 } from 'react-icons/fa';
+import { confirmAction } from '../utils/sweetAlert';
 
 const ORDER_STAGES = [
   {
@@ -312,15 +313,23 @@ const FarmerOrderManagement = () => {
     moveOrderToStage(order, nextStage);
   };
 
-  const handleDeleteOrder = (orderId) => {
+  const handleDeleteOrder = async (orderId) => {
     const order = orders.find((item) => item.id === orderId);
     if (!order) return;
 
-    if (window.confirm(`Delete order ${order.id} for ${order.customerName}?`)) {
-      setOrders((currentOrders) => currentOrders.filter((item) => item.id !== orderId));
-      if (selectedOrder?.id === orderId) {
-        closeDrawer();
-      }
+    const shouldDelete = await confirmAction({
+      title: 'Delete order?',
+      text: `Delete order ${order.id} for ${order.customerName}?`,
+      confirmButtonText: 'Yes, delete order'
+    });
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    setOrders((currentOrders) => currentOrders.filter((item) => item.id !== orderId));
+    if (selectedOrder?.id === orderId) {
+      closeDrawer();
     }
   };
 

@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Secure Login | DX Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --ink-950: #06131f;
+            --ink-900: #0b1f33;
+            --ink-800: #14314a;
+            --teal-500: #14b8a6;
+            --sky-400: #38bdf8;
+            --amber-300: #fcd34d;
+            --slate-900: #172033;
+            --slate-700: #46546d;
+            --slate-500: #69778d;
+            --slate-200: #d7dfeb;
+            --slate-100: #eef4fa;
+            --surface: rgba(255, 255, 255, 0.96);
+            --white: #ffffff;
+            --danger: #b42318;
+            --danger-bg: #fef3f2;
+            --success-bg: rgba(20, 184, 166, 0.12);
+            --shadow-xl: 0 32px 80px rgba(4, 14, 26, 0.28);
+            --shadow-lg: 0 18px 40px rgba(10, 25, 41, 0.18);
+            --shadow-sm: 0 10px 24px rgba(18, 37, 56, 0.08);
+            --radius-xl: 28px;
+            --radius-lg: 20px;
+            --radius-md: 14px;
+            --transition: 220ms ease;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            color-scheme: light;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Manrope", "Segoe UI", sans-serif;
+            color: var(--slate-900);
+            background:
+                radial-gradient(circle at top left, rgba(56, 189, 248, 0.2), transparent 32%),
+                radial-gradient(circle at bottom right, rgba(20, 184, 166, 0.18), transparent 28%),
+                linear-gradient(135deg, #04101a 0%, #0b1f33 48%, #123251 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 28px;
+        }
+
+        body::before,
+        body::after {
+            content: "";
+            position: fixed;
+            inset: auto;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::before {
+            width: 360px;
+            height: 360px;
+            top: -90px;
+            right: -110px;
+            background: radial-gradient(circle, rgba(252, 211, 77, 0.22), transparent 64%);
+        }
+
+        body::after {
+            width: 420px;
+            height: 420px;
+            left: -120px;
+            bottom: -140px;
+            background: radial-gradient(circle, rgba(20, 184, 166, 0.16), transparent 66%);
+        }
+
+        .login-shell {
+            position: relative;
+            z-index: 1;
+            width: min(1120px, 100%);
+            min-height: 700px;
+            display: grid;
+            grid-template-columns: 1.04fr 0.96fr;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 32px;
+            overflow: hidden;
+            box-shadow: var(--shadow-xl);
+            backdrop-filter: blur(18px);
+        }
+
+        .brand-panel,
+        .form-panel {
+            position: relative;
+            padding: 44px;
+        }
+
+        .brand-panel {
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0)),
+                linear-gradient(145deg, rgba(9, 35, 57, 0.96), rgba(13, 64, 92, 0.88));
+            color: var(--white);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .brand-panel::before,
+        .brand-panel::after {
+            content: "";
+            position: absolute;
+            border-radius: 999px;
+            opacity: 0.65;
+        }
+
+        .brand-panel::before {
+            width: 260px;
+            height: 260px;
+            top: 52%;
+            right: -120px;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.34), transparent 68%);
+        }
+
+        .brand-panel::after {
+            width: 220px;
+            height: 220px;
+            top: -60px;
+            left: -70px;
+            background: radial-gradient(circle, rgba(252, 211, 77, 0.18), transparent 70%);
+        }
+
+        .brand-top,
+        .brand-copy,
+        .brand-foot {
+            position: relative;
+            z-index: 1;
+        }
+
+        .brand-lockup {
+            display: inline-flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .brand-mark {
+            width: 58px;
+            height: 58px;
+            border-radius: 18px;
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.24), rgba(20, 184, 166, 0.34));
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+            box-shadow: 0 18px 28px rgba(1, 9, 19, 0.24);
+        }
+
+        .brand-mark img {
+            width: 34px;
+            height: 34px;
+            object-fit: contain;
+            filter: brightness(0) invert(1);
+        }
+
+        .brand-fallback {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            font-family: "Space Grotesk", sans-serif;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            color: var(--white);
+        }
+
+        .brand-text small {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 0.72rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.74);
+        }
+
+        .brand-text strong {
+            font-family: "Space Grotesk", sans-serif;
+            font-size: 1.2rem;
+            letter-spacing: 0.02em;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            backdrop-filter: blur(10px);
+        }
+
+        .brand-copy {
+            margin: 38px 0;
+        }
+
+        .brand-copy h1 {
+            margin: 0 0 18px;
+            max-width: 11ch;
+            font-family: "Space Grotesk", sans-serif;
+            font-size: clamp(2.4rem, 4vw, 4rem);
+            line-height: 1.02;
+            letter-spacing: -0.04em;
+        }
+
+        .brand-copy p {
+            margin: 0;
+            max-width: 36rem;
+            font-size: 1.05rem;
+            line-height: 1.8;
+            color: rgba(255, 255, 255, 0.82);
+        }
+
+        .insight-grid {
+            margin-top: 34px;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .insight-card {
+            padding: 18px 18px 16px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .insight-card span {
+            display: inline-flex;
+            width: 42px;
+            height: 42px;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.12);
+            color: var(--amber-300);
+            font-size: 1rem;
+        }
+
+        .insight-card h2 {
+            margin: 14px 0 8px;
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .insight-card p {
+            margin: 0;
+            font-size: 0.92rem;
+            line-height: 1.65;
+            color: rgba(255, 255, 255, 0.75);
+        }
+
+        .status-strip {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 28px;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 14px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.88);
+            font-size: 0.88rem;
+            font-weight: 600;
+        }
+
+        .status-pill i {
+            color: var(--teal-500);
+        }
+
+        .brand-foot {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            padding-top: 22px;
+            border-top: 1px solid rgba(255, 255, 255, 0.14);
+            color: rgba(255, 255, 255, 0.72);
+            font-size: 0.92rem;
+        }
+
+        .brand-foot p {
+            margin: 0;
+        }
+
+        .brand-foot .help-note {
+            text-align: right;
+        }
+
+        .form-panel {
+            background: linear-gradient(180deg, rgba(248, 251, 255, 0.98), rgba(241, 246, 252, 0.98));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .form-card {
+            width: min(440px, 100%);
+        }
+
+        .panel-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(20, 184, 166, 0.1);
+            color: #0f766e;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .panel-label i {
+            font-size: 0.8rem;
+        }
+
+        .form-card h2 {
+            margin: 18px 0 10px;
+            font-family: "Space Grotesk", sans-serif;
+            font-size: clamp(2rem, 4vw, 2.7rem);
+            line-height: 1.08;
+            letter-spacing: -0.04em;
+            color: var(--ink-900);
+        }
+
+        .form-card > p {
+            margin: 0 0 30px;
+            color: var(--slate-700);
+            line-height: 1.75;
+        }
+
+        .alert-banner {
+            margin-bottom: 18px;
+            padding: 14px 16px;
+            border-radius: 16px;
+            border: 1px solid rgba(180, 35, 24, 0.12);
+            background: var(--danger-bg);
+            color: var(--danger);
+            font-size: 0.94rem;
+            line-height: 1.6;
+        }
+
+        .login-form {
+            display: grid;
+            gap: 18px;
+        }
+
+        .field {
+            display: grid;
+            gap: 8px;
+        }
+
+        .field label {
+            font-size: 0.94rem;
+            font-weight: 700;
+            color: var(--slate-900);
+        }
+
+        .input-shell {
+            position: relative;
+        }
+
+        .input-shell i {
+            position: absolute;
+            top: 50%;
+            left: 18px;
+            transform: translateY(-50%);
+            color: var(--slate-500);
+            font-size: 1rem;
+            transition: color var(--transition);
+            pointer-events: none;
+        }
+
+        .input-shell input {
+            width: 100%;
+            min-height: 58px;
+            padding: 16px 54px 16px 50px;
+            border: 1.5px solid var(--slate-200);
+            border-radius: 16px;
+            background: var(--white);
+            color: var(--slate-900);
+            font: inherit;
+            font-size: 1rem;
+            font-weight: 600;
+            transition:
+                border-color var(--transition),
+                box-shadow var(--transition),
+                transform var(--transition);
+            box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+        }
+
+        .input-shell input::placeholder {
+            color: #93a1b5;
+            font-weight: 500;
+        }
+
+        .input-shell input:focus {
+            outline: none;
+            border-color: rgba(20, 184, 166, 0.62);
+            box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.12);
+            transform: translateY(-1px);
+        }
+
+        .input-shell input:focus ~ i,
+        .input-shell input:not(:placeholder-shown) ~ i {
+            color: var(--teal-500);
+        }
+
+        .password-toggle {
+            position: absolute;
+            top: 50%;
+            right: 14px;
+            transform: translateY(-50%);
+            width: 36px;
+            height: 36px;
+            border: 0;
+            border-radius: 12px;
+            background: transparent;
+            color: var(--slate-500);
+            display: grid;
+            place-items: center;
+            cursor: pointer;
+            transition:
+                color var(--transition),
+                background-color var(--transition);
+        }
+
+        .password-toggle:hover,
+        .password-toggle:focus-visible {
+            color: var(--teal-500);
+            background: rgba(20, 184, 166, 0.1);
+            outline: none;
+        }
+
+        .form-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            font-size: 0.93rem;
+            color: var(--slate-700);
+        }
+
+        .remember-me {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+        }
+
+        .remember-me input {
+            width: 18px;
+            height: 18px;
+            accent-color: #0f766e;
+        }
+
+        .helper-note {
+            text-align: right;
+        }
+
+        .helper-note strong {
+            display: block;
+            margin-bottom: 3px;
+            color: var(--slate-900);
+            font-size: 0.92rem;
+        }
+
+        .helper-note span {
+            display: block;
+            max-width: 190px;
+            font-size: 0.82rem;
+            line-height: 1.55;
+        }
+
+        .submit-button {
+            position: relative;
+            min-height: 58px;
+            border: 0;
+            border-radius: 18px;
+            padding: 16px 22px;
+            background: linear-gradient(135deg, #0f766e, #0ea5a4 52%, #38bdf8);
+            color: var(--white);
+            font: inherit;
+            font-size: 1rem;
+            font-weight: 800;
+            letter-spacing: 0.01em;
+            cursor: pointer;
+            transition:
+                transform var(--transition),
+                box-shadow var(--transition),
+                filter var(--transition);
+            box-shadow: 0 18px 28px rgba(15, 118, 110, 0.28);
+        }
+
+        .submit-button:hover {
+            transform: translateY(-2px);
+            filter: saturate(1.04);
+            box-shadow: 0 24px 32px rgba(15, 118, 110, 0.26);
+        }
+
+        .submit-button:active {
+            transform: translateY(0);
+        }
+
+        .submit-button:focus-visible {
+            outline: none;
+            box-shadow:
+                0 0 0 4px rgba(56, 189, 248, 0.18),
+                0 18px 28px rgba(15, 118, 110, 0.28);
+        }
+
+        .submit-button.is-loading {
+            cursor: wait;
+            opacity: 0.92;
+        }
+
+        .confidence-strip {
+            margin-top: 20px;
+            display: grid;
+            gap: 12px;
+        }
+
+        .confidence-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            border-radius: 16px;
+            background: var(--surface);
+            border: 1px solid rgba(20, 36, 59, 0.08);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .confidence-item i {
+            width: 40px;
+            height: 40px;
+            border-radius: 14px;
+            display: grid;
+            place-items: center;
+            background: var(--success-bg);
+            color: #0f766e;
+        }
+
+        .confidence-item strong {
+            display: block;
+            margin-bottom: 3px;
+            font-size: 0.92rem;
+            color: var(--slate-900);
+        }
+
+        .confidence-item span {
+            display: block;
+            font-size: 0.84rem;
+            color: var(--slate-700);
+        }
+
+        .small-print {
+            margin-top: 18px;
+            font-size: 0.82rem;
+            color: var(--slate-500);
+            line-height: 1.7;
+        }
+
+        .small-print strong {
+            color: var(--slate-900);
+        }
+
+        @media (max-width: 980px) {
+            .login-shell {
+                grid-template-columns: 1fr;
+            }
+
+            .brand-panel,
+            .form-panel {
+                padding: 34px 28px;
+            }
+
+            .brand-copy h1 {
+                max-width: 16ch;
+            }
+
+            .brand-foot {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .brand-foot .help-note {
+                text-align: left;
+            }
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 16px;
+            }
+
+            .login-shell {
+                border-radius: 24px;
+            }
+
+            .brand-panel,
+            .form-panel {
+                padding: 24px 20px;
+            }
+
+            .insight-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-meta {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .helper-note {
+                text-align: left;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation: none !important;
+                transition: none !important;
+                scroll-behavior: auto !important;
+            }
+        }
+    </style>
+</head>
+<body>
+<main class="login-shell">
+    <section class="brand-panel" aria-label="Platform overview">
+        <div class="brand-top">
+            <div class="brand-lockup">
+                <div class="brand-mark">
+                    <span class="brand-fallback" style="display:grid;" aria-hidden="true">DX</span>
+                </div>
+                <div class="brand-text">
+                    <small>Business Operations</small>
+                    <strong>DX Platform</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="brand-copy">
+            <span class="eyebrow">
+                <i class="fas fa-shield-halved" aria-hidden="true"></i>
+                Protected seller access
+            </span>
+
+            <h1>Log in with confidence and get back to work.</h1>
+            <p>
+                Access orders, inventory, reporting, and team workflows from a single secure dashboard
+                built for day-to-day business operations.
+            </p>
+
+            <div class="insight-grid">
+                <article class="insight-card">
+                    <span><i class="fas fa-chart-line" aria-hidden="true"></i></span>
+                    <h2>Live performance data</h2>
+                    <p>Track sales, stock movement, and daily operational activity without switching tools.</p>
+                </article>
+
+                <article class="insight-card">
+                    <span><i class="fas fa-people-group" aria-hidden="true"></i></span>
+                    <h2>Role-based teamwork</h2>
+                    <p>Give the right people access to the right workflows with clear account permissions.</p>
+                </article>
+            </div>
+
+            <div class="status-strip" aria-label="Security highlights">
+                <div class="status-pill">
+                    <i class="fas fa-lock" aria-hidden="true"></i>
+                    256-bit encrypted sessions
+                </div>
+                <div class="status-pill">
+                    <i class="fas fa-bolt" aria-hidden="true"></i>
+                    Fast daily sign-in flow
+                </div>
+                <div class="status-pill">
+                    <i class="fas fa-user-check" aria-hidden="true"></i>
+                    Admin-managed access
+                </div>
+            </div>
+        </div>
+
+        <div class="brand-foot">
+            <p>&copy; <span data-year></span> DX Platform. All rights reserved.</p>
+            <p class="help-note">Use your approved seller or staff credentials to continue.</p>
+        </div>
+    </section>
+
+    <section class="form-panel" aria-label="Login form">
+        <div class="form-card">
+            <span class="panel-label">
+                <i class="fas fa-fingerprint" aria-hidden="true"></i>
+                Account Sign In
+            </span>
+            <h2>Welcome back</h2>
+            <p>Enter your account details to open the dashboard and continue your daily workflow.</p>
+
+            <!-- Example error state:
+            <div class="alert-banner" role="alert">Invalid username or password. Please try again.</div>
+            -->
+
+            <form action="#" method="POST" class="login-form" id="loginForm">
+
+                <div class="field">
+                    <label for="username">Username or email</label>
+                    <div class="input-shell">
+                        <input
+                            type="text"
+                            id="username"
+                            name="username"
+                            value=""
+                            autocomplete="username"
+                            spellcheck="false"
+                            required
+                            placeholder="Enter your username or email"
+                        >
+                        <i class="fas fa-user" aria-hidden="true"></i>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label for="password">Password</label>
+                    <div class="input-shell">
+                        <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            autocomplete="current-password"
+                            required
+                            placeholder="Enter your password"
+                        >
+                        <i class="fas fa-lock" aria-hidden="true"></i>
+                        <button
+                            type="button"
+                            class="password-toggle"
+                            id="togglePassword"
+                            aria-label="Show password"
+                            aria-controls="password"
+                            aria-pressed="false"
+                        >
+                            <i class="fas fa-eye" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-meta">
+                    <label class="remember-me" for="remember">
+                        <input
+                            type="checkbox"
+                            id="remember"
+                            name="remember"
+                            value="1"
+                        >
+                        Keep me signed in on this device
+                    </label>
+
+                    <div class="helper-note">
+                        <strong>Need help signing in?</strong>
+                        <span>Contact your administrator if your account needs to be created or reset.</span>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-button" id="submitButton">Sign in securely</button>
+            </form>
+
+            <div class="confidence-strip" aria-label="Security information">
+                <div class="confidence-item">
+                    <i class="fas fa-shield" aria-hidden="true"></i>
+                    <div>
+                        <strong>Protected access</strong>
+                        <span>Session handling is designed for secure dashboard access.</span>
+                    </div>
+                </div>
+
+                <div class="confidence-item">
+                    <i class="fas fa-clock-rotate-left" aria-hidden="true"></i>
+                    <div>
+                        <strong>Quick return workflow</strong>
+                        <span>Your last entered username stays available after validation errors.</span>
+                    </div>
+                </div>
+            </div>
+
+            <p class="small-print">
+                <strong>Integration note:</strong> connect this form to your real login endpoint, replace the sample
+                alert with server-side validation feedback, and update the logo mark if you want to use a custom image.
+            </p>
+        </div>
+    </section>
+</main>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const passwordInput = document.getElementById("password");
+        const togglePassword = document.getElementById("togglePassword");
+        const submitButton = document.getElementById("submitButton");
+        const loginForm = document.getElementById("loginForm");
+        const yearNode = document.querySelector("[data-year]");
+
+        if (yearNode) {
+            yearNode.textContent = new Date().getFullYear();
+        }
+
+        if (togglePassword && passwordInput) {
+            togglePassword.addEventListener("click", function () {
+                const nextType = passwordInput.type === "password" ? "text" : "password";
+                const isVisible = nextType === "text";
+
+                passwordInput.type = nextType;
+                togglePassword.setAttribute("aria-pressed", String(isVisible));
+                togglePassword.setAttribute("aria-label", isVisible ? "Hide password" : "Show password");
+                togglePassword.innerHTML = isVisible
+                    ? '<i class="fas fa-eye-slash" aria-hidden="true"></i>'
+                    : '<i class="fas fa-eye" aria-hidden="true"></i>';
+            });
+        }
+
+        if (loginForm && submitButton) {
+            loginForm.addEventListener("submit", function () {
+                submitButton.classList.add("is-loading");
+                submitButton.disabled = true;
+                submitButton.textContent = "Signing in...";
+            });
+        }
+    });
+</script>
+</body>
+</html>

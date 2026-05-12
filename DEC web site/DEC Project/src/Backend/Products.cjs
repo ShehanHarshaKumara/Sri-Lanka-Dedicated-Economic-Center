@@ -241,20 +241,22 @@ app.put('/api/products/:id', upload.array('images', 5), (req, res) => {
     console.log('Update files:', req.files);
     console.log('Product ID:', productId);
 
-    // Safely destructure with validation
-    const name = req.body.name?.trim();
-    const description = req.body.description?.trim() || '';
+    const normalizeText = (value) => (value === undefined || value === null ? '' : String(value).trim());
+
+    // Safely normalize with validation
+    const name = normalizeText(req.body.name);
+    const description = normalizeText(req.body.description);
     const price = req.body.price;
     const quantity = req.body.quantity;
-    const category = req.body.category?.trim() || '';
+    const category = normalizeText(req.body.category);
     const lat = req.body.lat || null;
     const lng = req.body.lng || null;
-    const address = req.body.address?.trim() || '';
-    const unit = req.body.unit || 'kg';
-    const status = req.body.status || 'active';
+    const address = normalizeText(req.body.address);
+    const unit = normalizeText(req.body.unit) || 'kg';
+    const status = normalizeText(req.body.status) || 'active';
 
     // Validate required fields
-    if (!name || !price || !quantity) {
+    if (!name || price === undefined || price === null || price === '' || quantity === undefined || quantity === null || quantity === '') {
       return res.status(400).json({ 
         success: false, 
         error: 'Missing required fields: name, price, and quantity are required' 
@@ -269,10 +271,10 @@ app.put('/api/products/:id', upload.array('images', 5), (req, res) => {
       });
     }
 
-    if (isNaN(parseInt(quantity)) || parseInt(quantity) <= 0) {
+    if (isNaN(parseInt(quantity)) || parseInt(quantity) < 0) {
       return res.status(400).json({ 
         success: false, 
-        error: 'Quantity must be a valid positive number' 
+        error: 'Quantity must be zero or a valid positive number' 
       });
     }
 

@@ -9,13 +9,101 @@ import {
   FaFilter, FaSort, FaDownload, FaPrint, FaShare, FaHeart, FaComment, FaPhoneAlt,
   FaEnvelope, FaWhatsapp, FaFacebook, FaInstagram, FaTwitter, FaYoutube, FaQuestionCircle,
   FaExclamationTriangle, FaInfoCircle, FaLightbulb, FaMedal, FaTrophy, FaAward, FaBug, FaTint,
-  FaChartLine, FaHandHoldingUsd
+  FaChartLine, FaHandHoldingUsd, FaStore, FaAddressBook
 } from 'react-icons/fa';
 import FarmerProfile from './FarmerProfile';
-import FarmerOrderManagement from './FarmerOrderManagement';
+import FarmerShopPage from './FarmerShopPage';
+import FarmerProductListPage from './FarmerProductListPage';
+import FarmerCreateProductPage from './FarmerCreateProductPage';
+import FarmerCommunityPage from './FarmerCommunityPage';
+import FarmerPendingOrdersPage from './FarmerPendingOrdersPage';
+import FarmerProcessingOrdersPage from './FarmerProcessingOrdersPage';
+import FarmerPackingOrdersPage from './FarmerPackingOrdersPage';
+import FarmerDeliveryOrdersPage from './FarmerDeliveryOrdersPage';
+import FarmerCompletedOrdersPage from './FarmerCompletedOrdersPage';
+import FarmerCustomerDetailsPage from './FarmerCustomerDetailsPage';
+import { createFarmerSampleOrders } from './farmerOrderConfig';
 import { API_BASES } from '../config/api';
+import { confirmAction, showErrorAlert } from '../utils/sweetAlert';
 
-const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
+const createEmptyProductForm = () => ({
+  name: '',
+  price: '',
+  category: '',
+  stock: '',
+  unit: '',
+  description: '',
+  address: '',
+  images: [],
+  status: 'active',
+  organic: false,
+  featured: false
+});
+
+const getFarmerOrdersStorageKey = (farmerId) => `farmer-orders-${farmerId}`;
+
+const loadStoredFarmerOrders = (farmerId) => {
+  if (typeof window === 'undefined') {
+    return createFarmerSampleOrders();
+  }
+
+  try {
+    const storedOrders = window.localStorage.getItem(getFarmerOrdersStorageKey(farmerId));
+
+    if (!storedOrders) {
+      return createFarmerSampleOrders();
+    }
+
+    const parsedOrders = JSON.parse(storedOrders);
+    return Array.isArray(parsedOrders) ? parsedOrders : createFarmerSampleOrders();
+  } catch {
+    return createFarmerSampleOrders();
+  }
+};
+
+const normalizeFarmerOrderStatus = (status) => {
+  const normalizedStatus = String(status || 'pending').trim().toLowerCase();
+  if (normalizedStatus === 'delivered') return 'completed';
+  if (['pending', 'processing', 'packing', 'delivery', 'completed'].includes(normalizedStatus)) {
+    return normalizedStatus;
+  }
+  return 'pending';
+};
+
+const mapApiOrderToFarmerOrder = (apiOrder) => {
+  const items = Array.isArray(apiOrder?.items) ? apiOrder.items : [];
+  const firstItem = items[0] || {};
+  const createdAt = apiOrder?.createdAt || new Date().toISOString();
+  const address = [
+    apiOrder?.customer?.address,
+    apiOrder?.customer?.city,
+    apiOrder?.customer?.zipCode
+  ].filter(Boolean).join(', ');
+
+  return {
+    id: apiOrder?.orderNumber || `ORD-${String(apiOrder?.id || '').padStart(6, '0')}`,
+    backendOrderId: apiOrder?.id,
+    customerName: apiOrder?.customer?.name || 'Unknown customer',
+    customerPhone: apiOrder?.customer?.phone || 'Not provided',
+    productName: items.length > 1
+      ? `${firstItem.productName || 'Ordered product'} +${items.length - 1} more`
+      : firstItem.productName || 'Ordered product',
+    quantity: firstItem.quantity || 1,
+    unit: firstItem.unit || 'unit',
+    amount: Number(apiOrder?.totals?.total ?? firstItem.price ?? 0),
+    requestedDate: createdAt,
+    deliveryAddress: address || 'Delivery address not provided',
+    status: normalizeFarmerOrderStatus(apiOrder?.status),
+    customerConfirmed: !['pending'].includes(normalizeFarmerOrderStatus(apiOrder?.status)),
+    notes: `Payment: ${apiOrder?.paymentMethod || 'not recorded'} | Shipping: ${apiOrder?.shippingMethod || 'not recorded'}`,
+    createdAt,
+    updatedAt: createdAt,
+    lastContactedAt: normalizeFarmerOrderStatus(apiOrder?.status) === 'pending' ? null : createdAt,
+    completedAt: ['completed', 'delivered'].includes(String(apiOrder?.status || '').toLowerCase()) ? createdAt : null
+  };
+};
+
+const ModernFarmerPortal = ({ user, onLogout }) => {
   // Full viewport setup
   useEffect(() => {
     const setFullViewport = () => {
@@ -51,31 +139,49 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
   });
 
   const [products, setProducts] = useState([]);
+  const [orders, setOrders] = useState(() => loadStoredFarmerOrders(user?.id || 1));
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [lastPortalTab, setLastPortalTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [showAddProduct, setShowAddProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [showDropdownId, setShowDropdownId] = useState(null);
   const [hoveredCard, setHoveredCard] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
   
-  const [productForm, setProductForm] = useState({
-    name: '', price: '', category: '', stock: '', unit: '', description: '', 
-    images: [], status: 'active', organic: false, featured: false
-  });
+  const [productForm, setProductForm] = useState(createEmptyProductForm());
   
   const [previewImages, setPreviewImages] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [formError, setFormError] = useState('');
+  const [productsError, setProductsError] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
 
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [farmerProfile, setFarmerProfile] = useState(null);
+  const [ordersError, setOrdersError] = useState('');
+
+  useEffect(() => {
+    setOrders(loadStoredFarmerOrders(user?.id || 1));
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(
+        getFarmerOrdersStorageKey(user?.id || 1),
+        JSON.stringify(orders)
+      );
+    } catch {
+      // Ignore storage write failures and keep the in-memory orders available.
+    }
+  }, [orders, user?.id]);
 
   // Data Arrays
   const categories = [
@@ -95,18 +201,27 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
 
   const sidebarItems = [
     { id: 'dashboard', label: 'Dashboard', icon: FaHome },
-    { id: 'profile', label: 'Profile', icon: FaUser },
-    { id: 'products', label: 'My Products', icon: FaBox },
-    { id: 'orders', label: 'Orders', icon: FaClipboardList },
+    { id: 'shop', label: 'Shop', icon: FaStore },
+    { id: 'product-management', label: 'Product Management', kind: 'section' },
+    { id: 'product-list', label: 'Product List', icon: FaBox },
+    { id: 'create-product', label: 'Create Product', icon: FaPlus },
+    { id: 'order-management', label: 'Order Management', kind: 'section' },
+    { id: 'pending-orders', label: 'Pending Orders', icon: FaClipboardList },
+    { id: 'processing-orders', label: 'Processing Orders', icon: FaSpinner },
+    { id: 'packing-orders', label: 'Packing Orders', icon: FaBox },
+    { id: 'delivery-orders', label: 'Delivery Orders', icon: FaTruck },
+    { id: 'completed-orders', label: 'Completed Orders', icon: FaCheck },
+    { id: 'customer-details', label: 'Customer Details', icon: FaAddressBook },
     { id: 'analytics', label: 'Analytics', icon: FaChartBar },
-    { id: 'community', label: 'Community', icon: FaUsers }
+    { id: 'community', label: 'Community', icon: FaUsers },
+    { id: 'profile', label: 'Profile', icon: FaUser }
   ];
 
   const quickStats = [
     { label: 'Today\'s Orders', value: '12', change: '+3 from yesterday', positive: true },
     { label: 'Pending Deliveries', value: '5', change: 'Due today', positive: false },
     { label: 'Low Stock Items', value: '3', change: 'Restock needed', positive: false },
-    { label: 'Customer Messages', value: '8', change: 'Unread', positive: true }
+    { label: 'Community Chats', value: '8', change: 'Joined farmers', positive: true }
   ];
 
   // Mock weather data
@@ -123,9 +238,6 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
     const handleClickOutside = (event) => {
-      if (!event.target.closest('.dropdown-menu') && !event.target.closest('.dropdown-trigger')) {
-        setShowDropdownId(null);
-      }
       if (!event.target.closest('.notification-panel') && !event.target.closest('.notification-trigger')) {
         setShowNotifications(false);
       }
@@ -135,6 +247,7 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
     document.addEventListener('click', handleClickOutside);
     fetchProducts();
     fetchProfile();
+    fetchFarmerOrders();
     
     return () => {
       window.removeEventListener('scroll', handleScroll);
@@ -145,6 +258,7 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
   // Fetch products from backend for this farmer
   const fetchProducts = async () => {
     setIsLoadingProducts(true);
+    setProductsError('');
     try {
       const farmerId = user?.id || 1;
       console.log('Fetching products for farmer:', farmerId);
@@ -167,11 +281,11 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
       }
 
       setProducts(Array.isArray(data) ? data : []);
+      setProductsError('');
     } catch (error) {
       console.error('Fetch products error:', error);
       setProducts([]);
-      // Optionally show error to user
-      setFormError(error.message || 'Failed to load products. Please check your internet connection and try again.');
+      setProductsError(error.message || 'Failed to load products. Please check your internet connection and try again.');
     }
     setIsLoadingProducts(false);
   };
@@ -188,6 +302,104 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
     }
   };
 
+  const fetchFarmerOrders = async () => {
+    const farmerId = user?.id || 1;
+    setOrdersError('');
+
+    try {
+      const response = await fetch(`${API_BASES.payments}/farmer/${farmerId}/orders`);
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch farmer orders');
+      }
+
+      const apiOrders = Array.isArray(data.orders) ? data.orders : [];
+
+      if (apiOrders.length > 0) {
+        setOrders(apiOrders.map(mapApiOrderToFarmerOrder));
+      }
+    } catch (error) {
+      console.error('Fetch farmer orders error:', error);
+      setOrdersError(error.message || 'Live orders could not be loaded.');
+    }
+  };
+
+  const syncFarmerOrderToBackend = async (order) => {
+    if (!order?.backendOrderId) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASES.payments}/orders/${order.backendOrderId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: order.status === 'completed' ? 'delivered' : order.status,
+          customerName: order.customerName,
+          customerPhone: order.customerPhone,
+          customerAddress: order.deliveryAddress,
+          total: Number(order.amount || 0)
+        })
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to sync order update');
+      }
+    } catch (error) {
+      console.error('Sync farmer order error:', error);
+      setOrdersError(error.message || 'Order updated locally, but backend sync failed.');
+    }
+  };
+
+  const deleteFarmerOrderFromBackend = async (order) => {
+    if (!order?.backendOrderId) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASES.payments}/orders/${order.backendOrderId}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to delete backend order');
+      }
+    } catch (error) {
+      console.error('Delete farmer order error:', error);
+      setOrdersError(error.message || 'Order deleted locally, but backend delete failed.');
+    }
+  };
+
+  const updateOrdersAndSync = (updater) => {
+    setOrders((currentOrders) => {
+      const nextOrders = typeof updater === 'function' ? updater(currentOrders) : updater;
+      const currentById = new Map(currentOrders.map((order) => [order.id, order]));
+      const nextIds = new Set(nextOrders.map((order) => order.id));
+
+      nextOrders.forEach((order) => {
+        const previousOrder = currentById.get(order.id);
+        if (
+          order.backendOrderId &&
+          previousOrder &&
+          JSON.stringify(previousOrder) !== JSON.stringify(order)
+        ) {
+          syncFarmerOrderToBackend(order);
+        }
+      });
+
+      currentOrders.forEach((order) => {
+        if (order.backendOrderId && !nextIds.has(order.id)) {
+          deleteFarmerOrderFromBackend(order);
+        }
+      });
+
+      return nextOrders;
+    });
+  };
+
   // Calculate dashboard statistics
   const dashboardStats = {
     totalProducts: products.length,
@@ -195,7 +407,9 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
     totalSales: products.reduce((sum, p) => sum + (p.sales || 0), 0),
     totalRevenue: products.reduce((sum, p) => sum + ((p.price || 0) * (p.sales || 0)), 0),
     totalViews: products.reduce((sum, p) => sum + (p.views || 0), 0),
-    avgRating: (products.reduce((sum, p) => sum + (p.rating || 0), 0) / products.length).toFixed(1)
+    avgRating: products.length
+      ? (products.reduce((sum, p) => sum + (p.rating || 0), 0) / products.length).toFixed(1)
+      : '0.0'
   };
 
   // Handle image upload
@@ -227,6 +441,19 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
     setSuccessMessage(message);
     setShowSuccess(true);
     setTimeout(() => setShowSuccess(false), 3000);
+  };
+
+  const resetProductEditor = () => {
+    setEditingProduct(null);
+    setProductForm(createEmptyProductForm());
+    setPreviewImages([]);
+    setFormError('');
+  };
+
+  const openCreateProductPage = () => {
+    resetProductEditor();
+    setActiveTab('create-product');
+    if (window.innerWidth < 1024) setSidebarOpen(false);
   };
 
   // Add/Edit product (send to backend)
@@ -347,15 +574,9 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
       }
 
       // Success
-      setShowAddProduct(false);
-      setEditingProduct(null);
-      setProductForm({
-        name: '', price: '', category: '', stock: '', unit: '',
-        description: '', images: [], status: 'active', organic: false, featured: false
-      });
-      setPreviewImages([]);
-      setFormError('');
+      resetProductEditor();
       showSuccessNotification(editingProduct ? 'Product updated successfully!' : 'Product uploaded successfully!');
+      setActiveTab('product-list');
       setIsUploading(false);
       await fetchProducts(); // Refresh products list
 
@@ -369,20 +590,23 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
   const editProduct = (product) => {
     setEditingProduct(product);
     setProductForm({
+      ...createEmptyProductForm(),
       name: product.name || '',
       price: product.price ? product.price.toString() : '',
       category: product.category || '',
       stock: product.quantity ? product.quantity.toString() : '',
       unit: product.unit || 'kg',
       description: product.description || '',
+      address: product.address || '',
       images: [],
       status: product.status || 'active',
       organic: product.organic || false,
       featured: product.featured || false
     });
-    // Only set previewImages to the image_url if it exists and is not empty
     setPreviewImages(product.image_url ? [product.image_url] : []);
-    setShowAddProduct(true);
+    setFormError('');
+    setActiveTab('create-product');
+    if (window.innerWidth < 1024) setSidebarOpen(false);
   };
 
   // Delete product (call backend)
@@ -390,41 +614,48 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
     const product = products.find(p => p.id === id);
     if (!product) return;
 
-    if (window.confirm(`Are you sure you want to delete "${product.name}"? This action cannot be undone.`)) {
-      try {
-        console.log('Deleting product:', id);
-        
-        const response = await fetch(`${API_BASES.products}/products/${id}`, { 
-          method: 'DELETE' 
-        });
+    const shouldDelete = await confirmAction({
+      title: 'Delete product?',
+      text: `Are you sure you want to delete "${product.name}"? This action cannot be undone.`,
+      confirmButtonText: 'Yes, delete product'
+    });
 
-        console.log('Delete response status:', response.status);
+    if (!shouldDelete) return;
 
-        // Check if response is JSON
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          throw new Error('Server returned non-JSON response. Please check if the backend server is running.');
-        }
+    try {
+      console.log('Deleting product:', id);
+      
+      const response = await fetch(`${API_BASES.products}/products/${id}`, { 
+        method: 'DELETE' 
+      });
 
-        const result = await response.json();
-        console.log('Delete response result:', result);
+      console.log('Delete response status:', response.status);
 
-        if (!response.ok) {
-          throw new Error(result.error || `Server error: ${response.status}`);
-        }
-
-        if (!result.success) {
-          throw new Error(result.error || 'Failed to delete product');
-        }
-
-        showSuccessNotification(`Product "${product.name}" deleted successfully!`);
-        setShowDropdownId(null);
-        await fetchProducts(); // Refresh products list
-
-      } catch (error) {
-        console.error('Delete error:', error);
-        setFormError(error.message || 'Failed to delete product. Please check your internet connection and try again.');
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Server returned non-JSON response. Please check if the backend server is running.');
       }
+
+      const result = await response.json();
+      console.log('Delete response result:', result);
+
+      if (!response.ok) {
+        throw new Error(result.error || `Server error: ${response.status}`);
+      }
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to delete product');
+      }
+
+      showSuccessNotification(`Product "${product.name}" deleted successfully!`);
+      await fetchProducts(); // Refresh products list
+
+    } catch (error) {
+      console.error('Delete error:', error);
+      const message = error.message || 'Failed to delete product. Please check your internet connection and try again.';
+      setProductsError(message);
+      showErrorAlert('Delete failed', message);
     }
   };
 
@@ -467,7 +698,7 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
 
     } catch (error) {
       console.error('Status toggle error:', error);
-      setFormError(error.message || 'Failed to update product status. Please check your internet connection and try again.');
+      setProductsError(error.message || 'Failed to update product status. Please check your internet connection and try again.');
     }
   };
 
@@ -495,13 +726,33 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
     });
 
   const handleTabChange = (tabId) => {
-    if (tabId === 'community') {
-      onNavigateToMessages();
+    if (tabId === 'profile') {
+      setLastPortalTab(activeTab === 'profile' ? lastPortalTab : activeTab);
+    }
+
+    if (tabId === 'create-product') {
+      openCreateProductPage();
     } else {
       setActiveTab(tabId);
       if (window.innerWidth < 1024) setSidebarOpen(false);
     }
   };
+
+  if (activeTab === 'profile') {
+    return (
+      <div
+        className="w-full min-h-screen"
+        style={{ margin: 0, padding: 0, width: '100vw', minHeight: '100vh', overflowX: 'hidden' }}
+      >
+        <FarmerProfile
+          user={user}
+          goBack={() => setActiveTab(lastPortalTab || 'dashboard')}
+          onLogout={onLogout}
+          onProfileSaved={fetchProfile}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen mobile-safe-shell w-full bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50" 
@@ -519,7 +770,8 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 rounded-xl bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-all duration-300 lg:hidden"
+                title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+                className="inline-flex items-center justify-center rounded-xl border border-emerald-200 bg-white/80 p-2 shadow-sm backdrop-blur-sm transition-all duration-300 hover:bg-white hover:shadow-md"
               >
                 <FaBars className="text-emerald-700 text-lg" />
               </button>
@@ -648,27 +900,42 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
         } bg-white/80 backdrop-blur-lg border-r border-emerald-100 shadow-xl`}>
           <div className="h-full overflow-y-auto pt-20 pb-6">
             <nav className="px-3">
-              {sidebarItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => handleTabChange(item.id)}
-                  className={`w-full flex items-center mb-2 px-4 py-3 rounded-xl transition-all duration-300 group ${
-                    activeTab === item.id
-                      ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-lg transform scale-105'
-                      : 'text-gray-700 hover:bg-emerald-50 hover:text-emerald-700'
-                  }`}
-                >
-                  <item.icon className={`text-lg transition-all duration-300 ${sidebarOpen ? 'mr-3' : 'mx-auto'}`} />
-                  {sidebarOpen && (
-                    <>
-                      <span className="font-medium">{item.label}</span>
-                      {activeTab === item.id && (
-                        <FaChevronRight className="ml-auto text-sm" />
-                      )}
-                    </>
-                  )}
-                </button>
-              ))}
+              {sidebarItems.map((item) => {
+                if (item.kind === 'section') {
+                  return sidebarOpen ? (
+                    <div
+                      key={item.id}
+                      className="px-4 pb-2 pt-5 text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-400"
+                    >
+                      {item.label}
+                    </div>
+                  ) : (
+                    <div key={item.id} className="mx-auto my-4 h-px w-10 bg-emerald-100" />
+                  );
+                }
+
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleTabChange(item.id)}
+                    className={`w-full flex items-center mb-2 px-4 py-3 rounded-xl transition-all duration-300 group ${
+                      activeTab === item.id
+                        ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-lg transform scale-105'
+                        : 'text-gray-700 hover:bg-emerald-50 hover:text-emerald-700'
+                    }`}
+                  >
+                    <item.icon className={`text-lg transition-all duration-300 ${sidebarOpen ? 'mr-3' : 'mx-auto'}`} />
+                    {sidebarOpen && (
+                      <>
+                        <span className="font-medium">{item.label}</span>
+                        {activeTab === item.id && (
+                          <FaChevronRight className="ml-auto text-sm" />
+                        )}
+                      </>
+                    )}
+                  </button>
+                );
+              })}
             </nav>
             
             {/* Sidebar Footer */}
@@ -689,14 +956,11 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
                  { /* Main Content Area */}
                   <main className="flex-1 w-full min-w-0 overflow-x-hidden">
                   <div className="px-3 sm:px-4 lg:px-6 xl:px-8 py-4 lg:py-6 xl:py-8">
-                    {activeTab === 'profile' && (
-                      <FarmerProfile
-                        user={user}
-                        embedded
-                        onProfileSaved={fetchProfile}
-                      />
+                    {ordersError && (
+                      <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-semibold text-amber-800">
+                        {ordersError}
+                      </div>
                     )}
-                    
                     {/* Dashboard Tab */}
                     {activeTab === 'dashboard' && (
                     <div className="space-y-6">
@@ -743,7 +1007,7 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
                       
                       <div className="mt-4 lg:mt-0 flex flex-col sm:flex-row gap-3">
                         <button 
-                          onClick={() => setShowAddProduct(true)}
+                          onClick={openCreateProductPage}
                           className="bg-white text-emerald-600 px-4 py-2 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 flex items-center justify-center"
                         >
                           <FaPlus className="mr-2" /> Add Product
@@ -850,9 +1114,9 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
                     { 
                       icon: FaTruck, 
                       title: 'Track Deliveries', 
-                      desc: '3 orders in transit', 
+                      desc: `${orders.filter((order) => order.status === 'delivery').length} orders in transit`, 
                       color: 'from-blue-500 to-cyan-600',
-                      action: () => setActiveTab('orders')
+                      action: () => handleTabChange('delivery-orders')
                     },
                     { 
                       icon: FaChartBar, 
@@ -866,7 +1130,7 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
                       title: 'Manage Products', 
                       desc: 'Update your listings', 
                       color: 'from-green-500 to-emerald-600',
-                      action: () => setActiveTab('products')
+                      action: () => handleTabChange('product-list')
                     }
                   ].map((action, index) => (
                     <button
@@ -893,7 +1157,7 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
                       <p className="text-gray-600 text-sm mt-1">Your latest products</p>
                     </div>
                     <button 
-                      onClick={() => setActiveTab('products')}
+                      onClick={() => handleTabChange('product-list')}
                       className="text-emerald-600 hover:text-emerald-700 font-semibold text-sm flex items-center group"
                     >
                       View All <FaChevronRight className="ml-1 group-hover:translate-x-1 transition-transform" />
@@ -907,7 +1171,7 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
                         <h3 className="text-lg font-medium text-gray-700">No products available</h3>
                         <p className="text-gray-500 mt-2">Add your first product to get started</p>
                         <button 
-                          onClick={() => setShowAddProduct(true)}
+                          onClick={openCreateProductPage}
                           className="mt-4 bg-gradient-to-r from-emerald-500 to-green-600 text-white px-4 py-2 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 flex items-center mx-auto"
                         >
                           <FaPlus className="mr-2" /> Add Product
@@ -971,477 +1235,103 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
               </div>
             )}
 
-            {/* Products Tab */}
-            {activeTab === 'products' && (
-              <div className="space-y-6">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                  <div>
-                    <h1 className="text-2xl lg:text-3xl font-bold text-gray-800">My Products</h1>
-                    <p className="text-gray-600">Manage your farm products and listings</p>
-                  </div>
-                  <button 
-                    onClick={() => {
-                      setEditingProduct(null);
-                      setShowAddProduct(true);
-                    }}
-                    className="bg-gradient-to-r from-emerald-500 to-green-600 text-white px-4 py-2 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 flex items-center"
-                  >
-                    <FaPlus className="mr-2" /> Add Product
-                  </button>
-                </div>
-
-                {/* Products Filter/Search Bar */}
-                <div className="bg-white rounded-2xl shadow-md p-4">
-                  <div className="flex flex-col md:flex-row md:items-center gap-3">
-                    <div className="relative flex-1">
-                      <input
-                        type="text"
-                        placeholder="Search products..."
-                        className="w-full pl-10 pr-4 py-2 bg-gray-50 rounded-xl border border-gray-200 focus:border-emerald-500 focus:outline-none transition-all duration-300"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                      />
-                      <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                    </div>
-                    
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <select
-                        className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
-                        value={filterCategory}
-                        onChange={(e) => setFilterCategory(e.target.value)}
-                      >
-                        <option value="all">All Categories</option>
-                        {categories.map((cat) => (
-                          <option key={cat} value={cat}>{cat}</option>
-                        ))}
-                      </select>
-                      
-                      <select
-                        className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
-                        value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value)}
-                      >
-                        <option value="newest">Newest First</option>
-                        <option value="price-low">Price: Low to High</option>
-                        <option value="price-high">Price: High to Low</option>
-                        <option value="popular">Most Popular</option>
-                      </select>
-                      
-                      <button className="flex items-center justify-center gap-2 bg-emerald-50 text-emerald-600 px-3 py-2 rounded-xl hover:bg-emerald-100 transition-colors">
-                        <FaFilter /> Filters
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Products Grid */}
-                {isLoadingProducts ? (
-                  <div className="flex justify-center items-center py-12">
-                    <span className="text-emerald-600 font-semibold">Loading products...</span>
-                  </div>
-                ) : filteredProducts.length === 0 ? (
-                  <div className="bg-white rounded-2xl shadow-md p-8 text-center">
-                    <div className="max-w-md mx-auto">
-                      <FaBox className="text-4xl text-gray-300 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-700">No products found</h3>
-                      <p className="text-gray-500 mt-2">Try adjusting your search or add a new product</p>
-                      <button 
-                        onClick={() => setShowAddProduct(true)}
-                        className="mt-4 bg-gradient-to-r from-emerald-500 to-green-600 text-white px-4 py-2 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 flex items-center mx-auto"
-                      >
-                        <FaPlus className="mr-2" /> Add Product
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
-                    {filteredProducts.map((product) => (
-                      <div 
-                        key={product.id}
-                        className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden group relative"
-                      >
-                        <div className="relative h-48 overflow-hidden">
-                          <img 
-                            src={product.image_url} 
-                            alt={product.name} 
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                          
-                          {/* Product Badges */}
-                          <div className="absolute top-3 left-3 flex flex-col items-start gap-2">
-                            {product.organic && (
-                              <span className="px-2 py-1 bg-green-500 text-white text-xs rounded-lg flex items-center">
-                                <FaLeaf className="mr-1" /> Organic
-                              </span>
-                            )}
-                            {product.featured && (
-                              <span className="px-2 py-1 bg-blue-500 text-white text-xs rounded-lg flex items-center">
-                                <FaStar className="mr-1" /> Featured
-                              </span>
-                            )}
-                          </div>
-                          
-                          {/* Status Dropdown */}
-                          <div className="absolute top-3 right-3">
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setShowDropdownId(showDropdownId === product.id ? null : product.id);
-                              }}
-                              className="dropdown-trigger p-1 bg-white/80 backdrop-blur-sm rounded-lg hover:bg-white transition-colors"
-                            >
-                              <FaEllipsisV className="text-gray-600" />
-                            </button>
-                            
-                            {showDropdownId === product.id && (
-                              <div className="dropdown-menu absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-xl border border-gray-100 z-10">
-                                <button 
-                                  onClick={() => editProduct(product)}
-                                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center"
-                                >
-                                  <FaEdit className="mr-2 text-gray-500" /> Edit
-                                </button>
-                                <button 
-                                  onClick={() => toggleProductStatus(product.id)}
-                                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center"
-                                >
-                                  {product.status === 'active' ? (
-                                    <>
-                                      <FaTimes className="mr-2 text-gray-500" /> Deactivate
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FaCheck className="mr-2 text-gray-500" /> Activate
-                                    </>
-                                  )}
-                                </button>
-                                <button 
-                                  onClick={() => deleteProduct(product.id)}
-                                  className="w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-gray-50 flex items-center"
-                                >
-                                  <FaTrash className="mr-2" /> Delete
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div className="p-4">
-                          <div className="flex justify-between items-start">
-                            <h3 className="font-semibold text-gray-800 truncate">{product.name}</h3>
-                            <p className="text-emerald-600 font-bold flex items-center">
-                              <FaRupeeSign className="mr-1" /> {product.price}
-                              <span className="text-xs text-gray-500 ml-1">/{product.unit}</span>
-                            </p>
-                          </div>
-                          
-                          <div className="flex justify-between items-center mt-2">
-                            <span className="text-xs text-gray-500">{product.category}</span>
-                            <div className="flex items-center">
-                              <FaStar className="text-yellow-400 text-xs mr-1" />
-                              <span className="text-xs font-medium">{product.rating}</span>
-                            </div>
-                          </div>
-                          
-                          <div className="flex justify-between items-center mt-3 text-xs">
-                            <div className="flex items-center text-gray-500">
-                              <FaShoppingCart className="mr-1" /> {product.sales} sold
-                            </div>
-                            <div className="flex items-center">
-                              <span className={`px-2 py-1 rounded-full text-xs ${
-                                product.status === 'active' 
-                                  ? 'bg-emerald-100 text-emerald-700' 
-                                  : 'bg-gray-100 text-gray-700'
-                              }`}>
-                                {product.status}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+            {activeTab === 'product-list' && (
+              <FarmerProductListPage
+                products={products}
+                filteredProducts={filteredProducts}
+                isLoading={isLoadingProducts}
+                categories={categories}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                filterCategory={filterCategory}
+                setFilterCategory={setFilterCategory}
+                sortBy={sortBy}
+                setSortBy={setSortBy}
+                onCreateProduct={openCreateProductPage}
+                onEditProduct={editProduct}
+                onToggleProductStatus={toggleProductStatus}
+                onDeleteProduct={deleteProduct}
+                productsError={productsError}
+              />
             )}
 
-            {/* Add/Edit Product Modal */}
-            {showAddProduct && (
-              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <div 
-                  className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex justify-between items-center z-10">
-                    <h2 className="text-xl font-bold text-gray-800">
-                      {editingProduct ? 'Edit Product' : 'Add New Product'}
-                    </h2>
-                    <button 
-                      onClick={() => {
-                        setShowAddProduct(false);
-                        setEditingProduct(null);
-                        setProductForm({
-                          name: '', price: '', category: '', stock: '', unit: '', 
-                          description: '', images: [], status: 'active', organic: false, featured: false
-                        });
-                        setPreviewImages([]);
-                        setFormError('');
-                      }}
-                      className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
-                    >
-                      <FaTimes className="text-gray-500" />
-                    </button>
-                  </div>
-                  
-                  <form onSubmit={handleSubmitProduct} className="p-4 sm:p-6">
-                    {formError && (
-                      <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm">
-                        {formError}
-                      </div>
-                    )}
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Product Name */}
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Product Name *</label>
-                        <input
-                          type="text"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-emerald-500"
-                          placeholder="e.g. Organic Cinnamon Sticks"
-                          value={productForm.name}
-                          onChange={(e) => setProductForm({...productForm, name: e.target.value})}
-                        />
-                      </div>
-                      
-                      {/* Price */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Price (Rs.) *</label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <FaRupeeSign className="text-gray-400" />
-                          </div>
-                          <input
-                            type="number"
-                            className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-emerald-500"
-                            placeholder="0.00"
-                            value={productForm.price}
-                            onChange={(e) => setProductForm({...productForm, price: e.target.value})}
-                          />
-                        </div>
-                      </div>
-                      
-                      {/* Stock */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Stock *</label>
-                        <input
-                          type="number"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-emerald-500"
-                          placeholder="Available quantity"
-                          value={productForm.stock}
-                          onChange={(e) => setProductForm({...productForm, stock: e.target.value})}
-                        />
-                      </div>
-                      
-                      {/* Category */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
-                        <select
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-emerald-500"
-                          value={productForm.category}
-                          onChange={(e) => setProductForm({...productForm, category: e.target.value})}
-                        >
-                          <option value="">Select category</option>
-                          {categories.map((cat) => (
-                            <option key={cat} value={cat}>{cat}</option>
-                          ))}
-                        </select>
-                      </div>
-                      
-                      {/* Unit */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Unit *</label>
-                        <select
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-emerald-500"
-                          value={productForm.unit}
-                          onChange={(e) => setProductForm({...productForm, unit: e.target.value})}
-                        >
-                          <option value="">Select unit</option>
-                          {units.map((unit) => (
-                            <option key={unit} value={unit}>{unit}</option>
-                          ))}
-                        </select>
-                      </div>
-                      
-                      {/* Organic */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Certification</label>
-                        <div className="flex items-center">
-                          <input
-                            type="checkbox"
-                            id="organic"
-                            className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
-                            checked={productForm.organic}
-                            onChange={(e) => setProductForm({...productForm, organic: e.target.checked})}
-                          />
-                          <label htmlFor="organic" className="ml-2 block text-sm text-gray-700 flex items-center">
-                            <FaLeaf className="text-green-500 mr-1" /> Organic Certified
-                          </label>
-                        </div>
-                      </div>
-                      
-                      {/* Featured */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Listing Options</label>
-                        <div className="flex items-center">
-                          <input
-                            type="checkbox"
-                            id="featured"
-                            className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
-                            checked={productForm.featured}
-                            onChange={(e) => setProductForm({...productForm, featured: e.target.checked})}
-                          />
-                          <label htmlFor="featured" className="ml-2 block text-sm text-gray-700 flex items-center">
-                            <FaStar className="text-yellow-400 mr-1" /> Featured Product
-                          </label>
-                        </div>
-                      </div>
-                      
-                      {/* Status */}
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                        <div className="flex space-x-4">
-                          <label className="inline-flex items-center">
-                            <input
-                              type="radio"
-                              className="h-4 w-4 text-emerald-600 focus:ring-emerald-500"
-                              name="status"
-                              value="active"
-                              checked={productForm.status === 'active'}
-                              onChange={(e) => setProductForm({...productForm, status: e.target.value})}
-                            />
-                            <span className="ml-2 text-sm text-gray-700">Active</span>
-                          </label>
-                          <label className="inline-flex items-center">
-                            <input
-                              type="radio"
-                              className="h-4 w-4 text-emerald-600 focus:ring-emerald-500"
-                              name="status"
-                              value="inactive"
-                              checked={productForm.status === 'inactive'}
-                              onChange={(e) => setProductForm({...productForm, status: e.target.value})}
-                            />
-                            <span className="ml-2 text-sm text-gray-700">Inactive</span>
-                          </label>
-                        </div>
-                      </div>
-                      
-                      {/* Description */}
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
-                        <textarea
-                          rows={3}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-emerald-500"
-                          placeholder="Describe your product in detail..."
-                          value={productForm.description}
-                          onChange={(e) => setProductForm({...productForm, description: e.target.value})}
-                        />
-                      </div>
-                      
-                      {/* Image Upload */}
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Product Images *</label>
-                        <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg">
-                          <div className="space-y-1 text-center">
-                            <div className="flex text-sm text-gray-600">
-                              <label
-                                htmlFor="file-upload"
-                                className="relative cursor-pointer bg-white rounded-md font-medium text-emerald-600 hover:text-emerald-500 focus-within:outline-none"
-                              >
-                                <span>Upload images</span>
-                                <input
-                                  id="file-upload"
-                                  name="file-upload"
-                                  type="file"
-                                  className="sr-only"
-                                  multiple
-                                  accept="image/*"
-                                  onChange={handleImageUpload}
-                                />
-                              </label>
-                              <p className="pl-1">or drag and drop</p>
-                            </div>
-                            <p className="text-xs text-gray-500">PNG, JPG up to 5MB</p>
-                          </div>
-                        </div>
-                        
-                        {/* Preview Images */}
-                        {previewImages.length > 0 && (
-                          <div className="mt-4">
-                            <div className="flex flex-wrap gap-3">
-                              {previewImages.map((img, index) => (
-                                <div key={index} className="relative h-24 w-24 rounded-lg overflow-hidden border border-gray-200">
-                                  <img src={img} alt={`Preview ${index}`} className="h-full w-full object-cover" />
-                                  <button
-                                    type="button"
-                                    onClick={() => removeImage(index)}
-                                    className="absolute top-1 right-1 bg-white/80 backdrop-blur-sm rounded-full p-1 hover:bg-red-100 transition-colors"
-                                  >
-                                    <FaTimes className="text-red-500 text-xs" />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="mt-6 flex justify-end space-x-3">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowAddProduct(false);
-                          setEditingProduct(null);
-                          setProductForm({
-                            name: '', price: '', category: '', stock: '', unit: '', 
-                            description: '', images: [], status: 'active', organic: false, featured: false
-                          });
-                          setPreviewImages([]);
-                          setFormError('');
-                        }}
-                        className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={isUploading}
-                        className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 rounded-lg text-white font-medium hover:shadow-lg transition-all disabled:opacity-70 flex items-center justify-center min-w-24"
-                      >
-                        {isUploading ? (
-                          <>
-                            <FaSpinner className="animate-spin mr-2" /> Processing...
-                          </>
-                        ) : editingProduct ? (
-                          <>
-                            <FaSave className="mr-2" /> Update Product
-                          </>
-                        ) : (
-                          <>
-                            <FaUpload className="mr-2" /> Upload Product
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
+            {activeTab === 'create-product' && (
+              <FarmerCreateProductPage
+                editingProduct={editingProduct}
+                productForm={productForm}
+                setProductForm={setProductForm}
+                categories={categories}
+                units={units}
+                previewImages={previewImages}
+                isUploading={isUploading}
+                formError={formError}
+                onSubmit={handleSubmitProduct}
+                onImageUpload={handleImageUpload}
+                onRemoveImage={removeImage}
+                onCancel={resetProductEditor}
+                onOpenProductList={() => handleTabChange('product-list')}
+              />
             )}
 
-            {/* Orders Tab */}
-            {activeTab === 'orders' && (
-              <FarmerOrderManagement />
+            {activeTab === 'shop' && (
+              <FarmerShopPage
+                farmer={currentUser}
+                products={products}
+                isLoading={isLoadingProducts}
+                onAddProduct={openCreateProductPage}
+                onManageProducts={() => handleTabChange('product-list')}
+              />
+            )}
+
+            {activeTab === 'community' && (
+              <FarmerCommunityPage user={currentUser} />
+            )}
+
+            {activeTab === 'pending-orders' && (
+              <FarmerPendingOrdersPage
+                orders={orders}
+                setOrders={updateOrdersAndSync}
+                onNavigateToStage={handleTabChange}
+              />
+            )}
+
+            {activeTab === 'processing-orders' && (
+              <FarmerProcessingOrdersPage
+                orders={orders}
+                setOrders={updateOrdersAndSync}
+                onNavigateToStage={handleTabChange}
+              />
+            )}
+
+            {activeTab === 'packing-orders' && (
+              <FarmerPackingOrdersPage
+                orders={orders}
+                setOrders={updateOrdersAndSync}
+                onNavigateToStage={handleTabChange}
+              />
+            )}
+
+            {activeTab === 'delivery-orders' && (
+              <FarmerDeliveryOrdersPage
+                orders={orders}
+                setOrders={updateOrdersAndSync}
+                onNavigateToStage={handleTabChange}
+              />
+            )}
+
+            {activeTab === 'completed-orders' && (
+              <FarmerCompletedOrdersPage
+                orders={orders}
+                setOrders={updateOrdersAndSync}
+                onNavigateToStage={handleTabChange}
+              />
+            )}
+
+            {activeTab === 'customer-details' && (
+              <FarmerCustomerDetailsPage
+                orders={orders}
+                setOrders={updateOrdersAndSync}
+              />
             )}
 
             {/* Analytics Tab */}

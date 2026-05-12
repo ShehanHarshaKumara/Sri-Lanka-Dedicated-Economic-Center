@@ -9,6 +9,14 @@ CREATE TABLE IF NOT EXISTS users (
   name VARCHAR(150) NOT NULL,
   email VARCHAR(255) NOT NULL,
   password VARCHAR(255) NOT NULL DEFAULT '',
+  password_status VARCHAR(20)
+    GENERATED ALWAYS AS (
+      CASE
+        WHEN password IS NULL OR password = '' THEN 'not_set'
+        WHEN password LIKE '$2%' THEN 'hashed'
+        ELSE 'legacy_plain_text'
+      END
+    ) STORED,
   role ENUM('farmer', 'customer', 'administrator') NOT NULL DEFAULT 'customer',
   phone VARCHAR(20) DEFAULT NULL,
   address TEXT DEFAULT NULL,
@@ -31,6 +39,16 @@ CREATE TABLE IF NOT EXISTS admins (
   name VARCHAR(150) NOT NULL,
   email VARCHAR(255) NOT NULL,
   password VARCHAR(255) NOT NULL,
+  password_status VARCHAR(20)
+    GENERATED ALWAYS AS (
+      CASE
+        WHEN password IS NULL OR password = '' THEN 'not_set'
+        WHEN password LIKE '$2%' THEN 'hashed'
+        ELSE 'legacy_plain_text'
+      END
+    ) STORED,
+  avatar TEXT DEFAULT NULL,
+  last_login TIMESTAMP NULL DEFAULT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
@@ -188,5 +206,42 @@ CREATE TABLE IF NOT EXISTS product_reviews (
   KEY idx_product_reviews_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE OR REPLACE VIEW account_password_overview AS
+SELECT
+  'user' AS account_type,
+  id,
+  name,
+  email,
+  role,
+  password_status,
+  CASE
+    WHEN password_status = 'hashed' THEN 'Protected - actual password cannot be viewed'
+    WHEN password_status = 'legacy_plain_text' THEN 'Legacy plain-text password exists - reset immediately'
+    ELSE 'Password not set'
+  END AS password_note,
+  created_at,
+  updated_at,
+  last_login
+FROM users
+
+UNION ALL
+
+SELECT
+  'admin' AS account_type,
+  id,
+  name,
+  email,
+  'admin' AS role,
+  password_status,
+  CASE
+    WHEN password_status = 'hashed' THEN 'Protected - actual password cannot be viewed'
+    WHEN password_status = 'legacy_plain_text' THEN 'Legacy plain-text password exists - reset immediately'
+    ELSE 'Password not set'
+  END AS password_note,
+  created_at,
+  updated_at,
+  last_login
+FROM admins;
+
 INSERT IGNORE INTO admins (name, email, password)
-VALUES ('System Admin', 'admin@dec.local', 'admin123');
+VALUES ('System Admin', 'admin@dec.local', '$2b$10$Ss3XXE2BTe4jkUeDc2Fjz.dqqAjtm3DUjvG/sEVQG4P8ARI93vGem');

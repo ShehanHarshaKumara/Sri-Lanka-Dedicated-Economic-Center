@@ -20,7 +20,36 @@ db.connect((err) => {
     process.exit(1);
   }
   console.log('Connected to MySQL');
+  ensureAdminProductColumns();
 });
+
+const ensureAdminProductColumns = () => {
+  db.query(`
+    SELECT COLUMN_NAME
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'dedicated_economic_center'
+      AND TABLE_NAME = 'products'
+      AND COLUMN_NAME = 'status'
+  `, (err, rows) => {
+    if (err) {
+      console.error('Error checking product status column:', err);
+      return;
+    }
+
+    if (rows.length > 0) {
+      return;
+    }
+
+    db.query(`ALTER TABLE products ADD COLUMN status VARCHAR(20) DEFAULT 'active'`, (alterErr) => {
+      if (alterErr) {
+        console.error('Error adding product status column:', alterErr);
+        return;
+      }
+
+      console.log('Product status column added successfully');
+    });
+  });
+};
 
 // GET all products (for customers)
 app.get('/api/products', (req, res) => {
@@ -63,9 +92,9 @@ app.get('/api/admin/products', (req, res) => {
       p.lat,
       p.lng,
       p.created_at,
+      p.status,
       u.name AS farmer,
-      u.id AS farmer_id,
-      'active' as status
+      u.id AS farmer_id
     FROM products p
     JOIN users u ON p.farmer_id = u.id
     ORDER BY p.created_at DESC
@@ -87,7 +116,8 @@ app.get('/api/admin/products', (req, res) => {
       price: parseFloat(product.price),
       stock: parseInt(product.stock) || 0,
       image: product.image_url || 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=300&fit=crop',
-      status: product.status,
+      image_url: product.image_url || 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=300&fit=crop',
+      status: product.status || 'active',
       sales: 0, // Default to 0 since we don't have order tables yet
       rating: 4.5, // Default rating
       description: product.description,
@@ -106,7 +136,7 @@ app.get('/api/admin/product-stats', (req, res) => {
   const statsQuery = `
     SELECT 
       COUNT(*) as total_products,
-      COUNT(*) as active_products,
+      COUNT(CASE WHEN COALESCE(p.status, 'active') = 'active' THEN 1 END) as active_products,
       COUNT(CASE WHEN p.quantity < 50 THEN 1 END) as low_stock_products,
       COUNT(DISTINCT p.category) as total_categories
     FROM products p

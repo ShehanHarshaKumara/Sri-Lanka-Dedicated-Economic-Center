@@ -5,6 +5,7 @@ import {
   Minus, Plus, Check, X, Loader2, ShieldCheck,
   Calendar, MapPin, Mail, User, Home, AlertCircle
 } from 'lucide-react';
+import { showWarningAlert } from '../utils/sweetAlert';
 
 const EnhancedPaymentPage = () => {
   // Viewport setup
@@ -141,7 +142,7 @@ const EnhancedPaymentPage = () => {
       setDiscount(subtotal * discountRate);
     } else {
       setDiscount(0);
-      alert('Invalid discount code');
+      showWarningAlert('Invalid discount code', 'Please check the code and try again.');
     }
   };
 
@@ -156,7 +157,7 @@ const EnhancedPaymentPage = () => {
     
     const missingFields = requiredFields.filter(field => !formData[field]);
     if (missingFields.length > 0) {
-      alert('Please fill in all required fields');
+      showWarningAlert('Missing information', 'Please fill in all required fields before placing the order.');
       return;
     }
 
@@ -237,10 +238,6 @@ const EnhancedPaymentPage = () => {
         {!showCheckout ? (
           // Product View
           <div className="max-w-7xl mx-auto">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-6 sm:mb-8 text-center">
-              Premium Organic Store
-            </h1>
-            
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
               {/* Product Images */}
               <div className="space-y-3 sm:space-y-4">

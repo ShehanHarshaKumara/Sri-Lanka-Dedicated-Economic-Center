@@ -93,11 +93,42 @@ const db = mysql.createConnection({
   database: process.env.DB_NAME || 'dedicated_economic_center'
 });
 
+const ensureCustomerStatusColumn = () => {
+  const checkColumnSql = `
+    SELECT COLUMN_NAME
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'customer_profiles'
+      AND COLUMN_NAME = 'status'
+  `;
+
+  db.query(checkColumnSql, (err, rows) => {
+    if (err) {
+      console.error('Error checking customer status column:', err.message);
+      return;
+    }
+
+    if (rows.length > 0) {
+      return;
+    }
+
+    db.query(`ALTER TABLE customer_profiles ADD COLUMN status VARCHAR(20) DEFAULT 'active'`, (alterErr) => {
+      if (alterErr) {
+        console.error('Error adding customer status column:', alterErr.message);
+        return;
+      }
+
+      console.log('Customer status column added successfully');
+    });
+  });
+};
+
 db.connect((err) => {
   if (err) {
     console.error('MySQL Connection Failed:', err.message);
     process.exit(1);
   } else {
+    ensureCustomerStatusColumn();
     console.log('✓ MySQL Connected Successfully!');
   }
 });
@@ -411,7 +442,7 @@ router.get('/all', async (req, res) => {
           ...profile,
           name: user.name,
           email: user.email,
-          status: 'active', // You can add logic for status if needed
+          status: profile.status || 'active',
           verified: true // You can add logic for verification if needed
         };
       } else {
@@ -443,6 +474,59 @@ router.get('/all', async (req, res) => {
   } catch (error) {
     console.error('Fetch all customers error:', error);
     res.status(500).json({ error: 'Failed to fetch customers: ' + error.message });
+  }
+});
+
+// Update customer status for admin
+router.patch('/:userId/status', async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const { status } = req.body;
+    const normalizedStatus = String(status || '').trim().toLowerCase();
+
+    if (!['active', 'pending', 'suspended', 'rejected'].includes(normalizedStatus)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid status value'
+      });
+    }
+
+    const [updateResult] = await db.promise().query(
+      'UPDATE customer_profiles SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?',
+      [normalizedStatus, userId]
+    );
+
+    if (updateResult.affectedRows > 0) {
+      return res.json({ success: true, message: 'Customer status updated successfully' });
+    }
+
+    const [users] = await db.promise().query(
+      'SELECT id, name, email FROM users WHERE id = ? AND role = "customer" LIMIT 1',
+      [userId]
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({ success: false, error: 'Customer not found' });
+    }
+
+    const names = (users[0].name || '').trim().split(/\s+/);
+    const firstName = names[0] || 'Customer';
+    const lastName = names.slice(1).join(' ');
+
+    await db.promise().query(
+      `INSERT INTO customer_profiles (user_id, first_name, last_name, email, status, updated_at)
+       VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+       ON DUPLICATE KEY UPDATE status = VALUES(status), updated_at = CURRENT_TIMESTAMP`,
+      [userId, firstName, lastName, users[0].email, normalizedStatus]
+    );
+
+    res.json({ success: true, message: 'Customer status updated successfully' });
+  } catch (error) {
+    console.error('Update customer status error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update customer status: ' + error.message
+    });
   }
 });
 

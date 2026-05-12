@@ -1,0 +1,4 @@
+❌ Missing Google Drive config: GOOGLE_PROJECT_ID
+💾 Using local storage for images (Google Drive not configured)
+Customer Profile Server Running on http://localhost:3000/api/customer
+✓ MySQL Connected Successfully!

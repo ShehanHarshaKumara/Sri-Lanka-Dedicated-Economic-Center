@@ -10,6 +10,7 @@ import FramerPage from './Pages/FramerPage.jsx'
 import PaymentAndReting from './Pages/PaymentAndReting.jsx'
 import MapPage from './Pages/Map.jsx'
 import CustomerSupportApp from './Pages/CustomerMSg.jsx'
+import CustomerMessagesPage from './Pages/CustomerMessagesPage.jsx'
 
 // eslint-disable-next-line react-refresh/only-export-components
 function App() {
@@ -35,6 +36,11 @@ function App() {
 
   const handleLogin = (userData) => {
     setUser(userData);
+  };
+
+  const handleUserUpdate = (updatedUser) => {
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
   const handleLogout = () => {
@@ -74,6 +80,14 @@ function App() {
     setCurrentPage('messages');
   };
 
+  const customerNavigationProps = {
+    onNavigateToHome: handleBackToCustomerHP,
+    onNavigateToProducts: handleNavigateToProducts,
+    onNavigateToSellers: handleNavigateToSellers,
+    onNavigateToMap: handleNavigateToMap,
+    onNavigateToMessages: handleNavigateToMessages
+  };
+
   const handleBackToFarmerHP = () => {
     setCurrentPage('main');
   };
@@ -94,7 +108,7 @@ function App() {
   }
 
   if (user.role === 'admin' || user.role === 'administrator') {
-    return <AdminHP user={user} onLogout={handleLogout} />;
+    return <AdminHP user={user} onLogout={handleLogout} onUserUpdate={handleUserUpdate} />;
   }
   if (user.role === 'farmer') {
     if (currentPage === 'messages') {
@@ -108,35 +122,33 @@ function App() {
         <PaymentAndReting
           product={selectedProduct}
           onBack={handleBackFromPayment}
+          {...customerNavigationProps}
         />
       );
     }
     if (currentPage === 'products') {
-      return <FarmingFoodsPage onBack={handleBackToCustomerHP} onBuyNow={handleBuyNow} />;
+      return <FarmingFoodsPage onBack={handleBackToCustomerHP} onBuyNow={handleBuyNow} {...customerNavigationProps} />;
     }
     if (currentPage === 'sellers') {
-      return <FramerPage onBack={handleBackToCustomerHP} onLogout={handleLogout} />;
+      return <FramerPage onBack={handleBackToCustomerHP} {...customerNavigationProps} />;
     }
     if (currentPage === 'map') {
+      return <MapPage {...customerNavigationProps} />;
+    }
+    if (currentPage === 'messages') {
       return (
-        <div>
-          <button
-            onClick={() => setCurrentPage('main')}
-            className="m-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-          >
-            Back
-          </button>
-          <MapPage />
-        </div>
+        <CustomerMessagesPage
+          user={user}
+          onBack={handleBackToCustomerHP}
+          {...customerNavigationProps}
+        />
       );
     }
     return (
       <CustomerHP
         user={user}
         onLogout={handleLogout}
-        onNavigateToProducts={handleNavigateToProducts}
-        onNavigateToSellers={handleNavigateToSellers}
-        onNavigateToMap={handleNavigateToMap}
+        {...customerNavigationProps}
       />
     );
   }

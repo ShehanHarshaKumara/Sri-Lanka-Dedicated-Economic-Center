@@ -23,11 +23,42 @@ const db = mysql.createConnection({
   database: 'dedicated_economic_center'
 });
 
+const ensureFarmerStatusColumn = () => {
+  const checkColumnSql = `
+    SELECT COLUMN_NAME
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'farmer_profiles'
+      AND COLUMN_NAME = 'status'
+  `;
+
+  db.query(checkColumnSql, (err, rows) => {
+    if (err) {
+      console.error('Error checking farmer status column:', err.message);
+      return;
+    }
+
+    if (rows.length > 0) {
+      return;
+    }
+
+    db.query(`ALTER TABLE farmer_profiles ADD COLUMN status VARCHAR(20) DEFAULT 'active'`, (alterErr) => {
+      if (alterErr) {
+        console.error('Error adding farmer status column:', alterErr.message);
+        return;
+      }
+
+      console.log('Farmer status column added successfully');
+    });
+  });
+};
+
 db.connect((err) => {
   if (err) {
     console.error('MySQL Connection Failed:', err.message);
     process.exit(1);
   } else {
+    ensureFarmerStatusColumn();
     console.log('✓ MySQL Connected Successfully!');
   }
 });
@@ -274,8 +305,8 @@ router.get('/all', async (req, res) => {
       location_lng: row.location_lng,
       location_address: row.location_address,
       created_at: row.user_created_at,
-      // Add mock/placeholder fields for compatibility
-      status: 'active',
+      // Add compatibility fields used by the admin dashboard
+      status: row.status || 'active',
       verified: true,
       totalProducts: null,
       totalSales: null,
@@ -338,7 +369,7 @@ router.patch('/profile/:userId/status', async (req, res) => {
     const userId = req.params.userId;
     const { status } = req.body;
     
-    if (!['active', 'pending', 'suspended'].includes(status)) {
+    if (!['active', 'pending', 'suspended', 'rejected'].includes(status)) {
       return res.status(400).json({ 
         success: false, 
         error: 'Invalid status value' 
