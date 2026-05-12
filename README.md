@@ -1,3 +1,14 @@
+
+<p align="center">
+  <a href="https://1drv.ms/v/c/14d80c7f795708ba/IQBb3-lYVS20SK8-0sSjUPWIAVCrr9bB5YXwRr_-ELuBAD8?e=4esm69">
+    <img src="https://github.com/user-attachments/assets/15b073a8-7e93-4246-ad36-e1d3e2c2a7a4" 
+         alt="Watch Demo Video" width="900"/>
+  </a>
+</p>
+
+<p align="center">
+  👉 Click the image to watch the demo video
+</p>
 # 🌐 Dedicated Economic Center
 
 <p align="center">
