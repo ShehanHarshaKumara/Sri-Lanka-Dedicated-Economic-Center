@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { FaLeaf, FaUser, FaTractor, FaGoogle, FaFacebook, FaTwitter, FaApple, FaLock } from 'react-icons/fa';
+import { API_BASES } from '../config/api';
 // Import video assets
 import loginVideo from '../assets/videos/login-video.mp4';
 import signupVideo from '../assets/videos/signup-video.mp4';
@@ -36,7 +37,7 @@ const AuthPage = ({ onLogin }) => {
     setSuccessMessage('');
 
     try {
-      const apiUrl = 'http://localhost:5000/api/auth';
+      const apiUrl = API_BASES.auth;
       
       if (isLogin) {
         // Login API call
@@ -149,7 +150,7 @@ const AuthPage = ({ onLogin }) => {
     setError('');
     
     try {
-      const response = await fetch('http://localhost:5000/api/auth/admin-login', {
+      const response = await fetch(`${API_BASES.auth}/admin-login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -215,7 +216,7 @@ const AuthPage = ({ onLogin }) => {
   };
 
   return (
-    <div className="fixed inset-0 flex flex-col md:flex-row bg-gray-100 text-gray-800 overflow-hidden font-sans">
+    <div className="fixed inset-0 mobile-safe-shell mobile-safe-scroll flex flex-col md:flex-row bg-gray-100 text-gray-800 overflow-x-hidden md:overflow-hidden font-sans">
       {/* Left Hero Section with Video Background */}
       <div 
         className={`hidden md:flex md:w-1/2 relative overflow-hidden transition-all duration-800 ease-in-out ${
@@ -339,7 +340,7 @@ const AuthPage = ({ onLogin }) => {
       </div>
 
       {/* Right Auth Section */}
-      <div className={`w-full md:w-1/2 overflow-y-auto bg-white relative transition-all duration-800 ease-in-out ${
+      <div className={`w-full md:w-1/2 min-h-screen md:min-h-0 overflow-y-auto bg-white relative transition-all duration-800 ease-in-out ${
           slideDirection === 'slide-to-signup' 
             ? 'transform -translate-x-full' 
             : slideDirection === 'slide-to-login'
@@ -360,7 +361,7 @@ const AuthPage = ({ onLogin }) => {
           </div>
         </div>
 
-        <div className="min-h-full flex flex-col justify-center py-8 px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="min-h-screen md:min-h-full flex flex-col justify-center py-6 sm:py-8 px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="sm:mx-auto sm:w-full sm:max-w-md">
             <div className="flex justify-center md:hidden mb-8">
               <div className="flex items-center transform transition-all duration-500 hover:scale-110">
@@ -379,7 +380,7 @@ const AuthPage = ({ onLogin }) => {
             <div className={`text-center transition-all duration-600 ${
               contentVisible ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-8'
             }`}>
-              <h2 className="text-4xl font-black text-gray-800 mb-4 tracking-tight">
+              <h2 className="text-3xl sm:text-4xl font-black text-gray-800 mb-4 tracking-tight">
                 {showAdminLogin ? 'Admin Portal' : isLogin ? 'Welcome Back' : 'Join Our Community'}
               </h2>
               <p className="text-gray-600 mb-8 font-medium text-lg">

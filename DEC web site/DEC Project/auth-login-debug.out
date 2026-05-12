@@ -1,0 +1,3 @@
+Server is running on port 5000
+API Health check: http://localhost:5000/api/health
+Connected to MySQL database

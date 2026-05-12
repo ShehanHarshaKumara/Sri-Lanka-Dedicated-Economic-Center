@@ -1,0 +1,25 @@
+Backend server running on port 5001
+Connected to MySQL
+Upload request body: [Object: null prototype] {
+  farmer_id: '1',
+  name: 'Debug Product',
+  price: '100',
+  quantity: '5',
+  category: 'Vegetables',
+  unit: 'kg',
+  description: 'Debug description',
+  status: 'active'
+}
+Upload files: [
+  {
+    fieldname: 'images',
+    originalname: '1749812939694-pic1.jpg',
+    encoding: '7bit',
+    mimetype: 'image/jpeg',
+    destination: 'C:\\Final\\Sri-Lanka-Dedicated-Economic-Center--part-2\\DEC web site\\DEC Project\\src\\Backend\\uploads',
+    filename: '1777023167620-1749812939694-pic1.jpg',
+    path: 'C:\\Final\\Sri-Lanka-Dedicated-Economic-Center--part-2\\DEC web site\\DEC Project\\src\\Backend\\uploads\\1777023167620-1749812939694-pic1.jpg',
+    size: 221024
+  }
+]
+Product inserted successfully, ID: 8

@@ -6,6 +6,7 @@ import {
   Calendar, MapPin, Mail, User, Home, AlertCircle,
   Star as StarIcon
 } from 'lucide-react';
+import { API_BASES } from '../config/api';
 
 const EnhancedEcommercePage = ({ product: propProduct, onBack }) => {
   // Viewport setup
@@ -189,7 +190,7 @@ const EnhancedEcommercePage = ({ product: propProduct, onBack }) => {
   // Fetch reviews from backend when showReviews is true
   useEffect(() => {
     if (showReviews && product.id) {
-      fetch(`http://localhost:4001/api/reviews/${product.id}`)
+      fetch(`${API_BASES.payments}/reviews/${product.id}`)
         .then(res => res.json())
         .then(data => {
           if (Array.isArray(data)) {
@@ -260,7 +261,7 @@ const EnhancedEcommercePage = ({ product: propProduct, onBack }) => {
     };
 
     try {
-      const res = await fetch('http://localhost:4001/api/orders', {
+      const res = await fetch(`${API_BASES.payments}/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderData)
@@ -283,7 +284,7 @@ const EnhancedEcommercePage = ({ product: propProduct, onBack }) => {
     if (reviewRating === 0 || !reviewName || !reviewText) return;
 
     try {
-      const res = await fetch('http://localhost:4001/api/reviews', {
+      const res = await fetch(`${API_BASES.payments}/reviews`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -297,7 +298,7 @@ const EnhancedEcommercePage = ({ product: propProduct, onBack }) => {
       const data = await res.json();
       if (res.ok && data.success) {
         // Fetch updated reviews
-        fetch(`http://localhost:4001/api/reviews/${product.id}`)
+        fetch(`${API_BASES.payments}/reviews/${product.id}`)
           .then(res => res.json())
           .then(data => {
             if (Array.isArray(data)) {
@@ -358,8 +359,8 @@ const EnhancedEcommercePage = ({ product: propProduct, onBack }) => {
   const containerStyles = {
     margin: 0,
     padding: 0,
-    width: '100vw',
-    minHeight: '100vh',
+    width: '100%',
+    minHeight: '100dvh',
     overflowX: 'hidden'
   };
 

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Camera, MapPin, Edit3, Save, X, User, Mail, Phone, Hash, Globe, ShoppingBag, ArrowLeft } from 'lucide-react';
+import { API_BASES } from '../config/api';
 
 const CustomerProfile = ({ user, onBack, onLogout }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -37,7 +38,7 @@ const CustomerProfile = ({ user, onBack, onLogout }) => {
   const GOOGLE_MAPS_API_KEY = 'AIzaSyBlnL8xcC0cYhUHCHJdQDXSwWR7X7j9sWo';
 
   // API configuration - Updated to use the correct port
-  const API_BASE_URL = 'http://localhost:3000/api/customer';
+  const API_BASE_URL = API_BASES.customer;
 
   // Load Google Maps Script
   useEffect(() => {
@@ -434,7 +435,7 @@ const CustomerProfile = ({ user, onBack, onLogout }) => {
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col md:flex-row bg-gray-100 text-gray-800 overflow-hidden font-sans">
+    <div className="fixed inset-0 mobile-safe-shell flex flex-col md:flex-row bg-gray-100 text-gray-800 overflow-hidden font-sans">
       
       {/* Left Section - Hidden on Mobile, 50% on Desktop */}
       <div className="hidden md:flex md:w-1/2 relative overflow-hidden">
@@ -494,26 +495,36 @@ const CustomerProfile = ({ user, onBack, onLogout }) => {
       </div>
 
       {/* Right Section - Full Width on Mobile, 50% on Desktop */}
-      <div className="w-full md:w-1/2 overflow-y-auto bg-white relative">
+      <div className="w-full md:w-1/2 mobile-safe-scroll overflow-y-auto bg-white relative">
         
         {/* Mobile Header with Back Button */}
         <div className="md:hidden bg-gradient-to-r from-green-600 to-emerald-600 text-white p-4 sticky top-0 z-10">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={onBack}
-              className="p-2 bg-white/20 backdrop-blur-sm rounded-xl hover:bg-white/30 transition-colors"
-            >
-              <ArrowLeft className="text-white w-5 h-5" />
-            </button>
-            <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl">
-              <ShoppingBag className="text-white w-5 h-5" />
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <button
+                onClick={onBack}
+                className="p-2 bg-white/20 backdrop-blur-sm rounded-xl hover:bg-white/30 transition-colors flex-shrink-0"
+              >
+                <ArrowLeft className="text-white w-5 h-5" />
+              </button>
+              <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl flex-shrink-0">
+                <ShoppingBag className="text-white w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-xl font-bold truncate">Customer Profile</h1>
+                <p className="text-green-100 text-sm truncate">
+                  {user?.name || 'Manage your shopping preferences'}
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold">Customer Profile</h1>
-              <p className="text-green-100 text-sm">
-                {user?.name || 'Manage your shopping preferences'}
-              </p>
-            </div>
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="px-3 py-2 bg-white/15 backdrop-blur-sm rounded-xl hover:bg-white/25 transition-colors text-sm font-medium flex-shrink-0"
+              >
+                Logout
+              </button>
+            )}
           </div>
         </div>
 
@@ -562,7 +573,7 @@ const CustomerProfile = ({ user, onBack, onLogout }) => {
                 Edit Profile
               </button>
             ) : (
-              <div className="flex gap-2 sm:gap-3">
+              <div className="flex w-full sm:w-auto flex-col sm:flex-row gap-2 sm:gap-3">
                 <button
                   onClick={handleSave}
                   disabled={saving}

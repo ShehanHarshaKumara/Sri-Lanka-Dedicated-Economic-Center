@@ -4,11 +4,12 @@ import {
   Calendar, ShoppingCart, Heart, Share2, Truck, Filter, Search,
   TrendingUp, Shield, Leaf, Clock, MessageCircle, Globe, X,
   ChevronRight, BarChart3, Package, Plus, Minus, Check,
-  ArrowRight, ArrowLeft, Home, Info, Settings, LogOut, User,
+  ArrowRight, ArrowLeft, Home, Info, Settings, LogOut, User, Menu,
   Send, Smile, Paperclip, Camera
 } from 'lucide-react';
+import { API_BASES } from '../config/api';
 
-const ModernFarmerMarketplace = ({ onBack }) => {
+const ModernFarmerMarketplace = ({ onBack, onLogout }) => {
   const [selectedFarmer, setSelectedFarmer] = useState(null);
   const [likedProducts, setLikedProducts] = useState(new Set());
   const [cartItems, setCartItems] = useState(new Map());
@@ -22,13 +23,14 @@ const ModernFarmerMarketplace = ({ onBack }) => {
   const [farmers, setFarmers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Fetch farmers data from backend API
   useEffect(() => {
     const fetchFarmers = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:5003/api/farmers');
+        const response = await fetch(`${API_BASES.farmerDirectory}/farmers`);
         if (!response.ok) {
           throw new Error('Failed to fetch farmers data');
         }
@@ -90,7 +92,7 @@ const ModernFarmerMarketplace = ({ onBack }) => {
     if (selectedFarmer && selectedFarmer.id) {
       const fetchFarmerDetails = async () => {
         try {
-          const response = await fetch(`http://localhost:5003/api/farmers/${selectedFarmer.id}`);
+          const response = await fetch(`${API_BASES.farmerDirectory}/farmers/${selectedFarmer.id}`);
           if (!response.ok) {
             throw new Error('Failed to fetch farmer details');
           }
@@ -148,11 +150,28 @@ const ModernFarmerMarketplace = ({ onBack }) => {
   const handleCardClick = (farmer) => {
     setSelectedFarmer(farmer);
     setShowMessaging(false);
+    setSidebarOpen(false);
   };
 
   const handleBackClick = () => {
     setSelectedFarmer(null);
     setShowMessaging(false);
+    setSidebarOpen(false);
+  };
+
+  const openSidebar = () => setSidebarOpen(true);
+  const closeSidebar = () => setSidebarOpen(false);
+
+  const handleMarketplaceClick = () => {
+    setSelectedFarmer(null);
+    setShowMessaging(false);
+    closeSidebar();
+  };
+
+  const handleMessagesClick = () => {
+    if (!selectedFarmer) return;
+    setShowMessaging(true);
+    closeSidebar();
   };
 
   const toggleLike = (productId) => {
@@ -227,6 +246,173 @@ const ModernFarmerMarketplace = ({ onBack }) => {
     shadow: darkMode ? 'rgba(0, 0, 0, 0.3)' : 'rgba(34, 197, 94, 0.1)',
   };
 
+  const sidebarItems = [
+    {
+      label: 'Marketplace',
+      icon: Home,
+      active: !selectedFarmer && !showMessaging,
+      disabled: false,
+      onClick: handleMarketplaceClick
+    },
+    {
+      label: 'Farmer Profile',
+      icon: User,
+      active: !!selectedFarmer && !showMessaging,
+      disabled: !selectedFarmer,
+      onClick: closeSidebar
+    },
+    {
+      label: 'Messages',
+      icon: MessageCircle,
+      active: showMessaging,
+      disabled: !selectedFarmer,
+      onClick: handleMessagesClick
+    }
+  ];
+
+  const Sidebar = () => (
+    <>
+      {sidebarOpen && (
+        <button
+          type="button"
+          aria-label="Close sidebar"
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
+          onClick={closeSidebar}
+        />
+      )}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-72 transform transition-transform duration-300 lg:static lg:z-auto lg:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+        style={{
+          backgroundColor: theme.card,
+          borderRight: `1px solid ${theme.border}`,
+          boxShadow: `0 20px 50px ${theme.shadow}`,
+          backdropFilter: 'blur(20px)'
+        }}
+      >
+        <div className="flex h-full flex-col">
+          <div className="border-b px-5 py-6" style={{ borderColor: theme.border }}>
+            <div className="mb-4 flex items-center justify-between lg:justify-start">
+              <div>
+                <div
+                  className="text-2xl font-bold bg-gradient-to-r bg-clip-text text-transparent"
+                  style={{
+                    backgroundImage: `linear-gradient(45deg, ${theme.primary}, ${theme.secondary})`
+                  }}
+                >
+                  FarmConnect
+                </div>
+                <p className="mt-1 text-sm" style={{ color: theme.textSecondary }}>
+                  Browse farmers, open conversations, and manage your session from one place.
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label="Close sidebar"
+                onClick={closeSidebar}
+                className="rounded-full p-2 transition-all hover:scale-110 lg:hidden"
+                style={{ color: theme.text }}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div
+              className="rounded-2xl p-4"
+              style={{
+                background: `linear-gradient(135deg, ${theme.primary}16, ${theme.secondary}18)`,
+                border: `1px solid ${theme.border}`
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className="flex h-11 w-11 items-center justify-center rounded-2xl"
+                  style={{ backgroundColor: `${theme.primary}22`, color: theme.primary }}
+                >
+                  <User className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="font-semibold" style={{ color: theme.text }}>
+                    {selectedFarmer ? selectedFarmer.name : 'Marketplace Viewer'}
+                  </div>
+                  <div className="text-sm" style={{ color: theme.textSecondary }}>
+                    {selectedFarmer ? 'Farmer detail panel active' : 'Browsing all listed farmers'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <nav className="flex-1 space-y-2 px-4 py-5">
+            {sidebarItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  disabled={item.disabled}
+                  onClick={item.onClick}
+                  className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left font-medium transition-all duration-300"
+                  style={{
+                    backgroundColor: item.active ? `${theme.primary}18` : 'transparent',
+                    border: `1px solid ${item.active ? theme.primary : 'transparent'}`,
+                    color: item.disabled ? theme.textSecondary : theme.text,
+                    opacity: item.disabled ? 0.55 : 1
+                  }}
+                >
+                  <Icon
+                    className="h-5 w-5"
+                    style={{ color: item.active ? theme.primary : theme.textSecondary }}
+                  />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="space-y-3 border-t px-4 py-5" style={{ borderColor: theme.border }}>
+            {onBack && (
+              <button
+                type="button"
+                onClick={() => {
+                  closeSidebar();
+                  onBack();
+                }}
+                className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 font-medium transition-all duration-300 hover:scale-[1.01]"
+                style={{
+                  backgroundColor: `${theme.secondary}18`,
+                  color: theme.text,
+                  border: `1px solid ${theme.border}`
+                }}
+              >
+                <ArrowLeft className="h-5 w-5" />
+                <span>Back To Customer Home</span>
+              </button>
+            )}
+            {onLogout && (
+              <button
+                type="button"
+                onClick={() => {
+                  closeSidebar();
+                  onLogout();
+                }}
+                className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 font-medium text-white transition-all duration-300 hover:scale-[1.01]"
+                style={{
+                  background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                  boxShadow: `0 12px 24px ${theme.shadow}`
+                }}
+              >
+                <LogOut className="h-5 w-5" />
+                <span>Logout</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </aside>
+    </>
+  );
+
   // Messaging Component
   const MessagingView = () => {
     const farmerMessages = messages.filter(m => m.farmerId === selectedFarmer.id);
@@ -272,9 +458,21 @@ const ModernFarmerMarketplace = ({ onBack }) => {
             </div>
           </div>
           
-          <button className="p-2 rounded-full transition-all hover:scale-110" style={{ color: theme.text }}>
-            <Phone className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="p-2 rounded-full transition-all hover:scale-110"
+                style={{ color: theme.text }}
+                title="Logout"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            )}
+            <button className="p-2 rounded-full transition-all hover:scale-110" style={{ color: theme.text }}>
+              <Phone className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Messages */}
@@ -377,10 +575,13 @@ const ModernFarmerMarketplace = ({ onBack }) => {
       : (selectedFarmer.products || []).filter(p => p.category === selectedCategory);
 
     return (
-      <div className="fixed inset-0 flex flex-col" style={{ 
+      <div className="fixed inset-0 flex overflow-hidden" style={{ 
         background: theme.background,
         color: theme.text
       }}>
+        <Sidebar />
+
+        <div className="flex min-w-0 flex-1 flex-col">
         {/* Header */}
         <header className="sticky top-0 z-30 backdrop-blur-md" style={{
           backgroundColor: theme.card,
@@ -388,14 +589,24 @@ const ModernFarmerMarketplace = ({ onBack }) => {
           boxShadow: `0 4px 20px ${theme.shadow}`
         }}>
           <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-            <button
-              onClick={handleBackClick}
-              className="flex items-center gap-2 transition-all hover:scale-105 transform"
-              style={{ color: theme.primary }}
-            >
-              <ChevronLeft className="w-5 h-5" />
-              <span className="hidden sm:inline font-medium">Back to Farmers</span>
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={openSidebar}
+                className="rounded-full p-2 transition-all hover:scale-110 lg:hidden"
+                style={{ color: theme.text }}
+                title="Open sidebar"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <button
+                onClick={handleBackClick}
+                className="flex items-center gap-2 transition-all hover:scale-105 transform"
+                style={{ color: theme.primary }}
+              >
+                <ChevronLeft className="w-5 h-5" />
+                <span className="hidden sm:inline font-medium">Back to Farmers</span>
+              </button>
+            </div>
             
             <div className="flex items-center gap-4">
               <button 
@@ -722,6 +933,7 @@ const ModernFarmerMarketplace = ({ onBack }) => {
             </section>
           </div>
         </main>
+        </div>
       </div>
     );
   }
@@ -775,10 +987,13 @@ const ModernFarmerMarketplace = ({ onBack }) => {
 
   // Farmers List View
   return (
-    <div className="fixed inset-0 flex flex-col" style={{ 
+    <div className="fixed inset-0 flex overflow-hidden" style={{ 
       background: theme.background,
       color: theme.text
     }}>
+      <Sidebar />
+
+      <div className="flex min-w-0 flex-1 flex-col">
       {/* Header */}
       <header className="sticky top-0 z-20 backdrop-blur-md" style={{
         backgroundColor: theme.card,
@@ -788,6 +1003,14 @@ const ModernFarmerMarketplace = ({ onBack }) => {
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
+              <button
+                onClick={openSidebar}
+                className="rounded-full p-2 transition-all hover:scale-110 lg:hidden"
+                style={{ color: theme.text }}
+                title="Open sidebar"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
               {/* Back Button */}
               {onBack && (
                 <button
@@ -1060,6 +1283,7 @@ const ModernFarmerMarketplace = ({ onBack }) => {
           </section>
         </div>
       </main>
+      </div>
     </div>
   );
 };

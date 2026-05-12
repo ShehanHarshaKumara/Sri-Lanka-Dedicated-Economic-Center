@@ -40,7 +40,7 @@ const pool = mysql.createPool({
 
 // Helper function to construct full image URLs
 const constructImageUrls = (data) => {
-  const baseUrl = 'http://localhost:5003/uploads/';
+  const baseUrl = 'http://127.0.0.1:5003/uploads/';
 
   if (Array.isArray(data)) {
     return data.map(item => {

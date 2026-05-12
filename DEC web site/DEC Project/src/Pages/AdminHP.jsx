@@ -43,6 +43,7 @@ import {
   FaImage,
   FaPercent
 } from 'react-icons/fa';
+import { API_BASES } from '../config/api';
 
 // ===== CUSTOM RESPONSIVE CSS STYLES =====
 const customResponsiveCSS = `
@@ -58,8 +59,8 @@ const customResponsiveCSS = `
   }
   
   .admin-container {
-    width: 100vw;
-    min-height: 100vh;
+    width: 100%;
+    min-height: 100dvh;
     margin: 0;
     padding: 0;
     overflow-x: hidden;
@@ -105,7 +106,7 @@ const customResponsiveCSS = `
   /* Responsive breakpoints */
   .responsive-container {
     width: 100%;
-    max-width: 100vw;
+    max-width: 100%;
     margin: 0 auto;
     padding: 0 1rem;
   }
@@ -270,7 +271,7 @@ const AdminPortal = ({ user, onLogout }) => {
     setError(null);
     try {
       console.log('Fetching products from API...');
-      const response = await fetch('http://localhost:5050/api/admin/products');
+      const response = await fetch(`${API_BASES.adminProducts}/products`);
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -293,7 +294,7 @@ const AdminPortal = ({ user, onLogout }) => {
     setLoading(prev => ({ ...prev, stats: true }));
     try {
       console.log('Fetching product stats from API...');
-      const response = await fetch('http://localhost:5050/api/admin/product-stats');
+      const response = await fetch(`${API_BASES.adminProducts}/product-stats`);
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -317,7 +318,7 @@ const AdminPortal = ({ user, onLogout }) => {
     setErrorCustomers(null);
     try {
       // Adjust API endpoint if needed
-      const response = await fetch('http://localhost:3000/api/customer/all');
+      const response = await fetch(`${API_BASES.customer}/all`);
       if (!response.ok) {
         throw new Error('Failed to fetch customers');
       }
@@ -336,7 +337,7 @@ const AdminPortal = ({ user, onLogout }) => {
     setErrorFarmers(null);
     try {
       // Adjust API endpoint as needed
-      const response = await fetch('http://localhost:5002/api/farmer/all');
+      const response = await fetch(`${API_BASES.farmerProfile}/all`);
       if (!response.ok) {
         throw new Error('Failed to fetch farmers');
       }
@@ -429,7 +430,7 @@ const AdminPortal = ({ user, onLogout }) => {
     }
 
     try {
-      const response = await fetch(`http://localhost:5002/api/farmer/profile/${farmer.user_id}`, {
+      const response = await fetch(`${API_BASES.farmerProfile}/profile/${farmer.user_id}`, {
         method: 'DELETE'
       });
       
@@ -470,7 +471,7 @@ const AdminPortal = ({ user, onLogout }) => {
         formData.append('profile_image', profileImageFile);
       }
 
-      const response = await fetch(`http://localhost:5002/api/farmer/profile/${editingFarmer.user_id}`, {
+      const response = await fetch(`${API_BASES.farmerProfile}/profile/${editingFarmer.user_id}`, {
         method: 'POST',
         body: formData
       });
@@ -585,7 +586,7 @@ const AdminPortal = ({ user, onLogout }) => {
       const userId = user.user_id || user.id;
       console.log('Deleting customer with ID:', userId);
       
-      const response = await fetch(`http://localhost:3000/api/customer/${userId}`, {
+      const response = await fetch(`${API_BASES.customer}/${userId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json'
@@ -617,11 +618,11 @@ const AdminPortal = ({ user, onLogout }) => {
     }
   };
   return (
-    <div className="min-h-screen w-full bg-green-50 admin-container" style={{ 
+    <div className="min-h-screen mobile-safe-shell w-full bg-green-50 admin-container" style={{ 
       margin: 0, 
       padding: 0,
-      width: '100vw',
-      minHeight: '100vh',
+      width: '100%',
+      minHeight: '100dvh',
       overflowX: 'hidden'
     }}>
       {/* Navigation Header */}

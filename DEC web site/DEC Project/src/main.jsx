@@ -115,7 +115,7 @@ function App() {
       return <FarmingFoodsPage onBack={handleBackToCustomerHP} onBuyNow={handleBuyNow} />;
     }
     if (currentPage === 'sellers') {
-      return <FramerPage onBack={handleBackToCustomerHP} />;
+      return <FramerPage onBack={handleBackToCustomerHP} onLogout={handleLogout} />;
     }
     if (currentPage === 'map') {
       return (

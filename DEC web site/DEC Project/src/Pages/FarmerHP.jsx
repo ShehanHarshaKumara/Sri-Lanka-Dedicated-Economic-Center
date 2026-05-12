@@ -12,6 +12,8 @@ import {
   FaChartLine, FaHandHoldingUsd
 } from 'react-icons/fa';
 import FarmerProfile from './FarmerProfile';
+import FarmerOrderManagement from './FarmerOrderManagement';
+import { API_BASES } from '../config/api';
 
 const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
   // Full viewport setup
@@ -71,7 +73,6 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
   const [formError, setFormError] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-  const [showProfile, setShowProfile] = useState(false);
 
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [farmerProfile, setFarmerProfile] = useState(null);
@@ -94,6 +95,7 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
 
   const sidebarItems = [
     { id: 'dashboard', label: 'Dashboard', icon: FaHome },
+    { id: 'profile', label: 'Profile', icon: FaUser },
     { id: 'products', label: 'My Products', icon: FaBox },
     { id: 'orders', label: 'Orders', icon: FaClipboardList },
     { id: 'analytics', label: 'Analytics', icon: FaChartBar },
@@ -147,7 +149,7 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
       const farmerId = user?.id || 1;
       console.log('Fetching products for farmer:', farmerId);
       
-      const response = await fetch(`http://localhost:5001/api/products?farmer_id=${farmerId}`);
+      const response = await fetch(`${API_BASES.products}/products?farmer_id=${farmerId}`);
       
       console.log('Fetch products response status:', response.status);
 
@@ -178,7 +180,7 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
   const fetchProfile = async () => {
     try {
       const userId = user?.id || 1;
-      const res = await fetch(`http://localhost:5002/api/farmer/profile/${userId}`);
+      const res = await fetch(`${API_BASES.farmerProfile}/profile/${userId}`);
       const data = await res.json();
       setFarmerProfile(data);
     } catch {
@@ -309,10 +311,10 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
         formData.append('images', img);
       });
 
-      let url = 'http://localhost:5001/api/products/upload';
+      let url = `${API_BASES.products}/products/upload`;
       let method = 'POST';
       if (editingProduct) {
-        url = `http://localhost:5001/api/products/${editingProduct.id}`;
+        url = `${API_BASES.products}/products/${editingProduct.id}`;
         method = 'PUT';
       }
 
@@ -392,7 +394,7 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
       try {
         console.log('Deleting product:', id);
         
-        const response = await fetch(`http://localhost:5001/api/products/${id}`, { 
+        const response = await fetch(`${API_BASES.products}/products/${id}`, { 
           method: 'DELETE' 
         });
 
@@ -435,7 +437,7 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
     try {
       console.log('Toggling product status:', id, 'to', newStatus);
       
-      const response = await fetch(`http://localhost:5001/api/products/${id}/status`, {
+      const response = await fetch(`${API_BASES.products}/products/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus })
@@ -492,15 +494,6 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
       }
     });
 
-  if (showProfile) {
-    return (
-      <FarmerProfile
-        user={user}
-        goBack={() => setShowProfile(false)}
-      />
-    );
-  }
-
   const handleTabChange = (tabId) => {
     if (tabId === 'community') {
       onNavigateToMessages();
@@ -511,8 +504,8 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50" 
-         style={{ margin: 0, padding: 0, width: '100vw', minHeight: '100vh', overflowX: 'hidden' }}>
+    <div className="min-h-screen mobile-safe-shell w-full bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50" 
+         style={{ margin: 0, padding: 0, width: '100%', minHeight: '100dvh', overflowX: 'hidden' }}>
       
       {/* Modern Navigation Bar */}
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
@@ -639,7 +632,7 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
                   }
                   alt="Profile" 
                   className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl ring-2 ring-emerald-500/30 hover:ring-emerald-500 transition-all cursor-pointer" 
-                  onClick={() => setShowProfile(true)}
+                  onClick={() => handleTabChange('profile')}
                   title="View Profile"
                 />
               </div>
@@ -696,6 +689,13 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
                  { /* Main Content Area */}
                   <main className="flex-1 w-full min-w-0 overflow-x-hidden">
                   <div className="px-3 sm:px-4 lg:px-6 xl:px-8 py-4 lg:py-6 xl:py-8">
+                    {activeTab === 'profile' && (
+                      <FarmerProfile
+                        user={user}
+                        embedded
+                        onProfileSaved={fetchProfile}
+                      />
+                    )}
                     
                     {/* Dashboard Tab */}
                     {activeTab === 'dashboard' && (
@@ -1441,215 +1441,7 @@ const ModernFarmerPortal = ({ user, onLogout, onNavigateToMessages }) => {
 
             {/* Orders Tab */}
             {activeTab === 'orders' && (
-              <div className="space-y-6">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                  <div>
-                    <h1 className="text-2xl lg:text-3xl font-bold text-gray-800">My Orders</h1>
-                    <p className="text-gray-600">Manage and track your product orders</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button className="bg-emerald-50 text-emerald-600 px-3 py-2 rounded-xl font-medium hover:bg-emerald-100 transition-colors flex items-center">
-                      <FaDownload className="mr-2" /> Export
-                    </button>
-                    <button className="bg-emerald-50 text-emerald-600 px-3 py-2 rounded-xl font-medium hover:bg-emerald-100 transition-colors flex items-center">
-                      <FaPrint className="mr-2" /> Print
-                    </button>
-                  </div>
-                </div>
-
-                {/* Orders Summary Cards */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-                  {[
-                    { title: 'Total Orders', value: '48', change: '+12%', icon: FaClipboardList, color: 'from-blue-500 to-indigo-600' },
-                    { title: 'Pending', value: '5', change: 'Due today', icon: FaBell, color: 'from-orange-500 to-red-600' },
-                    { title: 'Completed', value: '38', change: 'This month', icon: FaCheck, color: 'from-green-500 to-emerald-600' },
-                    { title: 'Revenue', value: 'Rs.125K', change: '+18%', icon: FaRupeeSign, color: 'from-purple-500 to-pink-600' }
-                  ].map((stat, index) => (
-                    <div
-                      key={index}
-                      className="bg-white rounded-2xl p-4 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-500 overflow-hidden group"
-                    >
-                      <div className={`absolute inset-0 bg-gradient-to-r ${stat.color} opacity-0 group-hover:opacity-10 transition-opacity duration-500`} />
-                      <div className="relative z-10">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className={`p-3 rounded-xl bg-gradient-to-r ${stat.color} shadow-lg`}>
-                            <stat.icon className="text-white text-xl" />
-                          </div>
-                          <span className={`text-xs font-semibold px-2 py-1 rounded-lg ${
-                            index === 1 ? 'text-red-600 bg-red-50' : 'text-green-600 bg-green-50'
-                          }`}>
-                            {stat.change}
-                          </span>
-                        </div>
-                        <p className="text-gray-600 text-xs sm:text-sm font-medium">{stat.title}</p>
-                        <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800 mt-1">{stat.value}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Orders Table */}
-                <div className="bg-white rounded-2xl shadow-md overflow-hidden">
-                  <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                    <div className="relative w-full sm:w-auto">
-                      <input
-                        type="text"
-                        placeholder="Search orders..."
-                        className="w-full pl-10 pr-4 py-2 bg-gray-50 rounded-xl border border-gray-200 focus:border-emerald-500 focus:outline-none transition-all duration-300 text-sm"
-                      />
-                      <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                    </div>
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                      <select className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
-                        <option>Filter by status</option>
-                        <option>Pending</option>
-                        <option>Processing</option>
-                        <option>Completed</option>
-                        <option>Cancelled</option>
-                      </select>
-                      <button className="bg-emerald-50 text-emerald-600 px-3 py-2 rounded-xl hover:bg-emerald-100 transition-colors flex items-center">
-                        <FaFilter className="mr-2" /> Filter
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Order ID
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Product
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Buyer
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Date
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Quantity
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Amount
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Status
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Action
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {[1, 2, 3, 4, 5].map((order) => (
-                          <tr key={order} className="hover:bg-gray-50 transition-colors">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              #ORD{1000 + order}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <div className="flex-shrink-0 h-10 w-10">
-                                  <img className="h-10 w-10 rounded-lg object-cover" src={`https://images.unsplash.com/photo-1560769680-ba2f3767c785?w=100&h=100&fit=crop&crop=face&ixid=${order}`} alt="" />
-                                </div>
-                                <div className="ml-4">
-                                  <div className="text-sm font-medium text-gray-900">King Coconuts</div>
-                                  <div className="text-sm text-gray-500">50 pieces</div>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              <div className="flex items-center">
-                                <img className="h-8 w-8 rounded-full mr-2" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face" alt="" />
-                                <span>Sunil Perera</span>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {new Date().toLocaleDateString()}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              50
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              <div className="flex items-center">
-                                <FaRupeeSign className="mr-1 text-xs" /> 3,000
-
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                order % 3 === 0 
-                                  ? 'bg-green-100 text-green-800' 
-                                  : order % 2 === 0 
-                                    ? 'bg-yellow-100 text-yellow-800' 
-                                    : 'bg-blue-100 text-blue-800'
-                              }`}>
-                                {order % 3 === 0 ? 'Completed' : order % 2 === 0 ? 'Pending' : 'Processing'}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                              <button className="text-emerald-600 hover:text-emerald-900 mr-3">
-                                <FaEye />
-                              </button>
-                              <button className="text-blue-600 hover:text-blue-900">
-                                <FaEdit />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  
-                  <div className="bg-gray-50 px-6 py-3 flex items-center justify-between border-t border-gray-200">
-                    <div className="flex-1 flex justify-between sm:hidden">
-                      <button className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                        Previous
-                      </button>
-                      <button className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                        Next
-                      </button>
-                    </div>
-                    <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                      <div>
-                        <p className="text-sm text-gray-700">
-                          Showing <span className="font-medium">1</span> to <span className="font-medium">5</span> of{' '}
-                          <span className="font-medium">24</span> results
-                        </p>
-                      </div>
-                      <div>
-                        <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                          <button className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                            <span className="sr-only">Previous</span>
-                            <FaChevronRight className="h-4 w-4 transform rotate-180" />
-                          </button>
-                          <button aria-current="page" className="z-10 bg-emerald-50 border-emerald-500 text-emerald-600 relative inline-flex items-center px-4 py-2 border text-sm font-medium">
-                            1
-                          </button>
-                          <button className="bg-white border-gray-300 text-gray-500 hover:bg-gray-50 relative inline-flex items-center px-4 py-2 border text-sm font-medium">
-                            2
-                          </button>
-                          <button className="bg-white border-gray-300 text-gray-500 hover:bg-gray-50 relative inline-flex items-center px-4 py-2 border text-sm font-medium">
-                            3
-                          </button>
-                          <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
-                            ...
-                          </span>
-                          <button className="bg-white border-gray-300 text-gray-500 hover:bg-gray-50 relative inline-flex items-center px-4 py-2 border text-sm font-medium">
-                            8
-                          </button>
-                          <button className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                            <span className="sr-only">Next</span>
-                            <FaChevronRight className="h-4 w-4" />
-                          </button>
-                        </nav>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <FarmerOrderManagement />
             )}
 
             {/* Analytics Tab */}

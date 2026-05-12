@@ -4,6 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "app": "node ./scripts/run-app.cjs",
+    "backend": "node ./scripts/run-backends.cjs",
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",

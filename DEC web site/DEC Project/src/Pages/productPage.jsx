@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, ShoppingCart, Heart, Star, Leaf, Truck, Shield, Plus, Minus, Menu, X, User, Search, Award, Clock, Users, ArrowLeft } from 'lucide-react';
+import { API_BASES } from '../config/api';
 
 const FarmingFoodsPage = ({ onBack, onBuyNow }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -38,7 +39,7 @@ const FarmingFoodsPage = ({ onBack, onBuyNow }) => {
   // Fetch products from backend API
   useEffect(() => {
     setLoadingProducts(true);
-    fetch('http://localhost:5001/api/products')
+    fetch(`${API_BASES.products}/products`)
       .then(res => {
         if (!res.ok) throw new Error('Failed to fetch products');
         return res.json();
@@ -211,13 +212,13 @@ const FarmingFoodsPage = ({ onBack, onBuyNow }) => {
   const containerStyles = {
     margin: 0, 
     padding: 0,
-    width: '100vw',
-    minHeight: '100vh',
+    width: '100%',
+    minHeight: '100dvh',
     overflowX: 'hidden'
   };
 
   return (
-    <div style={containerStyles} className="min-h-screen bg-gray-50">
+    <div style={containerStyles} className="min-h-screen mobile-safe-shell bg-gray-50">
       {/* Notification */}
       {notification && (
         <div className="fixed top-4 right-4 z-50 animate-slide-in">

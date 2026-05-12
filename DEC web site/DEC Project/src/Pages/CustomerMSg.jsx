@@ -598,7 +598,7 @@ const CustomerSupportApp = ({ onBack }) => {
   };
 
   return (
-    <div className={`w-screen h-screen flex flex-col transition-all duration-300 ${
+    <div className={`w-full min-h-screen mobile-safe-shell flex flex-col transition-all duration-300 ${
       darkMode 
         ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-blue-900' 
         : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50'
@@ -706,7 +706,7 @@ const CustomerSupportApp = ({ onBack }) => {
         {/* Sidebar */}
         <div className={`${
           isMobile 
-            ? `fixed top-16 left-0 z-40 w-full sm:w-80 h-[calc(100vh-4rem)] transform transition-transform duration-300 ${
+            ? `fixed top-16 left-0 z-40 w-full sm:w-80 h-[calc(100dvh-4rem)] transform transition-transform duration-300 ${
                 sidebarOpen ? 'translate-x-0' : '-translate-x-full'
               }`
             : 'w-1/3 lg:w-1/4'

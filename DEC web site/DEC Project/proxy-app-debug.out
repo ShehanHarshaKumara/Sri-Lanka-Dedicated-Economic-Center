@@ -1,0 +1,58 @@
+Starting backend and frontend together...
+Press Ctrl+C to stop the full app.
+[backend] Started 7 backend services.
+[backend] Press Ctrl+C to stop all backend services.
+[backend] [farmers] Server running on port 5003
+[backend] [farmers] API endpoints:
+[backend] [farmers]   - GET /api/farmers
+[backend] [farmers]   - GET /api/farmers/:id
+[backend] [farmers]   - GET /api/farmers/search
+[backend] [farmers]   - GET /api/farmers/categories
+[backend] [farmers]   - GET /api/farmers/cities
+[backend] [farmers]   - GET /api/products
+[backend] [farmers]   - GET /api/products/:id
+[backend] [farmers]   - GET /api/products/search
+[backend] [farmers]   - GET /api/products/categories
+[backend] [payment] Payment backend running on port 4001
+[backend] [products] Backend server running on port 5001
+[backend] [admin-products] Products API server running on port 5050
+[backend] [auth] Server is running on port 5000
+[backend] [auth] API Health check: http://localhost:5000/api/health
+[backend] [farmer-profile] Farmer Profile Server Running on http://localhost:5002/api/farmer
+[backend] [products] Connected to MySQL
+[backend] [admin-products] Connected to MySQL
+[backend] [auth] Connected to MySQL database
+[backend] [farmer-profile] ✓ MySQL Connected Successfully!
+[frontend] Port 5173 is in use, trying another one...
+[frontend] 
+[frontend]   [32m[1mVITE[22m v6.3.5[39m  [2mready in [0m[1m617[22m[2m[0m ms[22m
+[frontend] 
+[frontend]   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5174[22m/[39m
+[frontend] [2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+[backend] [customer-profile] ❌ Missing Google Drive config: GOOGLE_PROJECT_ID
+[backend] [customer-profile] 💾 Using local storage for images (Google Drive not configured)
+[backend] [customer-profile] Customer Profile Server Running on http://localhost:3000/api/customer
+[backend] [customer-profile] ✓ MySQL Connected Successfully!
+[backend] [products] Upload request body: [Object: null prototype] {
+[backend] [products]   farmer_id: '1',
+[backend] [products]   name: 'Proxy Debug Product',
+[backend] [products]   price: '100',
+[backend] [products]   quantity: '5',
+[backend] [products]   category: 'Vegetables',
+[backend] [products]   unit: 'kg',
+[backend] [products]   description: 'Proxy debug description',
+[backend] [products]   status: 'active'
+[backend] [products] }
+[backend] [products] Upload files: [
+[backend] [products]   {
+[backend] [products]     fieldname: 'images',
+[backend] [products]     originalname: '1749812939694-pic1.jpg',
+[backend] [products]     encoding: '7bit',
+[backend] [products]     mimetype: 'image/jpeg',
+[backend] [products]     destination: 'C:\\Final\\Sri-Lanka-Dedicated-Economic-Center--part-2\\DEC web site\\DEC Project\\src\\Backend\\uploads',
+[backend] [products]     filename: '1777023405359-1749812939694-pic1.jpg',
+[backend] [products]     path: 'C:\\Final\\Sri-Lanka-Dedicated-Economic-Center--part-2\\DEC web site\\DEC Project\\src\\Backend\\uploads\\1777023405359-1749812939694-pic1.jpg',
+[backend] [products]     size: 221024
+[backend] [products]   }
+[backend] [products] ]
+[backend] [products] Product inserted successfully, ID: 9

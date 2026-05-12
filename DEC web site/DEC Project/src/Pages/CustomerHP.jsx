@@ -24,6 +24,7 @@ import {
   FaExpand,
   FaCompress
 } from 'react-icons/fa';
+import { API_BASES } from '../config/api';
 import CustomerProfile from './CustomerProfile';
 
 // Memoized components for better performance
@@ -210,7 +211,7 @@ const EconomicCenter = ({ user, onLogout, onNavigateToProducts, onNavigateToSell
   const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5001/api/products');
+      const response = await fetch(`${API_BASES.products}/products`);
       if (!response.ok) {
         throw new Error('Failed to fetch products');
       }
@@ -366,7 +367,7 @@ const EconomicCenter = ({ user, onLogout, onNavigateToProducts, onNavigateToSell
         const userId = user.id || localStorage.getItem('userId');
         const token = localStorage.getItem('token');
         
-        const response = await fetch(`http://localhost:3000/api/customer/profile/${userId}`, {
+        const response = await fetch(`${API_BASES.customer}/profile/${userId}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -402,7 +403,7 @@ const EconomicCenter = ({ user, onLogout, onNavigateToProducts, onNavigateToSell
   // Render CustomerProfile if needed
   if (showProfile) {
     return (
-      <div style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
+      <div className="mobile-safe-shell" style={{ width: '100%', minHeight: '100dvh', overflow: 'hidden' }}>
         <CustomerProfile 
           user={{
             id: user?.id || user?.userId || localStorage.getItem('userId'),
@@ -418,11 +419,11 @@ const EconomicCenter = ({ user, onLogout, onNavigateToProducts, onNavigateToSell
   }
 
   return (
-    <div className="w-full min-h-screen bg-white text-gray-800 m-0 p-0 box-border" style={{ 
-      margin: 0, 
+    <div className="w-full min-h-screen mobile-safe-shell bg-white text-gray-800 m-0 p-0 box-border" style={{ 
+      margin: 0,
       padding: 0,
-      width: '100vw',
-      minHeight: '100vh',
+      width: '100%',
+      minHeight: '100dvh',
       overflowX: 'hidden'
     }}>
       <style jsx>{`

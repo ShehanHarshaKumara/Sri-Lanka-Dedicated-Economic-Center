@@ -1,0 +1,31 @@
+
+> dec-project@0.0.0 backend
+> node ./scripts/run-backends.cjs
+
+Started 7 backend services.
+Press Ctrl+C to stop all backend services.
+[farmers] Server running on port 5003
+[farmers] API endpoints:
+[farmers]   - GET /api/farmers
+[farmers]   - GET /api/farmers/:id
+[farmers]   - GET /api/farmers/search
+[farmers]   - GET /api/farmers/categories
+[farmers]   - GET /api/farmers/cities
+[farmers]   - GET /api/products
+[farmers]   - GET /api/products/:id
+[farmers]   - GET /api/products/search
+[farmers]   - GET /api/products/categories
+[products] Backend server running on port 5001
+[payment] Payment backend running on port 4001
+[auth] Server is running on port 5000
+[auth] API Health check: http://localhost:5000/api/health
+[products] Connected to MySQL
+[farmer-profile] Farmer Profile Server Running on http://localhost:5002/api/farmer
+[auth] Connected to MySQL database
+[farmer-profile] ✓ MySQL Connected Successfully!
+[admin-products] Products API server running on port 5050
+[admin-products] Connected to MySQL
+[customer-profile] ❌ Missing Google Drive config: GOOGLE_PROJECT_ID
+[customer-profile] 💾 Using local storage for images (Google Drive not configured)
+[customer-profile] Customer Profile Server Running on http://localhost:3000/api/customer
+[customer-profile] ✓ MySQL Connected Successfully!

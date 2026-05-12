@@ -158,9 +158,8 @@ const FarmersChatApp = () => {
   const containerStyles = {
     margin: 0, 
     padding: 0,
-    width: '100vw',
-    height: '100vh',
-    minHeight: '100vh',
+    width: '100%',
+    minHeight: '100dvh',
     overflowX: 'hidden'
   };
 
@@ -190,7 +189,7 @@ const FarmersChatApp = () => {
   return (
     <div 
       style={containerStyles}
-      className={`transition-all duration-300 ${
+      className={`mobile-safe-shell transition-all duration-300 ${
         darkMode 
           ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-green-900' 
           : 'bg-gradient-to-br from-green-50 via-blue-50 to-yellow-50'
@@ -230,7 +229,7 @@ const FarmersChatApp = () => {
         {/* Sidebar */}
         <div className={`${
           isMobile 
-            ? `fixed top-14 left-0 z-40 w-full sm:w-80 h-[calc(100vh-3.5rem)] transform transition-transform duration-300 ${
+            ? `fixed top-14 left-0 z-40 w-full sm:w-80 h-[calc(100dvh-3.5rem)] transform transition-transform duration-300 ${
                 sidebarOpen ? 'translate-x-0' : '-translate-x-full'
               }`
             : 'w-full md:w-1/3 lg:w-1/3 xl:w-1/4'

@@ -682,14 +682,14 @@ function App() {
   const containerStyles = {
     margin: 0,
     padding: 0,
-    width: '100vw',
-    minHeight: '100vh',
+    width: '100%',
+    minHeight: '100dvh',
     overflowX: 'hidden'
   };
 
   return (
     <div
-      className={`min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 text-gray-900 ${isFullscreen ? 'fixed inset-0 overflow-auto' : ''}`}
+      className={`min-h-screen mobile-safe-shell bg-gradient-to-br from-blue-50 via-white to-green-50 text-gray-900 ${isFullscreen ? 'fixed inset-0 overflow-auto' : ''}`}
       style={containerStyles}
     >
       {showFPS && <FPSCounter />}

@@ -153,7 +153,7 @@ app.post('/api/products/upload', upload.array('images', 5), (req, res) => {
           error: 'Invalid image format. Please upload JPG, PNG, or GIF files only.' 
         });
       }
-      image_url = `http://localhost:5001/uploads/${req.files[0].filename}`;
+      image_url = `http://127.0.0.1:5001/uploads/${req.files[0].filename}`;
     }
 
     // First, check which columns exist
@@ -287,7 +287,7 @@ app.put('/api/products/:id', upload.array('images', 5), (req, res) => {
           error: 'Invalid image format. Please upload JPG, PNG, or GIF files only.' 
         });
       }
-      image_url = `http://localhost:5001/uploads/${req.files[0].filename}`;
+      image_url = `http://127.0.0.1:5001/uploads/${req.files[0].filename}`;
     }
 
     // First, check which columns exist

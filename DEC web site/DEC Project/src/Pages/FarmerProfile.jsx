@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, MapPin, Edit3, Save, X, User, Mail, Phone, Hash, Globe, Sparkles, Award, Sprout } from 'lucide-react';
+import { Camera, MapPin, Edit3, Save, X, User, Mail, Phone, Hash, Globe, Sparkles, Award, Sprout, ArrowLeft, LogOut } from 'lucide-react';
+import { API_BASES } from '../config/api';
 
-const FarmerProfile = ({ user, goBack }) => {
+const FarmerProfile = ({ user, goBack, onLogout, embedded = false, onProfileSaved }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true); // set loading true initially
   const [saving, setSaving] = useState(false);
@@ -180,7 +181,7 @@ const FarmerProfile = ({ user, goBack }) => {
     async function fetchProfile() {
       setLoading(true);
       try {
-        const res = await fetch(`http://localhost:5002/api/farmer/profile/${user?.id}`);
+        const res = await fetch(`${API_BASES.farmerProfile}/profile/${user?.id}`);
         if (!res.ok) throw new Error('Failed to fetch profile');
         const data = await res.json();
         setProfileData({
@@ -317,14 +318,14 @@ const FarmerProfile = ({ user, goBack }) => {
       if (profileData.imageFile) {
         formData.append('profile_image', profileData.imageFile);
       }
-      const res = await fetch(`http://localhost:5002/api/farmer/profile/${user?.id}`, {
+      const res = await fetch(`${API_BASES.farmerProfile}/profile/${user?.id}`, {
         method: 'POST',
         body: formData
       });
       const result = await res.json();
       if (result.success) {
         // Refetch profile to update state
-        const getRes = await fetch(`http://localhost:5002/api/farmer/profile/${user?.id}`);
+        const getRes = await fetch(`${API_BASES.farmerProfile}/profile/${user?.id}`);
         const data = await getRes.json();
         setProfileData({
           firstName: data.first_name || '',
@@ -347,6 +348,9 @@ const FarmerProfile = ({ user, goBack }) => {
           lng: data.location_lng ? parseFloat(data.location_lng) : 79.8612,
           address: data.location_address || 'Gampaha, Western Province, Sri Lanka'
         });
+        if (onProfileSaved) {
+          onProfileSaved(data);
+        }
         alert('Profile updated successfully!');
         setIsEditing(false);
       } else {
@@ -364,10 +368,19 @@ const FarmerProfile = ({ user, goBack }) => {
 
   const inputClasses = "w-full px-3 py-2.5 sm:px-4 sm:py-3.5 text-gray-900 bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-xl sm:rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-400 transition-all duration-300 placeholder:text-gray-400 hover:bg-white/90 shadow-sm hover:shadow-md text-sm sm:text-base";
   const readOnlyClasses = "text-gray-800 py-2.5 px-3 sm:py-3.5 sm:px-4 font-medium bg-gradient-to-r from-gray-50/80 to-white/60 backdrop-blur-sm rounded-xl sm:rounded-2xl border border-gray-100/50 shadow-sm text-sm sm:text-base";
+  const shellClasses = embedded
+    ? "relative mobile-safe-shell flex flex-col xl:flex-row overflow-hidden rounded-[2rem] border border-white/70 bg-white/80 text-gray-800 shadow-2xl backdrop-blur-sm font-sans"
+    : "fixed inset-0 mobile-safe-shell flex flex-col md:flex-row bg-gray-100 text-gray-800 overflow-hidden font-sans";
+  const heroClasses = embedded
+    ? "hidden xl:flex xl:w-[42%] relative overflow-hidden"
+    : "hidden md:flex md:w-1/2 relative overflow-hidden";
+  const contentClasses = embedded
+    ? "w-full xl:w-[58%] mobile-safe-scroll overflow-y-auto bg-white/90 relative"
+    : "w-full md:w-1/2 mobile-safe-scroll overflow-y-auto bg-white relative";
 
   if (loading) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-50">
+      <div className={embedded ? "min-h-[420px] flex items-center justify-center rounded-[2rem] bg-gradient-to-br from-green-50 to-emerald-50" : "fixed inset-0 flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-50"}>
         <div className="text-center">
           <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600 text-base sm:text-lg">Loading profile...</p>
@@ -377,19 +390,19 @@ const FarmerProfile = ({ user, goBack }) => {
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col md:flex-row bg-gray-100 text-gray-800 overflow-hidden font-sans">
+    <div className={shellClasses}>
       {/* Back Button */}
       {goBack && (
         <button
           onClick={goBack}
-          className="absolute top-4 left-4 z-50 bg-white border border-gray-200 rounded-xl px-4 py-2 shadow hover:bg-gray-50 transition"
+          className="absolute top-4 left-4 z-50 hidden md:flex bg-white border border-gray-200 rounded-xl px-4 py-2 shadow hover:bg-gray-50 transition"
         >
           ← Back
         </button>
       )}
       
       {/* Left Section - Hidden on Mobile, 50% on Desktop */}
-      <div className="hidden md:flex md:w-1/2 relative overflow-hidden">
+      <div className={heroClasses}>
         {/* Hero Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-green-600 via-emerald-600 to-green-700">
           {/* Animated Background Elements */}
@@ -446,18 +459,68 @@ const FarmerProfile = ({ user, goBack }) => {
       </div>
 
       {/* Right Section - Full Width on Mobile, 50% on Desktop */}
-      <div className="w-full md:w-1/2 overflow-y-auto bg-white relative">
+      <div className={contentClasses}>
         
         {/* Mobile Header - Only visible on mobile */}
-        <div className="md:hidden bg-gradient-to-r from-green-600 to-emerald-600 text-white p-4 sticky top-0 z-10">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl">
-              <Sparkles className="text-white w-5 h-5" />
+        <div className={`${embedded ? 'xl:hidden' : 'md:hidden'} bg-gradient-to-r from-green-600 to-emerald-600 text-white p-4 sticky top-0 z-10`}>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              {goBack && (
+                <button
+                  onClick={goBack}
+                  className="p-2 bg-white/20 backdrop-blur-sm rounded-xl hover:bg-white/30 transition-colors flex-shrink-0"
+                >
+                  <ArrowLeft className="text-white w-5 h-5" />
+                </button>
+              )}
+              <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl flex-shrink-0">
+                <Sparkles className="text-white w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-xl font-bold truncate">Farmer Profile</h1>
+                <p className="text-green-100 text-sm truncate">Manage your farming information</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold">Farmer Profile</h1>
-              <p className="text-green-100 text-sm">Manage your farming information</p>
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="px-3 py-2 bg-white/15 backdrop-blur-sm rounded-xl hover:bg-white/25 transition-colors text-sm font-medium flex-shrink-0"
+              >
+                Logout
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className={`${embedded ? 'hidden xl:block' : 'hidden md:block'} p-6 border-b border-gray-200`}>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              {goBack && (
+                <button
+                  onClick={goBack}
+                  className="p-2 bg-green-500/20 hover:bg-green-500/30 rounded-xl transition-colors flex-shrink-0"
+                >
+                  <ArrowLeft className="text-green-600 w-5 h-5" />
+                </button>
+              )}
+              <div>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                  Farmer Profile
+                </h1>
+                <p className="text-gray-600 truncate">
+                  Welcome, {user?.name || `${profileData.firstName} ${profileData.lastName}`}
+                </p>
+              </div>
             </div>
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="flex items-center gap-2 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-600 rounded-xl transition-colors font-medium flex-shrink-0"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </button>
+            )}
           </div>
         </div>
 
@@ -475,7 +538,7 @@ const FarmerProfile = ({ user, goBack }) => {
                 Edit Profile
               </button>
             ) : (
-              <div className="flex gap-2 sm:gap-3">
+              <div className="flex w-full sm:w-auto flex-col sm:flex-row gap-2 sm:gap-3">
                 <button
                   onClick={handleSave}
                   disabled={saving}

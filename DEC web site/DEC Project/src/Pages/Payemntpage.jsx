@@ -195,8 +195,8 @@ const EnhancedPaymentPage = () => {
   const containerStyles = {
     margin: 0,
     padding: 0,
-    width: '100vw',
-    minHeight: '100vh',
+    width: '100%',
+    minHeight: '100dvh',
     overflowX: 'hidden'
   };
 
