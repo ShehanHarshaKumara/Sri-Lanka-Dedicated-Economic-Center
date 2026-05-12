@@ -73,6 +73,7 @@
 <img width="1902" height="1067" alt="Screenshot 2026-05-12 121512" src="https://github.com/user-attachments/assets/ab80e9fc-8409-468b-a753-67ac16bd041a" />
   </a>
 </p>
+
 <p align="center">
 <a href="https://shehanharshakumara.github.io/Sri-Lanka-Dedicated-Economic-Center/">
 </a>
@@ -123,6 +124,9 @@ This repository includes:
 - **Web Application** — built using **React + Vite**
 - **Mobile Application** — built using **Flutter**
 
+admin login/password for a system:
+- **email - admin@gmail.com**
+-  **password- admin@123**
 ---
 
 ## 🗂 Repository Structure
