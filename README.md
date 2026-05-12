@@ -5,7 +5,10 @@
          alt="Watch Demo Video" width="900"/>
   </a>
 </p>
-
+<p align="center">
+<a href="https://shehanharshakumara.github.io/Sri-Lanka-Dedicated-Economic-Center/">
+</a>
+</p>
 <p align="center">
   👉 Click the image to watch the demo video
 </p>
