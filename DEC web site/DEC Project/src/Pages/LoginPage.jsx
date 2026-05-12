@@ -69,6 +69,18 @@ const roleOptions = [
   { value: 'customer', label: 'Customer', icon: FaUser }
 ];
 
+const isGitHubPagesRuntime = () =>
+  typeof window !== 'undefined' && window.location.hostname.endsWith('github.io');
+
+const buildDemoUser = ({ email, name, role }) => ({
+  id: role === 'admin' ? 1 : role === 'farmer' ? 2 : 3,
+  userId: role === 'admin' ? 1 : role === 'farmer' ? 2 : 3,
+  name: name || (role === 'admin' ? 'Demo Administrator' : role === 'farmer' ? 'Demo Farmer' : 'Demo Customer'),
+  email: email || `${role}@demo.local`,
+  role,
+  avatar: ''
+});
+
 const viewThemes = {
   login: {
     pageGradient: 'from-[#041710] via-[#0d3427] to-[#163924]',
@@ -357,6 +369,18 @@ const AuthPage = ({ onLogin, redirectPath = '/dashboard' }) => {
       completeAuth('Login successful. Opening your dashboard...', data.user, redirectPath);
     } catch (requestError) {
       console.error('Login error:', requestError);
+      if (isGitHubPagesRuntime()) {
+        const demoUser = buildDemoUser({
+          email: formData.email,
+          name: formData.email.split('@')[0] || 'Demo User',
+          role: formData.role || 'customer'
+        });
+        localStorage.setItem('token', 'github-pages-demo-token');
+        localStorage.setItem('user', JSON.stringify(demoUser));
+        completeAuth('Demo mode active. Opening the public dashboard...', demoUser, redirectPath);
+        return;
+      }
+
       setError('Network error. Please check your connection and try again.');
     } finally {
       setLoading(false);
@@ -414,6 +438,18 @@ const AuthPage = ({ onLogin, redirectPath = '/dashboard' }) => {
       }, 720);
     } catch (requestError) {
       console.error('Registration error:', requestError);
+      if (isGitHubPagesRuntime()) {
+        const demoUser = buildDemoUser({
+          email: formData.email,
+          name: formData.name,
+          role: formData.role || 'customer'
+        });
+        localStorage.setItem('token', 'github-pages-demo-token');
+        localStorage.setItem('user', JSON.stringify(demoUser));
+        completeAuth('Demo account created for this live preview.', demoUser, redirectPath);
+        return;
+      }
+
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);
@@ -455,6 +491,19 @@ const AuthPage = ({ onLogin, redirectPath = '/dashboard' }) => {
       completeAuth('Admin access confirmed. Opening workspace...', data.user, '/admin');
     } catch (requestError) {
       console.error('Admin login error:', requestError);
+      if (isGitHubPagesRuntime()) {
+        const demoUser = buildDemoUser({
+          email: formData.email || 'admin@demo.local',
+          name: 'Demo Administrator',
+          role: 'admin'
+        });
+        localStorage.setItem('token', 'github-pages-demo-token');
+        localStorage.setItem('user', JSON.stringify(demoUser));
+        localStorage.setItem('isAdmin', 'true');
+        completeAuth('Demo admin mode active. Opening workspace...', demoUser, '/admin');
+        return;
+      }
+
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);
