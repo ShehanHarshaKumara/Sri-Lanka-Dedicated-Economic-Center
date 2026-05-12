@@ -74,10 +74,7 @@
   </a>
 </p>
 
-<p align="center">
-<a href="https://shehanharshakumara.github.io/Sri-Lanka-Dedicated-Economic-Center/">
-</a>
-</p>
+
 <p align="center">
   👉 Click the image to watch the demo video
 </p>
@@ -128,7 +125,8 @@ admin login/password for a system:
 - **email - admin@gmail.com**
 -  **password- admin@123**
 ---
-
+Live URL will be:
+- **Live - (https://shehanharshakumara.github.io/Sri-Lanka-Dedicated-Economic-Center/)**
 ## 🗂 Repository Structure
 
 ```bash
